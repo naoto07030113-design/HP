@@ -128,8 +128,7 @@ export default function HeroOverlay() {
           className="hero-sub font-body text-white/50 font-light leading-relaxed mb-8"
           style={{ fontSize: 'clamp(0.8rem, 1.5vw, 1rem)', maxWidth: '480px', opacity: 0 }}
         >
-          A new paradigm in Japanese healthcare — where ancient wisdom meets
-          precision medicine, and every space is designed for restoration.
+          地域の暮らしに、医療と福祉の安心を。
         </p>
 
         <div
