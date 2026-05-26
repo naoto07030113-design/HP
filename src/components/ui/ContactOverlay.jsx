@@ -9,17 +9,13 @@ export default function ContactOverlay() {
 
   useEffect(() => {
     const ctx = gsap.context(() => {
-      gsap.fromTo(
-        ref.current,
-        { opacity: 0, y: 40 },
+      gsap.fromTo(ref.current,
+        { opacity: 0, y: 32 },
         {
-          opacity: 1,
-          y: 0,
-          duration: 1.2,
-          ease: 'power3.out',
+          opacity: 1, y: 0, duration: 1, ease: 'power3.out',
           scrollTrigger: {
             trigger: '#scroll-root',
-            start: '88% top',
+            start: '90% top',
             end: '100% top',
             toggleActions: 'play none none reverse',
           },
@@ -32,82 +28,56 @@ export default function ContactOverlay() {
   return (
     <div
       ref={ref}
-      className="fixed inset-0 z-20 pointer-events-none flex flex-col items-center justify-center"
-      style={{ background: 'linear-gradient(180deg, transparent 0%, rgba(8,13,11,0.85) 30%)', opacity: 0 }}
+      className="fixed inset-0 z-20 flex items-center justify-center"
+      style={{
+        opacity: 0,
+        pointerEvents: 'none',
+        background: 'rgba(248,249,245,0.9)',
+        backdropFilter: 'blur(4px)',
+      }}
     >
-      <div className="pointer-events-auto text-center max-w-xl px-8">
-        <div className="label-tag mb-6">Contact · お問い合わせ</div>
+      <div
+        className="pointer-events-auto text-center max-w-lg px-8"
+        style={{ background: 'rgba(255,255,255,0.98)', borderRadius: '8px', padding: '3rem 2.5rem', border: '1px solid #E0E8D8', boxShadow: '0 8px 48px rgba(0,0,0,0.08)' }}
+      >
+        <div className="label-tag mb-4">お問い合わせ · Contact</div>
 
-        <h2
-          className="font-display text-white mb-3"
-          style={{ fontSize: 'clamp(2rem, 6vw, 4.5rem)', fontWeight: 400, lineHeight: 1.1 }}
-        >
-          未来の医療へ
+        <h2 className="font-display mb-2" style={{ fontSize: 'clamp(1.8rem, 4vw, 2.8rem)', color: '#1C2016', fontWeight: 400 }}>
+          お気軽にご相談を
         </h2>
-        <h2
-          className="font-display mb-8"
-          style={{
-            fontSize: 'clamp(1.2rem, 3vw, 2.2rem)',
-            fontWeight: 300,
-            background: 'linear-gradient(135deg, #c9a84c, #52b788)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
-            letterSpacing: '0.06em',
-          }}
-        >
-          A New Standard in Care
-        </h2>
-
-        <div className="divider-gold mb-8" />
-
-        <p
-          className="font-body text-white/40 font-light mb-10 leading-relaxed"
-          style={{ fontSize: '0.85rem' }}
-        >
-          Whether you are seeking healing, rehabilitation, community care,
-          or exploring the future of healthcare with BIO PARK —
-          we are here for every step.
-        </p>
-
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
-          <button className="btn-glass">
-            施設見学を予約する
-          </button>
-          <button
-            className="font-body text-white/40 hover:text-white/70 transition-colors duration-300"
-            style={{ fontSize: '0.75rem', letterSpacing: '0.1em', background: 'none', border: 'none', cursor: 'pointer' }}
-          >
-            資料をダウンロード →
-          </button>
+        <div className="jp-text mb-6" style={{ fontSize: '0.85rem', color: '#6AB628', fontWeight: 500 }}>
+          Ito Medical Care Co., Ltd.
         </div>
 
-        {/* Contact info grid */}
-        <div className="grid grid-cols-3 gap-6 mt-8">
+        <div className="divider-green mb-6" />
+
+        <p className="jp-text mb-8" style={{ fontSize: '0.85rem', color: '#4A5240', lineHeight: 2 }}>
+          鍼灸・整骨・在宅リハビリまで、<br />
+          地域の皆さまの健康をトータルにサポートします。<br />
+          まずはお気軽にお電話ください。
+        </p>
+
+        <div className="grid grid-cols-2 gap-3 mb-8">
           {[
-            { label: '電話', value: '03-0000-0000', en: 'Phone' },
-            { label: '住所', value: '東京都', en: 'Location' },
-            { label: '受付時間', value: '9:00-18:00', en: 'Hours' },
+            { label: '本社・本院', tel: '0438-75-7886' },
+            { label: 'ストレッチ院', tel: '0438-53-8853' },
+            { label: 'SANRI院', tel: '0439-32-1771' },
+            { label: 'リハビリ', tel: '0438-75-7737' },
           ].map((item) => (
-            <div key={item.label} className="text-center">
-              <div className="label-tag mb-1">{item.en}</div>
-              <div className="jp-text text-white/60" style={{ fontSize: '0.75rem' }}>{item.label}</div>
-              <div className="font-body text-white/40 font-light" style={{ fontSize: '0.7rem', marginTop: '0.25rem' }}>
-                {item.value}
-              </div>
-            </div>
+            <a
+              key={item.label}
+              href={`tel:${item.tel.replace(/-/g, '')}`}
+              className="card-accent jp-text no-underline"
+              style={{ padding: '0.8rem 1rem', display: 'block' }}
+            >
+              <div style={{ fontSize: '0.62rem', color: '#8A9280', marginBottom: '0.2rem' }}>{item.label}</div>
+              <div style={{ fontSize: '0.9rem', color: '#1C2016', fontWeight: 600 }}>☎ {item.tel}</div>
+            </a>
           ))}
         </div>
 
-        {/* Bottom brand mark */}
-        <div className="mt-16 flex flex-col items-center gap-2">
-          <div className="divider-gold" style={{ width: '60px' }} />
-          <div className="font-display text-white/20" style={{ fontSize: '0.7rem', letterSpacing: '0.3em' }}>
-            伊藤医療 · Ito Medical Care
-          </div>
-          <div className="label-tag text-white/15" style={{ fontSize: '0.5rem' }}>
-            © 2025 All Rights Reserved
-          </div>
+        <div className="label-tag" style={{ color: '#B0B8A8', fontSize: '0.52rem' }}>
+          © 2025 有限会社イトーメディカルケア · All Rights Reserved
         </div>
       </div>
     </div>

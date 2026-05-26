@@ -1,98 +1,126 @@
-import { useEffect, useState } from 'react'
+import { Link, useLocation } from 'react-router-dom'
+import { useState } from 'react'
 
-const navItems = [
-  { label: '鍼灸', en: 'Acupuncture', href: '#acupuncture' },
-  { label: 'リハビリ', en: 'Rehab', href: '#rehab' },
-  { label: 'グループホーム', en: 'Group Home', href: '#grouphome' },
-  { label: 'BIO PARK', en: 'Bio Park', href: '#biopark' },
+const clinics = [
+  { label: '本院', path: '/honin' },
+  { label: 'ストレッチ院', path: '/stretch' },
+  { label: 'SANRI院', path: '/sanri' },
+  { label: 'リハビリ', path: '/reha' },
 ]
 
-export default function Navigation({ scrollProgress }) {
-  const [visible, setVisible] = useState(true)
-  const [lastScroll, setLastScroll] = useState(0)
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const current = window.scrollY
-      setVisible(current < lastScroll || current < 100)
-      setLastScroll(current)
-    }
-
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [lastScroll])
+export default function Navigation({ isPage = false }) {
+  const [menuOpen, setMenuOpen] = useState(false)
+  const location = useLocation()
+  const isHome = location.pathname === '/'
 
   return (
     <nav
-      className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-8 py-5 transition-all duration-700"
+      className="page-header"
       style={{
-        background: 'linear-gradient(180deg, rgba(8,13,11,0.9) 0%, transparent 100%)',
-        opacity: visible ? 1 : 0,
-        transform: `translateY(${visible ? 0 : -20}px)`,
+        zIndex: isPage ? 50 : 40,
+        background: isPage
+          ? 'rgba(248,249,245,0.98)'
+          : 'rgba(248,249,245,0.88)',
       }}
     >
-      {/* Logo */}
-      <div className="flex items-center gap-4">
-        <div className="w-8 h-8 relative">
+      <div className="max-w-5xl mx-auto px-5 h-14 flex items-center justify-between">
+        {/* Logo */}
+        <Link to="/" className="flex items-center gap-3 no-underline">
           <div
-            className="w-full h-full rounded-full"
-            style={{
-              background: 'conic-gradient(from 0deg, #2d8653, #c9a84c, #52b788, #2d8653)',
-              animation: 'spin 8s linear infinite',
-            }}
-          />
-          <div
-            className="absolute inset-1 rounded-full"
-            style={{ background: '#080d0b' }}
-          />
-          <div
-            className="absolute inset-2.5 rounded-full"
-            style={{ background: '#52b788', boxShadow: '0 0 8px #52b788' }}
-          />
-        </div>
-        <div>
-          <div className="text-xs font-display text-gold tracking-widest">伊藤医療</div>
-          <div className="text-xs font-body text-white/40 tracking-[0.2em] uppercase" style={{ fontSize: '0.55rem' }}>
-            Ito Medical Care
-          </div>
-        </div>
-      </div>
-
-      {/* Nav links */}
-      <div className="hidden md:flex items-center gap-8">
-        {navItems.map((item) => (
-          <a
-            key={item.href}
-            href={item.href}
-            onClick={(e) => {
-              e.preventDefault()
-              const el = document.querySelector(item.href)
-              if (el) el.scrollIntoView({ behavior: 'smooth' })
-            }}
-            className="group flex flex-col items-center gap-0.5 cursor-pointer"
+            className="w-7 h-7 rounded-full flex items-center justify-center"
+            style={{ background: '#6AB628' }}
           >
-            <span
-              className="jp-text text-white/50 group-hover:text-white/90 transition-colors duration-300"
-              style={{ fontSize: '0.7rem' }}
+            <div className="w-2.5 h-2.5 rounded-full bg-white" />
+          </div>
+          <div>
+            <div
+              className="jp-text font-bold leading-tight"
+              style={{ fontSize: '0.78rem', color: '#1C2016', letterSpacing: '0.05em' }}
             >
-              {item.label}
-            </span>
-            <span
-              className="label-tag opacity-0 group-hover:opacity-60 transition-all duration-300"
-              style={{ fontSize: '0.55rem' }}
-            >
-              {item.en}
-            </span>
-          </a>
-        ))}
-      </div>
+              有限会社イトーメディカルケア
+            </div>
+            <div className="label-tag" style={{ fontSize: '0.52rem' }}>Ito Medical Care Co., Ltd.</div>
+          </div>
+        </Link>
 
-      {/* CTA */}
-      <div className="flex items-center gap-4">
-        <button className="btn-glass" style={{ padding: '0.5rem 1.5rem', fontSize: '0.6rem' }}>
-          お問い合わせ
+        {/* Desktop nav */}
+        <div className="hidden md:flex items-center gap-1">
+          {clinics.map((c) => (
+            <Link
+              key={c.path}
+              to={c.path}
+              className="jp-text no-underline px-3 py-1.5 rounded transition-all duration-200"
+              style={{
+                fontSize: '0.78rem',
+                color: location.pathname === c.path ? '#6AB628' : '#4A5240',
+                fontWeight: location.pathname === c.path ? '600' : '400',
+                background: location.pathname === c.path ? '#EFF8E8' : 'transparent',
+              }}
+            >
+              {c.label}
+            </Link>
+          ))}
+          <a href="tel:0438757886" className="btn-primary ml-3" style={{ padding: '0.45rem 1.2rem', fontSize: '0.75rem' }}>
+            ☎ お問い合わせ
+          </a>
+        </div>
+
+        {/* Mobile hamburger */}
+        <button
+          className="md:hidden p-2"
+          onClick={() => setMenuOpen(!menuOpen)}
+          style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+        >
+          <div className="flex flex-col gap-1.5">
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                style={{
+                  width: '22px',
+                  height: '2px',
+                  background: '#1C2016',
+                  transition: 'all 0.3s',
+                  transform: menuOpen && i === 0 ? 'rotate(45deg) translateY(7px)' :
+                             menuOpen && i === 1 ? 'scaleX(0)' :
+                             menuOpen && i === 2 ? 'rotate(-45deg) translateY(-7px)' : 'none',
+                }}
+              />
+            ))}
+          </div>
         </button>
       </div>
+
+      {/* Mobile menu */}
+      {menuOpen && (
+        <div
+          className="md:hidden border-t"
+          style={{ borderColor: '#E8EDE4', background: 'rgba(248,249,245,0.98)' }}
+        >
+          {clinics.map((c) => (
+            <Link
+              key={c.path}
+              to={c.path}
+              onClick={() => setMenuOpen(false)}
+              className="block jp-text no-underline px-5 py-3"
+              style={{
+                fontSize: '0.9rem',
+                color: location.pathname === c.path ? '#6AB628' : '#1C2016',
+                fontWeight: location.pathname === c.path ? '600' : '400',
+                borderBottom: '1px solid #F0F2EE',
+              }}
+            >
+              {c.label}
+            </Link>
+          ))}
+          <a
+            href="tel:0438757886"
+            className="block jp-text no-underline px-5 py-3 font-medium"
+            style={{ color: '#6AB628', fontSize: '0.9rem' }}
+          >
+            ☎ 0438-75-7886
+          </a>
+        </div>
+      )}
     </nav>
   )
 }

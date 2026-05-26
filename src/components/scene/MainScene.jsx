@@ -1,382 +1,298 @@
 import { useRef, useMemo, Suspense } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Float, Stars, Environment } from '@react-three/drei'
-import { EffectComposer, Bloom, Vignette, ChromaticAberration } from '@react-three/postprocessing'
+import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing'
 import { BlendFunction } from 'postprocessing'
 import * as THREE from 'three'
 
-import ParticleField from './ParticleField'
-import AcupunctureZone from './AcupunctureZone'
-import RehabZone from './RehabZone'
-import GroupHomeZone from './GroupHomeZone'
-import BioParkZone from './BioParkZone'
-
-// Hero architectural elements
-function HeroGeometry() {
-  const ringRef = useRef()
-  const ring2Ref = useRef()
-  const coreRef = useRef()
-
-  useFrame(({ clock }) => {
-    const t = clock.elapsedTime
-    if (ringRef.current) {
-      ringRef.current.rotation.x = t * 0.08
-      ringRef.current.rotation.y = t * 0.12
+// ── Floor with subtle green grid ──────────────────────────────────
+function Floor() {
+  const linesH = useMemo(() => {
+    const geos = []
+    for (let i = 0; i <= 60; i++) {
+      const z = -i
+      const pts = [new THREE.Vector3(-4, -1.41, z), new THREE.Vector3(4, -1.41, z)]
+      geos.push(new THREE.BufferGeometry().setFromPoints(pts))
     }
-    if (ring2Ref.current) {
-      ring2Ref.current.rotation.x = -t * 0.06
-      ring2Ref.current.rotation.z = t * 0.09
+    return geos
+  }, [])
+
+  const linesV = useMemo(() => {
+    const geos = []
+    for (let x = -4; x <= 4; x++) {
+      const pts = [new THREE.Vector3(x, -1.41, 0), new THREE.Vector3(x, -1.41, -60)]
+      geos.push(new THREE.BufferGeometry().setFromPoints(pts))
     }
-    if (coreRef.current) {
-      coreRef.current.rotation.y = t * 0.2
-      coreRef.current.scale.setScalar(1 + Math.sin(t * 0.5) * 0.04)
-    }
-  })
-
-  return (
-    <group position={[0, 0, 2]}>
-      {/* Central glowing core */}
-      <mesh ref={coreRef}>
-        <icosahedronGeometry args={[0.5, 1]} />
-        <meshStandardMaterial
-          color="#52b788"
-          emissive="#52b788"
-          emissiveIntensity={1.2}
-          wireframe
-          transparent
-          opacity={0.5}
-        />
-      </mesh>
-
-      {/* Primary orbit ring */}
-      <mesh ref={ringRef} rotation={[0.5, 0, 0.2]}>
-        <torusGeometry args={[2.2, 0.018, 16, 150]} />
-        <meshStandardMaterial
-          color="#c9a84c"
-          emissive="#c9a84c"
-          emissiveIntensity={0.8}
-          metalness={0.9}
-          roughness={0.05}
-        />
-      </mesh>
-
-      {/* Secondary orbit ring */}
-      <mesh ref={ring2Ref} rotation={[-0.3, 0.4, 0]}>
-        <torusGeometry args={[3.2, 0.01, 8, 120]} />
-        <meshStandardMaterial
-          color="#52b788"
-          emissive="#52b788"
-          emissiveIntensity={0.5}
-          transparent
-          opacity={0.6}
-        />
-      </mesh>
-
-      {/* Outer halo */}
-      <Float speed={0.3} rotationIntensity={0.1}>
-        <mesh rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[4.5, 0.006, 8, 180]} />
-          <meshStandardMaterial
-            color="#1a5c3a"
-            emissive="#2d8653"
-            emissiveIntensity={0.4}
-            transparent
-            opacity={0.4}
-          />
-        </mesh>
-      </Float>
-
-      {/* Orbital dots */}
-      {Array.from({ length: 8 }, (_, i) => {
-        const angle = (i / 8) * Math.PI * 2
-        return (
-          <mesh key={i} position={[Math.cos(angle) * 2.2, Math.sin(angle) * 2.2, 0]}>
-            <sphereGeometry args={[0.06, 8, 8]} />
-            <meshStandardMaterial
-              color="#e8c97a"
-              emissive="#e8c97a"
-              emissiveIntensity={1.5}
-            />
-          </mesh>
-        )
-      })}
-    </group>
-  )
-}
-
-// Ambient floating geometry throughout the scene
-function AmbientFloaters() {
-  const floaters = useMemo(() => {
-    return Array.from({ length: 30 }, (_, i) => ({
-      position: [
-        (Math.random() - 0.5) * 16,
-        (Math.random() - 0.5) * 6,
-        -5 - Math.random() * 55,
-      ],
-      scale: 0.05 + Math.random() * 0.25,
-      color: Math.random() > 0.5 ? '#1a5c3a' : '#0d3320',
-      emissive: Math.random() > 0.7 ? '#52b788' : '#2d8653',
-      emissiveIntensity: 0.1 + Math.random() * 0.3,
-      speed: 0.1 + Math.random() * 0.3,
-      delay: Math.random() * Math.PI * 2,
-      type: Math.floor(Math.random() * 3),
-    }))
+    return geos
   }, [])
 
   return (
     <group>
-      {floaters.map((f, i) => (
-        <Float key={i} speed={f.speed * 2} floatIntensity={0.3} rotationIntensity={0.2}>
-          <mesh position={f.position} scale={f.scale}>
-            {f.type === 0 && <octahedronGeometry args={[1, 0]} />}
-            {f.type === 1 && <tetrahedronGeometry args={[1, 0]} />}
-            {f.type === 2 && <icosahedronGeometry args={[1, 0]} />}
-            <meshStandardMaterial
-              color={f.color}
-              emissive={f.emissive}
-              emissiveIntensity={f.emissiveIntensity}
-              metalness={0.5}
-              roughness={0.3}
-              transparent
-              opacity={0.5}
-              wireframe={Math.random() > 0.5}
-            />
-          </mesh>
-        </Float>
+      {/* Floor plane */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1.42, -28]}>
+        <planeGeometry args={[8, 60]} />
+        <meshStandardMaterial color="#EBEBEA" roughness={0.5} metalness={0.08} />
+      </mesh>
+      {/* Grid lines */}
+      {linesH.map((geo, i) => (
+        <line key={`h${i}`} geometry={geo}>
+          <lineBasicMaterial color="#6AB628" transparent opacity={0.07} />
+        </line>
       ))}
-    </group>
-  )
-}
-
-// Architectural floor grid
-function FloorGrid() {
-  const gridLines = useMemo(() => {
-    const lines = []
-    const count = 20
-    const size = 16
-    const depth = 70
-
-    // Z lines (going into the scene)
-    for (let i = 0; i <= count; i++) {
-      const x = -size / 2 + (i / count) * size
-      lines.push([
-        new THREE.Vector3(x, -2.5, 0),
-        new THREE.Vector3(x, -2.5, -depth),
-      ])
-    }
-
-    // X lines (cross lines) at intervals
-    for (let j = 0; j <= 30; j++) {
-      const z = -(j / 30) * depth
-      lines.push([
-        new THREE.Vector3(-size / 2, -2.5, z),
-        new THREE.Vector3(size / 2, -2.5, z),
-      ])
-    }
-
-    return lines.map((pts) => new THREE.BufferGeometry().setFromPoints(pts))
-  }, [])
-
-  return (
-    <group>
-      {gridLines.map((geo, i) => (
-        <line key={i} geometry={geo}>
-          <lineBasicMaterial
-            color="#1a5c3a"
-            transparent
-            opacity={0.08}
-          />
+      {linesV.map((geo, i) => (
+        <line key={`v${i}`} geometry={geo}>
+          <lineBasicMaterial color="#6AB628" transparent opacity={0.07} />
         </line>
       ))}
     </group>
   )
 }
 
-// Wall/ceiling elements for architectural feel
-function ArchitecturalWalls() {
-  const leftPanels = useMemo(() => {
-    return Array.from({ length: 8 }, (_, i) => ({
-      z: -5 - i * 8,
-      x: -7.5,
-      w: 0.01,
-      h: 5,
-      opacity: 0.04 + Math.random() * 0.04,
-    }))
-  }, [])
+// ── Ceiling ───────────────────────────────────────────────────────
+function Ceiling() {
+  return (
+    <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 2.3, -28]}>
+      <planeGeometry args={[8, 60]} />
+      <meshStandardMaterial color="#F8F8F8" roughness={0.95} />
+    </mesh>
+  )
+}
 
-  const rightPanels = useMemo(() => {
-    return Array.from({ length: 8 }, (_, i) => ({
-      z: -5 - i * 8,
-      x: 7.5,
-      w: 0.01,
-      h: 5,
-      opacity: 0.04 + Math.random() * 0.04,
-    }))
-  }, [])
+// ── Walls ─────────────────────────────────────────────────────────
+function Walls() {
+  return (
+    <>
+      {/* Left wall */}
+      <mesh position={[-4, 0.44, -28]} rotation={[0, Math.PI / 2, 0]}>
+        <planeGeometry args={[60, 3.8]} />
+        <meshStandardMaterial color="#F2F2F0" roughness={0.95} />
+      </mesh>
+      {/* Right wall */}
+      <mesh position={[4, 0.44, -28]} rotation={[0, -Math.PI / 2, 0]}>
+        <planeGeometry args={[60, 3.8]} />
+        <meshStandardMaterial color="#F2F2F0" roughness={0.95} />
+      </mesh>
+      {/* Back end wall */}
+      <mesh position={[0, 0.44, -58]}>
+        <planeGeometry args={[8, 3.8]} />
+        <meshStandardMaterial color="#EEEEEC" roughness={0.95} />
+      </mesh>
+      {/* Front entrance frame */}
+      <mesh position={[0, 0.44, 1]}>
+        <planeGeometry args={[8, 3.8]} />
+        <meshStandardMaterial color="#F5F5F2" roughness={0.95} />
+      </mesh>
+    </>
+  )
+}
+
+// ── Baseboard trim (green accent line) ───────────────────────────
+function Baseboards() {
+  const lines = useMemo(() => [
+    // Left baseboard
+    [new THREE.Vector3(-3.99, -1.2, 0), new THREE.Vector3(-3.99, -1.2, -58)],
+    // Right baseboard
+    [new THREE.Vector3(3.99, -1.2, 0), new THREE.Vector3(3.99, -1.2, -58)],
+  ], [])
+
+  return (
+    <>
+      {lines.map((pts, i) => {
+        const geo = new THREE.BufferGeometry().setFromPoints(pts)
+        return (
+          <line key={i} geometry={geo}>
+            <lineBasicMaterial color="#6AB628" transparent opacity={0.5} />
+          </line>
+        )
+      })}
+    </>
+  )
+}
+
+// ── Ceiling light strips ──────────────────────────────────────────
+function CeilingLights() {
+  const positions = [-4, -11, -18, -25, -32, -39, -46, -53]
+
+  return (
+    <>
+      {positions.map((z, i) => (
+        <group key={i} position={[0, 2.25, z]}>
+          {/* Emissive light panel */}
+          <mesh rotation={[Math.PI / 2, 0, 0]}>
+            <planeGeometry args={[1.8, 0.12]} />
+            <meshBasicMaterial color="#D4FF80" transparent opacity={0.9} />
+          </mesh>
+          <pointLight color="#C8FF60" intensity={0.7} distance={6} decay={2} />
+        </group>
+      ))}
+    </>
+  )
+}
+
+// ── Door / clinic entrance glows ─────────────────────────────────
+const CLINIC_DOORS = [
+  { z: -10, side: 'left',  color: '#80D020', label: '本院' },
+  { z: -22, side: 'right', color: '#72CC18', label: 'ストレッチ' },
+  { z: -34, side: 'left',  color: '#88D828', label: 'SANRI' },
+  { z: -46, side: 'right', color: '#6CC420', label: 'リハビリ' },
+]
+
+function ClinicDoor({ z, side, color }) {
+  const x = side === 'left' ? -3.98 : 3.98
+  const rotY = side === 'left' ? Math.PI / 2 : -Math.PI / 2
+  const lightX = side === 'left' ? -2.5 : 2.5
+  const doorRef = useRef()
+
+  useFrame(({ clock }) => {
+    if (!doorRef.current) return
+    doorRef.current.material.opacity = 0.12 + Math.sin(clock.elapsedTime * 0.8) * 0.04
+  })
 
   return (
     <group>
-      {[...leftPanels, ...rightPanels].map((p, i) => (
-        <mesh key={i} position={[p.x, 0, p.z]}>
-          <planeGeometry args={[0.5, p.h]} />
-          <meshStandardMaterial
-            color="#52b788"
-            transparent
-            opacity={p.opacity}
-            emissive="#1a5c3a"
-            emissiveIntensity={0.5}
-            side={THREE.DoubleSide}
-          />
-        </mesh>
-      ))}
+      {/* Door glow panel */}
+      <mesh ref={doorRef} position={[x, 0.3, z]} rotation={[0, rotY, 0]}>
+        <planeGeometry args={[2.8, 2.6]} />
+        <meshBasicMaterial color={color} transparent opacity={0.14} side={THREE.DoubleSide} />
+      </mesh>
+      {/* Door frame top line */}
+      <mesh position={[x * 0.98, 1.65, z]} rotation={[0, rotY, 0]}>
+        <planeGeometry args={[2.8, 0.04]} />
+        <meshBasicMaterial color={color} />
+      </mesh>
+      {/* Door frame side lines */}
+      {[-1.38, 1.38].map((dx, i) => {
+        const pts = side === 'left'
+          ? [new THREE.Vector3(x * 0.97, -1.4, z + dx), new THREE.Vector3(x * 0.97, 1.65, z + dx)]
+          : [new THREE.Vector3(x * 0.97, -1.4, z + dx), new THREE.Vector3(x * 0.97, 1.65, z + dx)]
+        const geo = new THREE.BufferGeometry().setFromPoints(pts)
+        return (
+          <line key={i} geometry={geo}>
+            <lineBasicMaterial color={color} transparent opacity={0.7} />
+          </line>
+        )
+      })}
+      {/* Room light spilling in */}
+      <pointLight position={[lightX, 0.2, z]} color={color} intensity={4} distance={7} decay={2} />
+      {/* Floor light pool */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[lightX * 0.6, -1.4, z]}>
+        <circleGeometry args={[1.2, 32]} />
+        <meshBasicMaterial color={color} transparent opacity={0.1} depthWrite={false} />
+      </mesh>
     </group>
   )
 }
 
-// Scroll-driven camera rig
-function CameraRig({ scrollRef }) {
-  const { camera } = useThree()
+// ── Ambient floating dust particles ──────────────────────────────
+function DustParticles({ count = 600 }) {
+  const meshRef = useRef()
 
-  const camCurve = useMemo(() => new THREE.CatmullRomCurve3([
-    new THREE.Vector3(0, 0.6, 10),      // 0.0 - Hero entrance
-    new THREE.Vector3(-0.5, 0.5, 6),    // ~0.05 - Pull back
-    new THREE.Vector3(-4.5, 0.8, 0),    // ~0.2 - Zone 1 approach
-    new THREE.Vector3(-4, 0.5, -7),     // ~0.3 - Zone 1 mid
-    new THREE.Vector3(1, 0, -18),       // ~0.42 - Zone 2 approach
-    new THREE.Vector3(3.5, -0.2, -24),  // ~0.5 - Zone 2 mid
-    new THREE.Vector3(2, 0, -30),       // ~0.58 - transition
-    new THREE.Vector3(-3, 0.5, -38),    // ~0.67 - Zone 3 approach
-    new THREE.Vector3(-4, 0.5, -44),    // ~0.75 - Zone 3 mid
-    new THREE.Vector3(1, 0.3, -52),     // ~0.85 - Zone 4 approach
-    new THREE.Vector3(-3, 0.5, -57),    // ~0.93 - Zone 4 mid
-    new THREE.Vector3(0, 0.5, -62),     // 1.0 - End
-  ]), [])
-
-  const lookCurve = useMemo(() => new THREE.CatmullRomCurve3([
-    new THREE.Vector3(0, 0, 2),
-    new THREE.Vector3(-0.5, 0, 0),
-    new THREE.Vector3(-3, 0, -5),
-    new THREE.Vector3(-3, 0, -13),
-    new THREE.Vector3(0, 0, -22),
-    new THREE.Vector3(2, 0, -30),
-    new THREE.Vector3(0, 0, -35),
-    new THREE.Vector3(-2, 0, -44),
-    new THREE.Vector3(-3, 0, -50),
-    new THREE.Vector3(0, 0, -58),
-    new THREE.Vector3(-1, 0, -63),
-    new THREE.Vector3(0, 0, -70),
-  ]), [])
-
-  const lookTarget = useRef(new THREE.Vector3(0, 0, 2))
+  const { positions, speeds } = useMemo(() => {
+    const pos = new Float32Array(count * 3)
+    const spd = new Float32Array(count)
+    for (let i = 0; i < count; i++) {
+      pos[i * 3]     = (Math.random() - 0.5) * 7
+      pos[i * 3 + 1] = (Math.random() - 0.5) * 3.5
+      pos[i * 3 + 2] = -Math.random() * 55
+      spd[i] = 0.001 + Math.random() * 0.002
+    }
+    return { positions: pos, speeds: spd }
+  }, [count])
 
   useFrame(() => {
-    const t = Math.min(Math.max(scrollRef.current, 0), 1)
-    const targetPos = camCurve.getPoint(t)
-    const targetLook = lookCurve.getPoint(t)
+    if (!meshRef.current) return
+    const pos = meshRef.current.geometry.attributes.position.array
+    for (let i = 0; i < count; i++) {
+      pos[i * 3 + 1] += speeds[i]
+      pos[i * 3]     += (Math.random() - 0.5) * 0.001
+      if (pos[i * 3 + 1] > 1.8) {
+        pos[i * 3 + 1] = -1.4
+        pos[i * 3]     = (Math.random() - 0.5) * 7
+      }
+    }
+    meshRef.current.geometry.attributes.position.needsUpdate = true
+  })
 
-    camera.position.lerp(targetPos, 0.04)
-    lookTarget.current.lerp(targetLook, 0.04)
-    camera.lookAt(lookTarget.current)
+  return (
+    <points ref={meshRef}>
+      <bufferGeometry>
+        <bufferAttribute attach="attributes-position" array={positions} count={count} itemSize={3} />
+      </bufferGeometry>
+      <pointsMaterial size={0.02} color="#9AE040" transparent opacity={0.4} sizeAttenuation depthWrite={false} />
+    </points>
+  )
+}
+
+// ── Scroll-driven camera (straight corridor) ──────────────────────
+function CameraRig({ scrollRef }) {
+  const { camera } = useThree()
+  const breathY = useRef(0)
+
+  useFrame(({ clock }) => {
+    const t = Math.min(Math.max(scrollRef.current, 0), 1)
+    // Move straight down corridor: Z from 6 to -52
+    const targetZ = 6 - t * 58
+    const targetX = Math.sin(t * Math.PI * 0.5) * 0.3 // gentle sway
+    breathY.current = Math.sin(clock.elapsedTime * 0.4) * 0.04
+
+    camera.position.x += (targetX - camera.position.x) * 0.04
+    camera.position.y += (0.1 + breathY.current - camera.position.y) * 0.06
+    camera.position.z += (targetZ - camera.position.z) * 0.04
+
+    camera.lookAt(camera.position.x * 0.5, 0.05, camera.position.z - 8)
   })
 
   return null
 }
 
-// Fog that changes density across zones
+// ── Fog ──────────────────────────────────────────────────────────
 function SceneFog() {
   const { scene } = useThree()
-
-  useMemo(() => {
-    scene.fog = new THREE.FogExp2('#080d0b', 0.022)
-  }, [scene])
-
+  useMemo(() => { scene.fog = new THREE.Fog('#F5F5F2', 18, 55) }, [scene])
   return null
 }
 
+// ── Main export ──────────────────────────────────────────────────
 export default function MainScene({ scrollRef }) {
   return (
     <Canvas
-      style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%' }}
-      camera={{ position: [0, 0.6, 10], fov: 60, near: 0.1, far: 200 }}
-      gl={{ antialias: true, alpha: false, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.2 }}
+      style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', zIndex: 0 }}
+      camera={{ position: [0, 0.1, 6], fov: 65, near: 0.1, far: 120 }}
+      gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.1 }}
       dpr={[1, 2]}
     >
       <SceneFog />
+      <color attach="background" args={['#F5F5F2']} />
 
-      {/* Scene background */}
-      <color attach="background" args={['#080d0b']} />
+      {/* Lighting */}
+      <ambientLight intensity={0.7} color="#FFFFFF" />
+      <directionalLight position={[0, 6, 2]} intensity={0.8} color="#FFFFFF" castShadow />
+      <directionalLight position={[0, 4, -20]} intensity={0.4} color="#E8FFD0" />
+      <directionalLight position={[0, 4, -45]} intensity={0.3} color="#E8FFD0" />
 
-      {/* Global ambient light - very dim */}
-      <ambientLight intensity={0.08} color="#0d3320" />
-
-      {/* Main directional fill */}
-      <directionalLight
-        position={[5, 8, 5]}
-        intensity={0.4}
-        color="#c9f0d8"
-      />
-
-      {/* Deep scene fill */}
-      <directionalLight
-        position={[-5, -2, -10]}
-        intensity={0.15}
-        color="#1a5c3a"
-      />
-
-      {/* Camera control */}
       <CameraRig scrollRef={scrollRef} />
 
-      {/* Environment */}
-      <Stars radius={80} depth={50} count={1500} factor={2} saturation={0.3} fade speed={0.5} />
-
       <Suspense fallback={null}>
-        {/* Ground plane grid */}
-        <FloorGrid />
-        <ArchitecturalWalls />
+        <Floor />
+        <Ceiling />
+        <Walls />
+        <Baseboards />
+        <CeilingLights />
+        <DustParticles />
 
-        {/* Hero entrance */}
-        <HeroGeometry />
+        {CLINIC_DOORS.map((door) => (
+          <ClinicDoor key={door.z} {...door} />
+        ))}
 
-        {/* Ambient floating objects throughout */}
-        <AmbientFloaters />
-
-        {/* Global particle field */}
-        <ParticleField count={3000} spread={45} />
-
-        {/* Zone 1 — Acupuncture */}
-        <AcupunctureZone />
-
-        {/* Zone 2 — Rehabilitation */}
-        <RehabZone />
-
-        {/* Zone 3 — Group Home */}
-        <GroupHomeZone />
-
-        {/* Zone 4 — BIO PARK */}
-        <BioParkZone />
-
-        {/* Post-processing */}
         <EffectComposer multisampling={0}>
           <Bloom
-            intensity={1.4}
-            luminanceThreshold={0.2}
-            luminanceSmoothing={0.8}
+            intensity={0.6}
+            luminanceThreshold={0.7}
+            luminanceSmoothing={0.9}
             blendFunction={BlendFunction.ADD}
             mipmapBlur
-            radius={0.6}
+            radius={0.4}
           />
-          <Vignette
-            offset={0.3}
-            darkness={0.7}
-            eskil={false}
-            blendFunction={BlendFunction.NORMAL}
-          />
-          <ChromaticAberration
-            blendFunction={BlendFunction.NORMAL}
-            offset={[0.0008, 0.0008]}
-            radialModulation={false}
-            modulationOffset={0}
-          />
+          <Vignette offset={0.25} darkness={0.35} blendFunction={BlendFunction.NORMAL} />
         </EffectComposer>
       </Suspense>
     </Canvas>

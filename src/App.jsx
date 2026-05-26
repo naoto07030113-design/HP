@@ -1,78 +1,75 @@
-import { useRef, useState, useCallback } from 'react'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { useState, useCallback } from 'react'
+
 import { useLenis } from './hooks/useLenis'
 import { useScrollProgress } from './hooks/useScrollProgress'
 import MainScene from './components/scene/MainScene'
 import Navigation from './components/ui/Navigation'
 import HeroOverlay from './components/ui/HeroOverlay'
-import SectionLabels from './components/ui/SectionLabels'
 import ScrollProgress from './components/ui/ScrollProgress'
 import ContactOverlay from './components/ui/ContactOverlay'
 import LoadingScreen from './components/ui/LoadingScreen'
+import { ClinicCard, CLINICS } from './components/ui/ClinicCard'
 
-export default function App() {
+import HoninPage from './pages/HoninPage'
+import StretchPage from './pages/StretchPage'
+import SanriPage from './pages/SanriPage'
+import RehaPage from './pages/RehaPage'
+
+function HomePage() {
   const [loaded, setLoaded] = useState(false)
-
   useLenis()
   const scrollRef = useScrollProgress()
-
-  const handleLoadComplete = useCallback(() => {
-    setLoaded(true)
-  }, [])
+  const handleLoad = useCallback(() => setLoaded(true), [])
 
   return (
-    <div style={{ background: '#080d0b' }}>
-      {/* Loading screen */}
-      {!loaded && <LoadingScreen onComplete={handleLoadComplete} />}
+    <div style={{ background: '#F8F9F5' }}>
+      {!loaded && <LoadingScreen onComplete={handleLoad} />}
 
-      {/* Fixed 3D canvas — always behind everything */}
+      {/* Fixed 3D canvas */}
       <MainScene scrollRef={scrollRef} />
 
-      {/* Fixed UI layer */}
-      <Navigation scrollRef={scrollRef} />
+      {/* Fixed UI overlays */}
+      <Navigation />
       <HeroOverlay />
-      <SectionLabels />
       <ScrollProgress scrollRef={scrollRef} />
+
+      {/* Clinic info cards — one per zone */}
+      {CLINICS.map((clinic) => (
+        <ClinicCard
+          key={clinic.path}
+          clinic={clinic}
+          side={clinic.side}
+          triggerStart={clinic.triggerStart}
+          triggerEnd={clinic.triggerEnd}
+        />
+      ))}
+
       <ContactOverlay />
 
-      {/* Scrollable container that drives camera animation */}
-      {/* Sections are transparent — they only exist to create scroll distance */}
+      {/* Scrollable spacer — drives camera + ScrollTrigger */}
       <div id="scroll-root" style={{ position: 'relative', zIndex: 10 }}>
-        {/* Hero */}
-        <section
-          id="hero"
-          style={{ height: '100vh', pointerEvents: 'none' }}
-        />
-
-        {/* Zone 1 — Acupuncture */}
-        <section
-          id="acupuncture"
-          style={{ height: '120vh', pointerEvents: 'none' }}
-        />
-
-        {/* Zone 2 — Rehab */}
-        <section
-          id="rehab"
-          style={{ height: '120vh', pointerEvents: 'none' }}
-        />
-
-        {/* Zone 3 — Group Home */}
-        <section
-          id="grouphome"
-          style={{ height: '120vh', pointerEvents: 'none' }}
-        />
-
-        {/* Zone 4 — BIO PARK */}
-        <section
-          id="biopark"
-          style={{ height: '120vh', pointerEvents: 'none' }}
-        />
-
-        {/* Contact */}
-        <section
-          id="contact"
-          style={{ height: '100vh', pointerEvents: 'none' }}
-        />
+        <section id="hero"        style={{ height: '100vh',  pointerEvents: 'none' }} />
+        <section id="acupuncture" style={{ height: '120vh', pointerEvents: 'none' }} />
+        <section id="stretch"     style={{ height: '120vh', pointerEvents: 'none' }} />
+        <section id="sanri"       style={{ height: '120vh', pointerEvents: 'none' }} />
+        <section id="reha"        style={{ height: '120vh', pointerEvents: 'none' }} />
+        <section id="contact"     style={{ height: '100vh', pointerEvents: 'none' }} />
       </div>
     </div>
+  )
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/"       element={<HomePage />} />
+        <Route path="/honin"  element={<HoninPage />} />
+        <Route path="/stretch" element={<StretchPage />} />
+        <Route path="/sanri"  element={<SanriPage />} />
+        <Route path="/reha"   element={<RehaPage />} />
+      </Routes>
+    </BrowserRouter>
   )
 }
