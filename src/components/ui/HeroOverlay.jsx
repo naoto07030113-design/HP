@@ -1,11 +1,27 @@
 import { useEffect, useRef } from 'react'
 import gsap from 'gsap'
+import ScrollTrigger from 'gsap/ScrollTrigger'
+
+gsap.registerPlugin(ScrollTrigger)
 
 export default function HeroOverlay() {
   const containerRef = useRef()
 
   useEffect(() => {
     const ctx = gsap.context(() => {
+      // Fade out entire hero as user scrolls into zone 1
+      gsap.to(containerRef.current, {
+        opacity: 0,
+        y: -40,
+        ease: 'power2.in',
+        scrollTrigger: {
+          trigger: '#scroll-root',
+          start: '10% top',
+          end: '22% top',
+          scrub: 1,
+        },
+      })
+
       gsap.fromTo(
         '.hero-tag',
         { opacity: 0, y: 20 },

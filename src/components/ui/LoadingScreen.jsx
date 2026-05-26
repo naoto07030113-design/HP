@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import gsap from 'gsap'
 
 export default function LoadingScreen({ onComplete }) {
   const [count, setCount] = useState(0)
+  const [fading, setFading] = useState(false)
   const containerRef = useRef()
   const barRef = useRef()
 
@@ -22,18 +22,14 @@ export default function LoadingScreen({ onComplete }) {
 
   useEffect(() => {
     if (barRef.current) {
-      gsap.to(barRef.current, { width: `${count}%`, duration: 0.3, ease: 'power2.out' })
+      barRef.current.style.width = `${Math.min(count, 100)}%`
     }
 
     if (count >= 100) {
       setTimeout(() => {
-        gsap.to(containerRef.current, {
-          opacity: 0,
-          duration: 1,
-          ease: 'power3.inOut',
-          onComplete: () => onComplete?.(),
-        })
-      }, 400)
+        setFading(true)
+        setTimeout(() => onComplete?.(), 800)
+      }, 300)
     }
   }, [count, onComplete])
 
@@ -41,7 +37,12 @@ export default function LoadingScreen({ onComplete }) {
     <div
       ref={containerRef}
       className="fixed inset-0 z-[100] flex flex-col items-center justify-center"
-      style={{ background: '#080d0b' }}
+      style={{
+        background: '#080d0b',
+        opacity: fading ? 0 : 1,
+        transition: 'opacity 0.8s ease-in-out',
+        pointerEvents: fading ? 'none' : 'all',
+      }}
     >
       {/* Animated logo mark */}
       <div className="relative mb-10">

@@ -33,6 +33,7 @@ export default function ContactOverlay() {
     <div
       ref={ref}
       className="fixed inset-0 z-20 pointer-events-none flex flex-col items-center justify-center"
+      style={{ background: 'linear-gradient(180deg, transparent 0%, rgba(8,13,11,0.85) 30%)' }}
       style={{ opacity: 0 }}
     >
       <div className="pointer-events-auto text-center max-w-xl px-8">
