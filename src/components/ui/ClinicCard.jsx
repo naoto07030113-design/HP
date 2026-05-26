@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import gsap from 'gsap'
 import ScrollTrigger from 'gsap/ScrollTrigger'
@@ -10,28 +10,47 @@ export function ClinicCard({ clinic, side, triggerStart, triggerEnd }) {
   const navigate = useNavigate()
 
   useEffect(() => {
+    const isMobile = window.innerWidth < 768
+
     const ctx = gsap.context(() => {
-      gsap.fromTo(
-        ref.current,
-        {
-          opacity: 0,
-          x: side === 'left' ? -40 : 40,
-          y: '-50%',
-        },
-        {
-          opacity: 1,
-          x: 0,
-          y: '-50%',
-          duration: 0.7,
-          ease: 'power3.out',
-          scrollTrigger: {
-            trigger: '#scroll-root',
-            start: `${triggerStart} top`,
-            end: `${triggerEnd} top`,
-            toggleActions: 'play reverse play reverse',
-          },
-        }
-      )
+      if (isMobile) {
+        // Mobile: slide up from bottom
+        gsap.fromTo(
+          ref.current,
+          { opacity: 0, y: 60 },
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.6,
+            ease: 'power3.out',
+            scrollTrigger: {
+              trigger: '#scroll-root',
+              start: `${triggerStart} top`,
+              end: `${triggerEnd} top`,
+              toggleActions: 'play reverse play reverse',
+            },
+          }
+        )
+      } else {
+        // Desktop: slide in from left/right side
+        gsap.fromTo(
+          ref.current,
+          { opacity: 0, x: side === 'left' ? -40 : 40, y: '-50%' },
+          {
+            opacity: 1,
+            x: 0,
+            y: '-50%',
+            duration: 0.7,
+            ease: 'power3.out',
+            scrollTrigger: {
+              trigger: '#scroll-root',
+              start: `${triggerStart} top`,
+              end: `${triggerEnd} top`,
+              toggleActions: 'play reverse play reverse',
+            },
+          }
+        )
+      }
     })
     return () => ctx.revert()
   }, [side, triggerStart, triggerEnd])
@@ -40,28 +59,30 @@ export function ClinicCard({ clinic, side, triggerStart, triggerEnd }) {
     <div
       ref={ref}
       className={`clinic-overlay ${side}`}
-      style={{ opacity: 0, transform: 'translateY(-50%)' }}
+      style={{ opacity: 0 }}
     >
-      <div className="card-white" style={{ padding: '1.6rem 1.8rem', borderRadius: '6px' }}>
+      <div className="card-white" style={{ padding: '1.2rem 1.4rem', borderRadius: '6px' }}>
         {/* Number + Tag */}
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-2">
           <div className="label-tag">{clinic.tag}</div>
-          <div className="section-num" style={{ fontSize: '2.5rem', lineHeight: 1 }}>{clinic.num}</div>
+          <div className="section-num" style={{ fontSize: '2rem', lineHeight: 1 }}>{clinic.num}</div>
         </div>
 
-        {/* Green top border */}
-        <div className="divider-green mb-4" />
+        <div className="divider-green mb-3" />
 
         {/* Clinic name */}
-        <h3 className="jp-text font-bold mb-1" style={{ fontSize: '1.35rem', color: '#1C2016', lineHeight: 1.3 }}>
+        <h3
+          className="jp-text font-bold mb-1"
+          style={{ fontSize: 'clamp(1rem, 2.5vw, 1.35rem)', color: '#1C2016', lineHeight: 1.3, whiteSpace: 'pre-line' }}
+        >
           {clinic.name}
         </h3>
-        <div className="jp-text mb-4" style={{ fontSize: '0.75rem', color: '#6AB628', fontWeight: 500 }}>
+        <div className="jp-text mb-3" style={{ fontSize: '0.72rem', color: '#6AB628', fontWeight: 500 }}>
           {clinic.tagline}
         </div>
 
-        {/* Info rows */}
-        <div className="mb-4">
+        {/* Info rows — hidden on smallest screens to keep card compact */}
+        <div className="clinic-card-info mb-3">
           {[
             { label: '住所', value: clinic.address },
             { label: 'TEL', value: clinic.tel },
@@ -69,24 +90,24 @@ export function ClinicCard({ clinic, side, triggerStart, triggerEnd }) {
           ].map((row) => (
             <div key={row.label} className="info-row">
               <span className="label">{row.label}</span>
-              <span style={{ fontSize: '0.8rem', color: '#3A4030', lineHeight: 1.5 }}>{row.value}</span>
+              <span style={{ fontSize: '0.78rem', color: '#3A4030', lineHeight: 1.5, whiteSpace: 'pre-line' }}>{row.value}</span>
             </div>
           ))}
         </div>
 
         {/* Features */}
-        <div className="flex flex-wrap gap-1.5 mb-5">
+        <div className="flex flex-wrap gap-1 mb-4">
           {clinic.features.map((f) => (
             <span
               key={f}
               className="jp-text"
               style={{
-                fontSize: '0.68rem',
+                fontSize: '0.65rem',
                 background: '#EFF8E8',
                 color: '#4A8018',
                 border: '1px solid rgba(106,182,40,0.25)',
                 borderRadius: '2px',
-                padding: '0.2rem 0.6rem',
+                padding: '0.15rem 0.5rem',
               }}
             >
               {f}
@@ -97,10 +118,10 @@ export function ClinicCard({ clinic, side, triggerStart, triggerEnd }) {
         {/* CTA */}
         <button
           className="btn-primary w-full justify-center"
-          style={{ fontSize: '0.82rem' }}
+          style={{ fontSize: '0.8rem', padding: '0.6rem 1rem' }}
           onClick={() => navigate(clinic.path)}
         >
-          {clinic.name}のページへ →
+          詳細を見る →
         </button>
       </div>
     </div>
@@ -116,7 +137,7 @@ export const CLINICS = [
     tagline: '袖ケ浦市野里 ― 地域のかかりつけ治療院',
     address: '千葉県袖ケ浦市野里1770-3',
     tel: '0438-75-5557',
-    hours: 'AM 9:00-12:00 / PM 2:00-7:30（金曜定休）',
+    hours: 'AM 9:00-12:00 / PM 14:00-19:30（金曜定休）',
     features: ['鍼灸治療', '整骨・整体', '交通事故', '各種保険', 'スポーツ外傷'],
     path: '/honin',
     side: 'left',
