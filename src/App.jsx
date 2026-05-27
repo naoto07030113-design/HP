@@ -9,7 +9,7 @@ import HeroOverlay from './components/ui/HeroOverlay'
 import ScrollProgress from './components/ui/ScrollProgress'
 import ContactOverlay from './components/ui/ContactOverlay'
 import LoadingScreen from './components/ui/LoadingScreen'
-import { ClinicCard, CLINICS } from './components/ui/ClinicCard'
+import { ZoneDisplay, ZONES } from './components/ui/ZoneDisplay'
 
 import HoninPage from './pages/HoninPage'
 import StretchPage from './pages/StretchPage'
@@ -23,7 +23,7 @@ function HomePage() {
   const handleLoad = useCallback(() => setLoaded(true), [])
 
   return (
-    <div style={{ background: '#F8F9F5' }}>
+    <div style={{ background: '#EDECEA' }}>
       {!loaded && <LoadingScreen onComplete={handleLoad} />}
 
       {/* Fixed 3D canvas */}
@@ -34,14 +34,13 @@ function HomePage() {
       <HeroOverlay />
       <ScrollProgress scrollRef={scrollRef} />
 
-      {/* Clinic info cards — one per zone */}
-      {CLINICS.map((clinic) => (
-        <ClinicCard
-          key={clinic.path}
-          clinic={clinic}
-          side={clinic.side}
-          triggerStart={clinic.triggerStart}
-          triggerEnd={clinic.triggerEnd}
+      {/* Zone info strips — one per clinic zone */}
+      {ZONES.map((zone) => (
+        <ZoneDisplay
+          key={zone.path}
+          zone={zone}
+          triggerStart={zone.triggerStart}
+          triggerEnd={zone.triggerEnd}
         />
       ))}
 
@@ -64,11 +63,11 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/"       element={<HomePage />} />
-        <Route path="/honin"  element={<HoninPage />} />
+        <Route path="/"        element={<HomePage />} />
+        <Route path="/honin"   element={<HoninPage />} />
         <Route path="/stretch" element={<StretchPage />} />
-        <Route path="/sanri"  element={<SanriPage />} />
-        <Route path="/reha"   element={<RehaPage />} />
+        <Route path="/sanri"   element={<SanriPage />} />
+        <Route path="/reha"    element={<RehaPage />} />
       </Routes>
     </BrowserRouter>
   )

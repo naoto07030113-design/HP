@@ -4,10 +4,10 @@
 
 @layer base {
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html { background: #F8F9F5; color: #1C2016; scroll-behavior: auto; }
+  html { background: #EDECEA; color: #1C2016; scroll-behavior: auto; }
   body {
     font-family: 'Inter', 'Noto Sans JP', system-ui, sans-serif;
-    background: #F8F9F5;
+    background: #EDECEA;
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
   }
@@ -130,22 +130,6 @@
     padding-top: 0.1rem;
   }
 
-  /* ── Clinic card overlay (scroll-driven) ── */
-  .clinic-overlay {
-    position: fixed;
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 30;
-    width: min(440px, 44vw);
-    pointer-events: none;
-  }
-  .clinic-overlay.left { left: 4vw; }
-  .clinic-overlay.right { right: 4vw; }
-  .clinic-overlay.visible { pointer-events: auto; }
-
-  /* ── Info rows hidden on very small cards ── */
-  .clinic-card-info { display: block; }
-
   /* ── Page layouts ── */
   .page-header {
     position: sticky;
@@ -196,25 +180,12 @@
 .anim-fade-up { animation: fadeUp 0.8s ease forwards; }
 .anim-fade-in { animation: fadeIn 0.6s ease forwards; }
 
-/* ── Mobile responsive: clinic overlay as bottom sheet ── */
-@media (max-width: 767px) {
-  .clinic-overlay {
-    top: auto;
-    bottom: 0;
-    left: 0 !important;
-    right: 0 !important;
-    width: 100% !important;
-    transform: none;
-    padding: 0 0.75rem env(safe-area-inset-bottom, 0.75rem);
-    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0));
-  }
-  .clinic-overlay .card-white {
-    border-radius: 12px 12px 0 0;
-    max-height: 56vh;
-    overflow-y: auto;
-  }
-  /* Compact info on mobile */
-  .clinic-card-info .info-row {
-    padding: 0.4rem 0;
+/* ── Zone display — mobile: full width near bottom ── */
+@media (max-width: 640px) {
+  /* ZoneDisplay is inline-styled but needs safe-area awareness */
+  /* The component uses fixed bottom: 2.2rem which works on mobile */
+  /* Safe area additional offset for notch devices */
+  .zone-display-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0);
   }
 }
