@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 @layer base {
-  * {
+  *, *::before, *::after {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
@@ -11,33 +11,29 @@
 
   html {
     scroll-behavior: auto;
-    background: #1a2e18;
+    background: #111c10;
     color: #f4f0e8;
+    /* Prevent iOS bounce scroll from showing background */
+    overscroll-behavior: none;
   }
 
   body {
     font-family: 'Jost', system-ui, sans-serif;
-    background: #1a2e18;
+    background: #111c10;
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
-  ::-webkit-scrollbar {
-    width: 2px;
-  }
-
-  ::-webkit-scrollbar-track {
-    background: #1a2e18;
-  }
-
-  ::-webkit-scrollbar-thumb {
-    background: #4a8c3f;
-    border-radius: 2px;
-  }
+  /* Minimal scrollbar — barely there */
+  ::-webkit-scrollbar { width: 1px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(138,184,128,0.25); }
 }
 
 @layer components {
+  /* ── Typography ── */
+
   .font-display {
     font-family: 'Cormorant Garamond', Georgia, serif;
   }
@@ -46,99 +42,31 @@
     font-family: 'Jost', system-ui, sans-serif;
   }
 
-  /* Glassmorphism panel — light version for bright overlays */
-  .glass-panel {
-    background: rgba(244, 240, 232, 0.12);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border: 1px solid rgba(244, 240, 232, 0.25);
-  }
+  /* ── Utilities ── */
 
-  /* Dark glass panel for navigation */
-  .glass-panel-dark {
-    background: rgba(26, 46, 24, 0.6);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(106, 184, 80, 0.15);
-  }
-
+  /* Label caps — Jost, ultra-spaced, quiet */
   .label-tag {
     font-family: 'Jost', sans-serif;
-    font-size: 0.6rem;
-    font-weight: 400;
-    letter-spacing: 0.28em;
-    text-transform: uppercase;
-    color: #8ab880;
-  }
-
-  .label-tag-light {
-    font-family: 'Jost', sans-serif;
-    font-size: 0.6rem;
-    font-weight: 400;
-    letter-spacing: 0.28em;
-    text-transform: uppercase;
-    color: rgba(244, 240, 232, 0.5);
-  }
-
-  .btn-primary {
-    background: rgba(244, 240, 232, 0.1);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(244, 240, 232, 0.35);
-    color: #f4f0e8;
-    font-family: 'Jost', sans-serif;
-    font-size: 0.7rem;
+    font-size: 0.55rem;
     font-weight: 300;
-    letter-spacing: 0.22em;
+    letter-spacing: 0.35em;
     text-transform: uppercase;
-    padding: 0.9rem 2.8rem;
-    cursor: pointer;
-    transition: all 0.5s ease;
-    position: relative;
-    overflow: hidden;
+    color: rgba(138, 184, 128, 0.55);
   }
 
-  .btn-primary::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: rgba(244, 240, 232, 0.08);
-    opacity: 0;
-    transition: opacity 0.4s ease;
-  }
-
-  .btn-primary:hover {
-    border-color: rgba(244, 240, 232, 0.65);
-    background: rgba(244, 240, 232, 0.18);
-  }
-
-  .btn-primary:hover::before {
-    opacity: 1;
-  }
-
-  .btn-secondary {
-    background: none;
-    border: none;
-    color: rgba(244, 240, 232, 0.45);
-    font-family: 'Jost', sans-serif;
-    font-size: 0.7rem;
-    font-weight: 300;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition: color 0.4s ease;
-    padding: 0.5rem 0;
-  }
-
-  .btn-secondary:hover {
-    color: rgba(244, 240, 232, 0.8);
-  }
-
+  /* Botanical divider rule */
   .divider-botanical {
     height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(138, 184, 128, 0.4), transparent);
+    background: linear-gradient(90deg, transparent, rgba(244,240,232,0.15), transparent);
+  }
+
+  /* Hidden on mobile — desktop editorial elements */
+  @media (max-width: 768px) {
+    .desktop-only { display: none !important; }
   }
 }
 
+/* ── Canvas ── */
 canvas {
   display: block;
 }

@@ -3,115 +3,138 @@ import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 
 // ─────────────────────────────────────────────────────────────────
-// Color palette for botanical realism
+// Botanical color palette — Kew Gardens realism
+// Deep, complex greens. Not saturated game-engine greens.
 // ─────────────────────────────────────────────────────────────────
-const GREENS = [
-  '#1e4018', '#2d6224', '#3a7a30', '#4a8c3a',
-  '#246020', '#5a9848', '#6ab050', '#3d5a2a',
-]
+const LEAF_DARKS  = ['#1c3e18', '#234a1e', '#1e4220', '#283a18', '#1a3a16']
+const LEAF_MIDS   = ['#2d6224', '#336828', '#2a6030', '#386a2a', '#2c6426']
+const LEAF_BRIGHTS = ['#3a7830', '#428040', '#3a7248', '#4a8038', '#446040']
+const BARK        = ['#2a2218', '#342a1c', '#2e2018', '#3a2820']
+const SOIL        = ['#281a0c', '#301e10', '#2a1808']
 
-function randGreen(seed = 0) {
-  return GREENS[seed % GREENS.length]
+function leafColor(type, idx) {
+  const arr = type === 'dark' ? LEAF_DARKS : type === 'mid' ? LEAF_MIDS : LEAF_BRIGHTS
+  return arr[idx % arr.length]
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Broad leaf — large tropical leaf as a curved plane
+// Leaf plane — shapes a single leaf as a tapered quad
 // ─────────────────────────────────────────────────────────────────
-function BroadLeaf({ position, rotation, scale = 1, colorIdx = 0 }) {
-  const geo = useMemo(() => {
-    const shape = new THREE.Shape()
-    shape.moveTo(0, 0)
-    shape.bezierCurveTo(-0.3, 0.8, -0.8, 1.8, 0, 3.0)
-    shape.bezierCurveTo(0.8, 1.8, 0.3, 0.8, 0, 0)
-    return new THREE.ShapeGeometry(shape, 8)
-  }, [])
+function makeLeafShape(length = 2.5, width = 0.9) {
+  const shape = new THREE.Shape()
+  const hw = width / 2
+  shape.moveTo(0, 0)
+  shape.bezierCurveTo(-hw * 1.1, length * 0.25, -hw, length * 0.65, 0, length)
+  shape.bezierCurveTo(hw, length * 0.65, hw * 1.1, length * 0.25, 0, 0)
+  return new THREE.ShapeGeometry(shape, 6)
+}
 
-  return (
-    <mesh
-      position={position}
-      rotation={rotation}
-      scale={scale}
-      geometry={geo}
-      castShadow
-    >
-      <meshStandardMaterial
-        color={randGreen(colorIdx)}
-        side={THREE.DoubleSide}
-        roughness={0.88}
-        metalness={0}
-      />
-    </mesh>
-  )
+// Cache a few leaf shapes for performance
+const leafGeos = {
+  large:  makeLeafShape(2.8, 1.1),
+  medium: makeLeafShape(2.0, 0.82),
+  small:  makeLeafShape(1.35, 0.6),
+  narrow: makeLeafShape(1.8, 0.45),
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Large tropical / elephant-ear plant
+// Tropical broad-leaf — elephant ear / Musa / Colocasia silhouette
 // ─────────────────────────────────────────────────────────────────
-function TropicalPlant({ position, scale = 1, colorOffset = 0 }) {
+function TropicalPlant({ position, scale = 1, seed = 0, animPhase = 0 }) {
   const groupRef = useRef()
 
-  // Gentle leaf sway
   useFrame(({ clock }) => {
     if (!groupRef.current) return
-    const t = clock.elapsedTime * 0.3 + colorOffset
-    groupRef.current.rotation.y = Math.sin(t) * 0.015
+    const t = clock.elapsedTime * 0.25 + animPhase
+    // Independent per-child sway — organic, not mechanical
     groupRef.current.children.forEach((child, i) => {
-      child.rotation.z = Math.sin(t + i * 0.8) * 0.02
+      if (child.isMesh) {
+        child.rotation.z = child.userData.baseRotZ + Math.sin(t + i * 1.3) * 0.018
+        child.rotation.x = child.userData.baseRotX + Math.sin(t * 0.7 + i * 0.9) * 0.012
+      }
     })
   })
 
   const leaves = useMemo(() => [
-    { pos: [0,   1.6, 0],    rot: [0.25,  0.0,  0.15], s: scale * 1.2, c: colorOffset     },
-    { pos: [0.4, 1.2, 0.3],  rot: [0.35,  0.6,  0.1],  s: scale * 1.0, c: colorOffset + 1 },
-    { pos: [-0.3,1.4,-0.2],  rot: [0.2,  -0.5,  0.2],  s: scale * 1.1, c: colorOffset + 2 },
-    { pos: [0,   2.0, 0],    rot: [-0.1,  0.3,  0.0],  s: scale * 0.9, c: colorOffset + 3 },
-    { pos: [-0.5,1.0, 0.1],  rot: [0.4,  -0.8, -0.1],  s: scale * 0.85,c: colorOffset + 1 },
-    { pos: [0.2, 0.8,-0.3],  rot: [0.5,   0.4,  0.25], s: scale * 0.8, c: colorOffset + 4 },
-  ], [scale, colorOffset])
+    { geo: 'large',  pos: [0.0,  1.8, 0.0],  rx: 0.28, ry: 0.15, rz: 0.10,  type: 'dark',   idx: seed     },
+    { geo: 'large',  pos: [0.4,  1.5, 0.3],  rx: 0.38, ry: 0.70, rz: 0.12,  type: 'mid',    idx: seed + 1 },
+    { geo: 'large',  pos: [-0.35,1.6,-0.2],  rx: 0.22, ry:-0.60, rz:-0.08,  type: 'dark',   idx: seed + 2 },
+    { geo: 'medium', pos: [0.1,  2.1, 0.0],  rx:-0.12, ry: 0.35, rz: 0.05,  type: 'mid',    idx: seed + 3 },
+    { geo: 'medium', pos: [-0.5, 1.2, 0.4],  rx: 0.45, ry:-0.85, rz:-0.15,  type: 'bright', idx: seed     },
+    { geo: 'medium', pos: [0.25, 0.9,-0.35], rx: 0.55, ry: 0.50, rz: 0.20,  type: 'dark',   idx: seed + 1 },
+    { geo: 'small',  pos: [0.6,  0.7, 0.0],  rx: 0.60, ry: 1.10, rz: 0.25,  type: 'bright', idx: seed + 2 },
+    { geo: 'small',  pos: [-0.2, 0.6,-0.5],  rx: 0.50, ry:-1.20, rz:-0.20,  type: 'mid',    idx: seed + 3 },
+  ], [seed])
 
   return (
-    <group position={position} ref={groupRef}>
-      {leaves.map((l, i) => (
-        <BroadLeaf
-          key={i}
-          position={l.pos}
-          rotation={l.rot}
-          scale={l.s}
-          colorIdx={l.c}
-        />
-      ))}
-      {/* Stem */}
-      <mesh position={[0, 0.6, 0]} castShadow>
-        <cylinderGeometry args={[0.05, 0.09, 1.2, 7]} />
-        <meshStandardMaterial color="#2a3820" roughness={0.95} />
+    <group position={position} scale={scale} ref={groupRef}>
+      {leaves.map((l, i) => {
+        const mesh = (
+          <mesh
+            key={i}
+            position={l.pos}
+            rotation={[l.rx, l.ry, l.rz]}
+            geometry={leafGeos[l.geo]}
+            castShadow
+          >
+            <meshStandardMaterial
+              color={leafColor(l.type, l.idx)}
+              side={THREE.DoubleSide}
+              roughness={0.88}
+              metalness={0}
+            />
+          </mesh>
+        )
+        // Store base rotations for animation
+        return (
+          <group key={i} userData={{ baseRotZ: l.rz, baseRotX: l.rx }}>
+            <mesh
+              position={l.pos}
+              rotation={[l.rx, l.ry, l.rz]}
+              geometry={leafGeos[l.geo]}
+              castShadow
+              userData={{ baseRotZ: l.rz, baseRotX: l.rx }}
+            >
+              <meshStandardMaterial
+                color={leafColor(l.type, l.idx)}
+                side={THREE.DoubleSide}
+                roughness={0.88}
+                metalness={0}
+              />
+            </mesh>
+          </group>
+        )
+      })}
+      {/* Petiole stem */}
+      <mesh position={[0, 0.7, 0]} castShadow>
+        <cylinderGeometry args={[0.045, 0.075, 1.4, 6]} />
+        <meshStandardMaterial color={BARK[seed % BARK.length]} roughness={0.96} />
       </mesh>
     </group>
   )
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Rounded shrub cluster
+// Shrub — dense organic cluster
 // ─────────────────────────────────────────────────────────────────
-function Shrub({ position, scale = 1, colorOffset = 0 }) {
+function Shrub({ position, scale = 1, seed = 0 }) {
   const spheres = useMemo(() => [
-    { p: [0,    0,    0],    s: 1.0,  c: 0 },
-    { p: [0.55, 0.15, 0],   s: 0.72, c: 1 },
-    { p: [-0.5, 0.12, 0.3], s: 0.78, c: 2 },
-    { p: [0.15,-0.1, -0.45],s: 0.65, c: 0 },
-    { p: [-0.2, 0.3,  0.2], s: 0.60, c: 3 },
-    { p: [0.3,  0.2, -0.3], s: 0.55, c: 1 },
-  ], [])
+    { p: [0,     0,     0],     s: 1.00, t: 'dark',   i: seed     },
+    { p: [0.62,  0.18,  0],     s: 0.76, t: 'mid',    i: seed + 1 },
+    { p: [-0.55, 0.14,  0.38],  s: 0.82, t: 'dark',   i: seed + 2 },
+    { p: [0.20, -0.08, -0.50],  s: 0.68, t: 'mid',    i: seed + 3 },
+    { p: [-0.28, 0.35,  0.22],  s: 0.62, t: 'bright', i: seed     },
+    { p: [0.38,  0.25, -0.35],  s: 0.55, t: 'bright', i: seed + 1 },
+    { p: [-0.18, 0.50, -0.12],  s: 0.48, t: 'mid',    i: seed + 2 },
+    { p: [0.50, -0.05,  0.42],  s: 0.44, t: 'dark',   i: seed + 3 },
+  ], [seed])
 
   return (
     <group position={position} scale={scale}>
       {spheres.map((sp, i) => (
         <mesh key={i} position={sp.p} castShadow>
-          <sphereGeometry args={[sp.s, 8, 6]} />
-          <meshStandardMaterial
-            color={randGreen(colorOffset + sp.c)}
-            roughness={0.92}
-            metalness={0}
-          />
+          <sphereGeometry args={[sp.s, 9, 7]} />
+          <meshStandardMaterial color={leafColor(sp.t, sp.i)} roughness={0.92} metalness={0} />
         </mesh>
       ))}
     </group>
@@ -119,82 +142,68 @@ function Shrub({ position, scale = 1, colorOffset = 0 }) {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Small tree / palm silhouette
+// Canopy tree — multi-tier foliage, natural silhouette
 // ─────────────────────────────────────────────────────────────────
-function SmallTree({ position, scale = 1, colorOffset = 0 }) {
+function CanopyTree({ position, scale = 1, seed = 0 }) {
+  const canopies = useMemo(() => [
+    { p: [0,     3.8, 0],    s: 1.55, t: 'dark',   i: seed     },
+    { p: [0.9,   3.4, 0.4],  s: 1.00, t: 'mid',    i: seed + 1 },
+    { p: [-0.8,  3.5,-0.3],  s: 1.05, t: 'dark',   i: seed + 2 },
+    { p: [0.3,   4.5, 0.2],  s: 0.80, t: 'bright', i: seed + 3 },
+    { p: [-0.4,  4.3,-0.4],  s: 0.72, t: 'mid',    i: seed     },
+    { p: [0.6,   2.9,-0.3],  s: 0.68, t: 'dark',   i: seed + 2 },
+  ], [seed])
+
   return (
     <group position={position} scale={scale}>
       {/* Trunk */}
-      <mesh position={[0, 1.5, 0]} castShadow>
-        <cylinderGeometry args={[0.08, 0.14, 3.0, 8]} />
-        <meshStandardMaterial color="#2a2018" roughness={0.95} />
+      <mesh position={[0, 1.6, 0]} castShadow>
+        <cylinderGeometry args={[0.09, 0.16, 3.2, 8]} />
+        <meshStandardMaterial color={BARK[seed % BARK.length]} roughness={0.95} />
       </mesh>
-      {/* Main canopy sphere */}
-      <mesh position={[0, 3.5, 0]} castShadow>
-        <sphereGeometry args={[1.4, 10, 8]} />
-        <meshStandardMaterial
-          color={randGreen(colorOffset)}
-          roughness={0.9}
-          metalness={0}
-        />
+      {/* Lower trunk flare */}
+      <mesh position={[0, 0.2, 0]} castShadow>
+        <cylinderGeometry args={[0.20, 0.26, 0.4, 8]} />
+        <meshStandardMaterial color={BARK[seed % BARK.length]} roughness={0.96} />
       </mesh>
-      {/* Secondary canopy bulges */}
-      <mesh position={[0.8, 3.1, 0.3]} castShadow>
-        <sphereGeometry args={[0.9, 8, 6]} />
-        <meshStandardMaterial
-          color={randGreen(colorOffset + 1)}
-          roughness={0.9}
-        />
-      </mesh>
-      <mesh position={[-0.7, 3.2, -0.4]} castShadow>
-        <sphereGeometry args={[0.85, 8, 6]} />
-        <meshStandardMaterial
-          color={randGreen(colorOffset + 2)}
-          roughness={0.9}
-        />
-      </mesh>
+      {/* Canopy layers */}
+      {canopies.map((c, i) => (
+        <mesh key={i} position={c.p} castShadow>
+          <sphereGeometry args={[c.s, 10, 8]} />
+          <meshStandardMaterial color={leafColor(c.t, c.i)} roughness={0.90} metalness={0} />
+        </mesh>
+      ))}
     </group>
   )
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Tall columnar plant (like a Dracaena or Yucca)
+// Columnar plant — Dracaena / Yucca crown
 // ─────────────────────────────────────────────────────────────────
-function TallColumnPlant({ position, scale = 1, colorOffset = 0 }) {
+function ColumnarPlant({ position, scale = 1, seed = 0 }) {
   const fronds = useMemo(() => (
-    Array.from({ length: 10 }, (_, i) => {
-      const angle = (i / 10) * Math.PI * 2
-      const tilt = 0.45 + Math.random() * 0.3
-      return { angle, tilt }
-    })
+    Array.from({ length: 12 }, (_, i) => ({
+      angle: (i / 12) * Math.PI * 2,
+      tilt:  0.42 + (i % 3) * 0.12,
+    }))
   ), [])
 
   return (
     <group position={position} scale={scale}>
-      {/* Trunk */}
-      <mesh position={[0, 2.0, 0]} castShadow>
-        <cylinderGeometry args={[0.12, 0.18, 4.0, 8]} />
-        <meshStandardMaterial color="#3a2a1a" roughness={0.95} />
+      <mesh position={[0, 2.2, 0]} castShadow>
+        <cylinderGeometry args={[0.10, 0.18, 4.4, 8]} />
+        <meshStandardMaterial color={BARK[seed % BARK.length]} roughness={0.96} />
       </mesh>
-      {/* Fronds at the top */}
       {fronds.map((f, i) => (
         <mesh
           key={i}
-          position={[
-            Math.cos(f.angle) * 0.5,
-            4.2,
-            Math.sin(f.angle) * 0.5,
-          ]}
-          rotation={[
-            f.tilt,
-            f.angle,
-            0,
-          ]}
+          position={[Math.cos(f.angle) * 0.4, 4.5, Math.sin(f.angle) * 0.4]}
+          rotation={[f.tilt, f.angle, 0]}
+          geometry={leafGeos.narrow}
           castShadow
         >
-          <planeGeometry args={[0.3, 2.2]} />
           <meshStandardMaterial
-            color={randGreen(colorOffset + i)}
+            color={leafColor('mid', seed + i)}
             side={THREE.DoubleSide}
             roughness={0.88}
           />
@@ -205,28 +214,59 @@ function TallColumnPlant({ position, scale = 1, colorOffset = 0 }) {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Dense ground cover patch
+// Fern — low, feathery, ground-level texture
 // ─────────────────────────────────────────────────────────────────
-function GroundCover({ position, size = 3, density = 20, colorOffset = 0 }) {
-  const patches = useMemo(() => (
-    Array.from({ length: density }, (_, i) => ({
-      x: (Math.random() - 0.5) * size,
-      z: (Math.random() - 0.5) * size,
-      s: 0.15 + Math.random() * 0.35,
-      ry: Math.random() * Math.PI * 2,
-      c: i % 5,
+function Fern({ position, scale = 1, seed = 0 }) {
+  const fronds = useMemo(() => (
+    Array.from({ length: 9 }, (_, i) => ({
+      angle: (i / 9) * Math.PI * 2,
+      tilt:  0.55 + (i % 4) * 0.1,
+      len:   1.1 + (i % 3) * 0.25,
     }))
-  ), [size, density])
+  ), [])
+
+  return (
+    <group position={position} scale={scale}>
+      {fronds.map((f, i) => (
+        <mesh
+          key={i}
+          position={[Math.cos(f.angle) * 0.2, 0.15, Math.sin(f.angle) * 0.2]}
+          rotation={[f.tilt, f.angle, 0]}
+          castShadow
+        >
+          <planeGeometry args={[0.28, f.len]} />
+          <meshStandardMaterial
+            color={leafColor('bright', seed + i)}
+            side={THREE.DoubleSide}
+            roughness={0.90}
+          />
+        </mesh>
+      ))}
+    </group>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Dense ground cover patch — layered low vegetation
+// ─────────────────────────────────────────────────────────────────
+function GroundCover({ position, size = 3, density = 25, seed = 0 }) {
+  const items = useMemo(() => (
+    Array.from({ length: density }, (_, i) => ({
+      x:  (Math.random() - 0.5) * size,
+      z:  (Math.random() - 0.5) * size,
+      s:  0.12 + (i % 5) * 0.06,
+      ry: Math.random() * Math.PI * 2,
+      t:  i % 3 === 0 ? 'bright' : i % 3 === 1 ? 'mid' : 'dark',
+      c:  i % 5,
+    }))
+  ), [size, density, seed])
 
   return (
     <group position={position}>
-      {patches.map((p, i) => (
-        <mesh key={i} position={[p.x, p.s * 0.4, p.z]} rotation={[0, p.ry, 0]}>
+      {items.map((p, i) => (
+        <mesh key={i} position={[p.x, p.s * 0.5, p.z]} rotation={[0, p.ry, 0]} castShadow>
           <sphereGeometry args={[p.s, 6, 4]} />
-          <meshStandardMaterial
-            color={randGreen(colorOffset + p.c)}
-            roughness={0.95}
-          />
+          <meshStandardMaterial color={leafColor(p.t, seed + p.c)} roughness={0.94} />
         </mesh>
       ))}
     </group>
@@ -234,186 +274,198 @@ function GroundCover({ position, size = 3, density = 20, colorOffset = 0 }) {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Wall climbing / hanging vine
+// Hanging plant basket — suspended from the roof structure
 // ─────────────────────────────────────────────────────────────────
-function WallVine({ x, zStart, zEnd, side = 1 }) {
-  const segments = useMemo(() => {
-    const count = Math.floor(Math.abs(zEnd - zStart) / 2.5)
-    return Array.from({ length: count }, (_, i) => {
-      const z = zStart + (i / count) * (zEnd - zStart)
-      const yBase = 0.5 + i * 0.3
-      const yHeight = 0.8 + Math.random() * 1.5
-      return { z, yBase: Math.min(yBase, 5.2), yHeight, idx: i }
+function HangingBasket({ position, seed = 0 }) {
+  const trails = useMemo(() => (
+    Array.from({ length: 10 }, (_, i) => {
+      const angle = (i / 10) * Math.PI * 2
+      const r = 0.2 + (i % 3) * 0.08
+      return { angle, r, len: 0.5 + (i % 4) * 0.2 }
     })
-  }, [zStart, zEnd])
+  ), [])
 
   return (
-    <group>
-      {segments.map((seg, i) => (
-        <mesh
-          key={i}
-          position={[x, seg.yBase + seg.yHeight * 0.5, seg.z]}
-          rotation={[
-            (Math.random() - 0.5) * 0.4,
-            (Math.random() - 0.5) * 0.3,
-            (Math.random() - 0.5) * 0.5,
-          ]}
-          castShadow
-        >
-          <sphereGeometry args={[0.18 + Math.random() * 0.12, 6, 5]} />
-          <meshStandardMaterial
-            color={randGreen(i + 2)}
-            roughness={0.92}
-          />
-        </mesh>
-      ))}
-    </group>
-  )
-}
-
-// ─────────────────────────────────────────────────────────────────
-// Scene 1 – Entrance planting
-// ─────────────────────────────────────────────────────────────────
-function EntrancePlanting() {
-  return (
-    <group>
-      {/* Flanking large plants at the entrance */}
-      <TropicalPlant position={[-9, 0, 5]}  scale={1.3} colorOffset={0} />
-      <TropicalPlant position={[9,  0, 5]}  scale={1.2} colorOffset={3} />
-      <TropicalPlant position={[-9, 0, 1]}  scale={1.0} colorOffset={1} />
-      <TropicalPlant position={[9,  0, 1]}  scale={1.1} colorOffset={4} />
-      <Shrub         position={[-8, 0, 3]}  scale={0.8} colorOffset={2} />
-      <Shrub         position={[8,  0, 3]}  scale={0.9} colorOffset={5} />
-      <GroundCover   position={[-9, 0, 3]}  size={2.5}  density={15}    colorOffset={0} />
-      <GroundCover   position={[9,  0, 3]}  size={2.5}  density={15}    colorOffset={2} />
-      <WallVine      x={-10.5} zStart={6} zEnd={-4} />
-      <WallVine      x={10.5}  zStart={6} zEnd={-4} />
-    </group>
-  )
-}
-
-// ─────────────────────────────────────────────────────────────────
-// Scene 2 – Grand Hall (large focal plants)
-// ─────────────────────────────────────────────────────────────────
-function GrandHallPlanting() {
-  return (
-    <group>
-      {/* Large signature trees flanking the central path */}
-      <SmallTree      position={[-8.5, 0, -8]}  scale={1.4} colorOffset={0} />
-      <SmallTree      position={[8.5,  0, -8]}  scale={1.3} colorOffset={2} />
-      <SmallTree      position={[-8,   0, -16]} scale={1.2} colorOffset={1} />
-      <SmallTree      position={[8,    0, -16]} scale={1.5} colorOffset={3} />
-      <TallColumnPlant position={[-9, 0, -12]} scale={1.0} colorOffset={1} />
-      <TallColumnPlant position={[9,  0, -12]} scale={1.0} colorOffset={3} />
-      <TropicalPlant  position={[-8.5, 0, -20]} scale={1.3} colorOffset={2} />
-      <TropicalPlant  position={[8.5,  0, -20]} scale={1.4} colorOffset={5} />
-      <TropicalPlant  position={[-9,   0, -5]}  scale={1.1} colorOffset={0} />
-      <TropicalPlant  position={[9,    0, -5]}  scale={1.0} colorOffset={4} />
-
-      {/* Dense shrub undergrowth */}
-      <Shrub position={[-8, 0, -11]} scale={1.1} colorOffset={1} />
-      <Shrub position={[8,  0, -11]} scale={1.0} colorOffset={3} />
-      <Shrub position={[-7, 0, -17]} scale={0.9} colorOffset={0} />
-      <Shrub position={[7,  0, -17]} scale={1.0} colorOffset={2} />
-
-      {/* Ground cover */}
-      <GroundCover position={[-9, 0, -10]} size={3} density={20} colorOffset={0} />
-      <GroundCover position={[9,  0, -10]} size={3} density={20} colorOffset={2} />
-      <GroundCover position={[-9, 0, -18]} size={3} density={18} colorOffset={1} />
-      <GroundCover position={[9,  0, -18]} size={3} density={18} colorOffset={3} />
-
-      <WallVine x={-10.5} zStart={-4} zEnd={-24} />
-      <WallVine x={10.5}  zStart={-4} zEnd={-24} />
-    </group>
-  )
-}
-
-// ─────────────────────────────────────────────────────────────────
-// Scene 3 – The Living Path (densest vegetation)
-// ─────────────────────────────────────────────────────────────────
-function LivingPathPlanting() {
-  // Create a corridor feel with plants crowding both sides
-  const zPositions = [-24, -27, -30, -33, -36, -39, -42]
-
-  return (
-    <group>
-      {zPositions.map((z, i) => (
+    <group position={position}>
+      {/* Basket pot */}
+      <mesh>
+        <cylinderGeometry args={[0.22, 0.18, 0.18, 8]} />
+        <meshStandardMaterial color="#6a5040" roughness={0.9} />
+      </mesh>
+      {/* Trailing vines */}
+      {trails.map((t, i) => (
         <group key={i}>
-          <TropicalPlant position={[-8.5, 0, z]}  scale={1.0 + i * 0.05}  colorOffset={i    } />
-          <TropicalPlant position={[8.5,  0, z]}  scale={1.0 + i * 0.04}  colorOffset={i + 2} />
-          <Shrub         position={[-8,   0, z+1.5]} scale={0.9}          colorOffset={i + 1} />
-          <Shrub         position={[8,    0, z+1.5]} scale={0.85}         colorOffset={i + 3} />
-          <GroundCover   position={[-9, 0, z+0.5]}   size={2.5} density={16} colorOffset={i} />
-          <GroundCover   position={[9,  0, z+0.5]}   size={2.5} density={16} colorOffset={i+1} />
+          {Array.from({ length: 4 }, (_, j) => (
+            <mesh
+              key={j}
+              position={[
+                Math.cos(t.angle) * t.r,
+                -0.15 - j * t.len * 0.5,
+                Math.sin(t.angle) * t.r,
+              ]}
+              castShadow
+            >
+              <sphereGeometry args={[0.10 + (j % 2) * 0.04, 5, 4]} />
+              <meshStandardMaterial color={leafColor('bright', seed + i + j)} roughness={0.92} />
+            </mesh>
+          ))}
         </group>
       ))}
-      <TallColumnPlant position={[-9, 0, -28]} scale={1.1} colorOffset={0} />
-      <TallColumnPlant position={[9,  0, -34]} scale={1.0} colorOffset={2} />
-      <SmallTree       position={[-8, 0, -38]} scale={1.2} colorOffset={1} />
-      <SmallTree       position={[8,  0, -32]} scale={1.1} colorOffset={3} />
-      <WallVine x={-10.5} zStart={-24} zEnd={-44} />
-      <WallVine x={10.5}  zStart={-24} zEnd={-44} />
+      {/* Hanging chain */}
+      <mesh position={[0, 0.6, 0]}>
+        <cylinderGeometry args={[0.006, 0.006, 1.2, 4]} />
+        <meshStandardMaterial color="#8a7868" metalness={0.6} roughness={0.4} />
+      </mesh>
     </group>
   )
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Scene 4 – Cultivation (neat, productive plants)
+// Wall climbing vine cluster
 // ─────────────────────────────────────────────────────────────────
-function CultivationPlanting() {
+function WallVines({ x, zStart, zEnd, seed = 0 }) {
+  const count = Math.floor(Math.abs(zEnd - zStart) / 2.2)
+
   return (
     <group>
-      {/* Background trees */}
-      <SmallTree     position={[-9, 0, -46]} scale={1.0} colorOffset={0} />
-      <SmallTree     position={[9,  0, -46]} scale={1.1} colorOffset={2} />
-      <TropicalPlant position={[-9, 0, -55]} scale={1.1} colorOffset={1} />
-      <TropicalPlant position={[9,  0, -55]} scale={1.0} colorOffset={4} />
-      <TropicalPlant position={[-9, 0, -62]} scale={0.9} colorOffset={3} />
-      <TropicalPlant position={[9,  0, -62]} scale={1.0} colorOffset={0} />
-      <Shrub         position={[-8, 0, -50]} scale={0.8} colorOffset={2} />
-      <Shrub         position={[8,  0, -50]} scale={0.8} colorOffset={1} />
-      <GroundCover   position={[-9, 0, -52]} size={3} density={14} colorOffset={0} />
-      <GroundCover   position={[9,  0, -52]} size={3} density={14} colorOffset={2} />
-      <WallVine x={-10.5} zStart={-44} zEnd={-65} />
-      <WallVine x={10.5}  zStart={-44} zEnd={-65} />
+      {Array.from({ length: count }, (_, i) => {
+        const z = zStart + (i / count) * (zEnd - zStart)
+        const yBase = 0.4 + (i * 0.22) % 5.0
+        return (
+          <group key={i}>
+            <mesh position={[x, yBase, z]} castShadow>
+              <sphereGeometry args={[0.16 + (i % 3) * 0.06, 6, 5]} />
+              <meshStandardMaterial
+                color={leafColor(i % 3 === 0 ? 'bright' : 'mid', seed + i)}
+                roughness={0.93}
+              />
+            </mesh>
+          </group>
+        )
+      })}
     </group>
   )
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Scene 5 – Reflection Hall (open, airy, elegant)
+// Scene plant clusters — utility for dense placement
 // ─────────────────────────────────────────────────────────────────
-function ReflectionPlanting() {
+function PlantRow({ zValues, xL = -8.5, xR = 8.5, seed = 0 }) {
   return (
     <group>
-      {/* Graceful sentinel trees */}
-      <SmallTree     position={[-8, 0, -66]} scale={1.5} colorOffset={0} />
-      <SmallTree     position={[8,  0, -66]} scale={1.4} colorOffset={2} />
-      <TallColumnPlant position={[-9, 0, -72]} scale={1.2} colorOffset={1} />
-      <TallColumnPlant position={[9,  0, -72]} scale={1.2} colorOffset={3} />
-      <TropicalPlant position={[-8.5, 0, -78]} scale={1.1} colorOffset={2} />
-      <TropicalPlant position={[8.5,  0, -78]} scale={1.0} colorOffset={5} />
-      <Shrub         position={[-7, 0, -69]} scale={0.9} colorOffset={1} />
-      <Shrub         position={[7,  0, -69]} scale={0.9} colorOffset={3} />
-      <GroundCover   position={[-9, 0, -74]} size={3} density={12} colorOffset={0} />
-      <GroundCover   position={[9,  0, -74]} size={3} density={12} colorOffset={2} />
-      <WallVine x={-10.5} zStart={-65} zEnd={-85} />
-      <WallVine x={10.5}  zStart={-65} zEnd={-85} />
+      {zValues.map((z, i) => (
+        <group key={i}>
+          <TropicalPlant position={[xL, 0, z]}       scale={1.0 + (i % 3) * 0.12} seed={seed + i    } animPhase={i * 0.7} />
+          <TropicalPlant position={[xR, 0, z]}       scale={1.0 + (i % 3) * 0.10} seed={seed + i + 4} animPhase={i * 0.9} />
+          <Fern          position={[xL - 0.8, 0, z + 0.8]} scale={0.9}           seed={seed + i + 1} />
+          <Fern          position={[xR + 0.8, 0, z + 0.8]} scale={0.85}          seed={seed + i + 2} />
+          <GroundCover   position={[xL, 0, z]}       size={2.2} density={18}       seed={seed + i    } />
+          <GroundCover   position={[xR, 0, z]}       size={2.2} density={18}       seed={seed + i + 2} />
+        </group>
+      ))}
     </group>
   )
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Master plant life component
+// All 5 scenes worth of plant life
 // ─────────────────────────────────────────────────────────────────
 export default function PlantLife() {
   return (
     <group>
-      <EntrancePlanting />
-      <GrandHallPlanting />
-      <LivingPathPlanting />
-      <CultivationPlanting />
-      <ReflectionPlanting />
+      {/* ── Scene 1: Entrance ── */}
+      <TropicalPlant position={[-9, 0,  6]} scale={1.4} seed={0} animPhase={0.0} />
+      <TropicalPlant position={[ 9, 0,  6]} scale={1.3} seed={3} animPhase={1.1} />
+      <TropicalPlant position={[-9, 0,  2]} scale={1.1} seed={1} animPhase={0.5} />
+      <TropicalPlant position={[ 9, 0,  2]} scale={1.2} seed={5} animPhase={1.7} />
+      <Shrub         position={[-8, 0,  4]} scale={0.9} seed={2} />
+      <Shrub         position={[ 8, 0,  4]} scale={0.9} seed={6} />
+      <Fern          position={[-8.5,0, 5.5]} scale={1.0} seed={1} />
+      <Fern          position={[ 8.5,0, 5.5]} scale={0.9} seed={4} />
+      <GroundCover   position={[-9, 0,  4]} size={3}   density={22} seed={0} />
+      <GroundCover   position={[ 9, 0,  4]} size={3}   density={22} seed={2} />
+      <WallVines     x={-10.5} zStart={6}  zEnd={-4}  seed={0} />
+      <WallVines     x={ 10.5} zStart={6}  zEnd={-4}  seed={4} />
+
+      {/* ── Scene 2: Grand Hall — focal specimen trees ── */}
+      <CanopyTree    position={[-8.5, 0, -8]}  scale={1.5} seed={0} />
+      <CanopyTree    position={[ 8.5, 0, -8]}  scale={1.4} seed={2} />
+      <CanopyTree    position={[-8,   0,-17]}  scale={1.3} seed={1} />
+      <CanopyTree    position={[ 8,   0,-17]}  scale={1.5} seed={3} />
+      <ColumnarPlant position={[-9,   0,-12]}  scale={1.1} seed={1} />
+      <ColumnarPlant position={[ 9,   0,-12]}  scale={1.1} seed={3} />
+      <TropicalPlant position={[-8.5, 0,-21]}  scale={1.3} seed={4} animPhase={2.1} />
+      <TropicalPlant position={[ 8.5, 0,-21]}  scale={1.4} seed={7} animPhase={0.8} />
+      <TropicalPlant position={[-9,   0, -4]}  scale={1.1} seed={2} animPhase={1.4} />
+      <TropicalPlant position={[ 9,   0, -4]}  scale={1.0} seed={6} animPhase={2.6} />
+      <Shrub         position={[-8,   0,-11]}  scale={1.1} seed={1} />
+      <Shrub         position={[ 8,   0,-11]}  scale={1.0} seed={4} />
+      <Shrub         position={[-7.5, 0,-18]}  scale={0.9} seed={2} />
+      <Shrub         position={[ 7.5, 0,-18]}  scale={1.0} seed={5} />
+      <Fern          position={[-8,   0,-14]}  scale={1.1} seed={0} />
+      <Fern          position={[ 8,   0,-14]}  scale={1.0} seed={3} />
+      <Fern          position={[-8.5, 0,-20]}  scale={0.9} seed={1} />
+      <Fern          position={[ 8.5, 0,-20]}  scale={1.0} seed={4} />
+      <GroundCover   position={[-8.5, 0,-10]}  size={3} density={24} seed={0} />
+      <GroundCover   position={[ 8.5, 0,-10]}  size={3} density={24} seed={2} />
+      <GroundCover   position={[-8.5, 0,-19]}  size={3} density={22} seed={1} />
+      <GroundCover   position={[ 8.5, 0,-19]}  size={3} density={22} seed={3} />
+      <WallVines     x={-10.5} zStart={-4}  zEnd={-24} seed={2} />
+      <WallVines     x={ 10.5} zStart={-4}  zEnd={-24} seed={6} />
+      {/* Hanging baskets */}
+      <HangingBasket position={[-5, 9.5, -10]} seed={0} />
+      <HangingBasket position={[ 5, 9.5, -10]} seed={3} />
+      <HangingBasket position={[-5, 9.5, -18]} seed={1} />
+      <HangingBasket position={[ 5, 9.5, -18]} seed={4} />
+
+      {/* ── Scene 3: Living Path — maximum density ── */}
+      <PlantRow
+        zValues={[-25, -28, -31, -34, -37, -40]}
+        seed={10}
+      />
+      <CanopyTree    position={[-8.5, 0,-27]}  scale={1.2} seed={5} />
+      <CanopyTree    position={[ 8.5, 0,-34]}  scale={1.1} seed={7} />
+      <ColumnarPlant position={[-9,   0,-30]}  scale={1.0} seed={4} />
+      <ColumnarPlant position={[ 9,   0,-37]}  scale={1.0} seed={6} />
+      <WallVines     x={-10.5} zStart={-24} zEnd={-44} seed={8} />
+      <WallVines     x={ 10.5} zStart={-24} zEnd={-44} seed={12} />
+      <HangingBasket position={[ 0, 9.5, -30]} seed={2} />
+      <HangingBasket position={[-5, 9.5, -36]} seed={5} />
+      <HangingBasket position={[ 5, 9.5, -36]} seed={7} />
+
+      {/* ── Scene 4: Cultivation — ordered but lush backdrop ── */}
+      <CanopyTree    position={[-8.5, 0,-47]}  scale={1.1} seed={0} />
+      <CanopyTree    position={[ 8.5, 0,-47]}  scale={1.2} seed={2} />
+      <TropicalPlant position={[-9,   0,-55]}  scale={1.2} seed={3} animPhase={1.0} />
+      <TropicalPlant position={[ 9,   0,-55]}  scale={1.1} seed={6} animPhase={2.2} />
+      <TropicalPlant position={[-9,   0,-63]}  scale={1.0} seed={1} animPhase={0.6} />
+      <TropicalPlant position={[ 9,   0,-63]}  scale={1.1} seed={5} animPhase={1.8} />
+      <Shrub         position={[-8,   0,-51]}  scale={0.8} seed={2} />
+      <Shrub         position={[ 8,   0,-51]}  scale={0.85} seed={4} />
+      <Fern          position={[-8.5, 0,-58]}  scale={1.0} seed={2} />
+      <Fern          position={[ 8.5, 0,-58]}  scale={0.9} seed={5} />
+      <GroundCover   position={[-9,   0,-53]}  size={3} density={18} seed={0} />
+      <GroundCover   position={[ 9,   0,-53]}  size={3} density={18} seed={2} />
+      <WallVines     x={-10.5} zStart={-44} zEnd={-66} seed={6} />
+      <WallVines     x={ 10.5} zStart={-44} zEnd={-66} seed={10} />
+
+      {/* ── Scene 5: Reflection Hall — open, majestic ── */}
+      <CanopyTree    position={[-8.5, 0,-67]}  scale={1.6} seed={1} />
+      <CanopyTree    position={[ 8.5, 0,-67]}  scale={1.5} seed={3} />
+      <ColumnarPlant position={[-9,   0,-73]}  scale={1.3} seed={2} />
+      <ColumnarPlant position={[ 9,   0,-73]}  scale={1.3} seed={4} />
+      <TropicalPlant position={[-8.5, 0,-80]}  scale={1.2} seed={5} animPhase={0.4} />
+      <TropicalPlant position={[ 8.5, 0,-80]}  scale={1.1} seed={7} animPhase={1.6} />
+      <Shrub         position={[-7.5, 0,-70]}  scale={1.0} seed={1} />
+      <Shrub         position={[ 7.5, 0,-70]}  scale={1.0} seed={3} />
+      <Fern          position={[-8,   0,-75]}  scale={1.2} seed={0} />
+      <Fern          position={[ 8,   0,-75]}  scale={1.1} seed={2} />
+      <GroundCover   position={[-9,   0,-75]}  size={3} density={15} seed={0} />
+      <GroundCover   position={[ 9,   0,-75]}  size={3} density={15} seed={2} />
+      <WallVines     x={-10.5} zStart={-66} zEnd={-86} seed={4} />
+      <WallVines     x={ 10.5} zStart={-66} zEnd={-86} seed={8} />
+      <HangingBasket position={[-4, 9.5, -70]} seed={3} />
+      <HangingBasket position={[ 4, 9.5, -70]} seed={6} />
     </group>
   )
 }

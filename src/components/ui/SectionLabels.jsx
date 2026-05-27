@@ -4,61 +4,51 @@ import ScrollTrigger from 'gsap/ScrollTrigger'
 
 gsap.registerPlugin(ScrollTrigger)
 
+// Minimal editorial labels — barely there, just enough orientation
 const scenes = [
   {
-    id: 'grand-hall',
-    number: '02',
-    tag: 'Grand Central Conservatory',
-    title: 'The Living Cathedral',
-    description: 'Monumental glass and steel rise into the morning sky. Sunlight breaks through and touches the earth in gold.',
+    number:  '02',
+    title:   'Grand Central Conservatory',
     triggerStart: '14%',
-    triggerEnd: '32%',
-    side: 'left',
+    triggerEnd:   '33%',
+    align: 'left',
   },
   {
-    id: 'living-path',
-    number: '03',
-    tag: 'The Living Path',
-    title: 'Deep in Green',
-    description: 'A dense corridor of botanical abundance. Humidity hangs in the air. Light moves through leaves.',
+    number:  '03',
+    title:   'The Living Path',
     triggerStart: '36%',
-    triggerEnd: '54%',
-    side: 'right',
+    triggerEnd:   '55%',
+    align: 'right',
   },
   {
-    id: 'cultivation',
-    number: '04',
-    tag: 'Cultivation & Harvest',
-    title: 'Where Life Grows',
-    description: 'Asparagus, lettuce, herbs. Raised beds and hydroponic racks. Purposeful, productive, elegant.',
-    triggerStart: '56%',
-    triggerEnd: '74%',
-    side: 'left',
+    number:  '04',
+    title:   'Cultivation & Harvest',
+    triggerStart: '58%',
+    triggerEnd:   '75%',
+    align: 'left',
   },
   {
-    id: 'reflection',
-    number: '05',
-    tag: 'The Reflection Hall',
-    title: 'Stillness at the End',
-    description: 'A serene, open hall. A mirror pool. The greenhouse breathes around you in quiet luxury.',
-    triggerStart: '76%',
-    triggerEnd: '96%',
-    side: 'right',
+    number:  '05',
+    title:   'Reflection Hall',
+    triggerStart: '77%',
+    triggerEnd:   '96%',
+    align: 'right',
   },
 ]
 
 function SceneLabel({ scene }) {
   const ref = useRef()
+  const isLeft = scene.align === 'left'
 
   useEffect(() => {
     const ctx = gsap.context(() => {
       gsap.fromTo(
         ref.current,
-        { opacity: 0, x: scene.side === 'left' ? -35 : 35 },
+        { opacity: 0, x: isLeft ? -20 : 20 },
         {
           opacity: 1,
           x: 0,
-          duration: 0.9,
+          duration: 1.0,
           ease: 'power3.out',
           scrollTrigger: {
             trigger: '#scroll-root',
@@ -70,80 +60,51 @@ function SceneLabel({ scene }) {
       )
     })
     return () => ctx.revert()
-  }, [scene])
-
-  const isLeft = scene.side === 'left'
+  }, [scene, isLeft])
 
   return (
     <div
       ref={ref}
-      className="fixed z-30 pointer-events-none"
       style={{
+        position: 'fixed',
+        bottom: '8vh',
+        ...(isLeft ? { left: '4.5vw' } : { right: '4.5vw' }),
+        zIndex: 30,
+        pointerEvents: 'none',
         opacity: 0,
-        bottom: '10vh',
-        ...(isLeft ? { left: '4vw' } : { right: '4vw' }),
-        maxWidth: 340,
+        maxWidth: 260,
       }}
     >
-      {/* Large ghost number */}
+      {/* Ghost number — very faint, large */}
       <div
-        className="font-display"
         style={{
-          fontSize: 'clamp(4.5rem, 10vw, 7.5rem)',
+          fontFamily: 'Cormorant Garamond, Georgia, serif',
+          fontSize: 'clamp(3.5rem, 8vw, 6rem)',
           fontWeight: 300,
-          lineHeight: 0.9,
+          lineHeight: 0.88,
           color: 'rgba(244,240,232,0.04)',
-          marginBottom: '0.1em',
           letterSpacing: '-0.02em',
+          marginBottom: '0.4rem',
+          userSelect: 'none',
         }}
       >
         {scene.number}
       </div>
 
-      {/* Tag */}
-      <div className="label-tag mb-2" style={{ color: '#8ab880' }}>
-        {scene.tag}
-      </div>
-
-      {/* Title */}
+      {/* Title — single line, quiet */}
       <div
-        className="font-display"
         style={{
-          fontSize: 'clamp(1.1rem, 2.5vw, 1.75rem)',
+          fontFamily: 'Cormorant Garamond, Georgia, serif',
+          fontSize: 'clamp(0.85rem, 1.6vw, 1.15rem)',
           fontWeight: 400,
           fontStyle: 'italic',
-          color: 'rgba(244,240,232,0.82)',
-          lineHeight: 1.2,
-          marginBottom: '0.75rem',
-          letterSpacing: '0.02em',
+          color: 'rgba(244,240,232,0.55)',
+          letterSpacing: '0.03em',
+          lineHeight: 1.3,
         }}
       >
         {scene.title}
       </div>
-
-      {/* Divider */}
-      <div
-        style={{
-          height: 1,
-          width: 50,
-          background: 'rgba(106,184,80,0.5)',
-          marginBottom: '0.85rem',
-        }}
-      />
-
-      {/* Description */}
-      <p
-        className="font-body"
-        style={{
-          fontSize: '0.78rem',
-          fontWeight: 300,
-          lineHeight: 1.75,
-          color: 'rgba(244,240,232,0.38)',
-          letterSpacing: '0.025em',
-        }}
-      >
-        {scene.description}
-      </p>
     </div>
   )
 }
@@ -152,7 +113,7 @@ export default function SectionLabels() {
   return (
     <>
       {scenes.map((s) => (
-        <SceneLabel key={s.id} scene={s} />
+        <SceneLabel key={s.number} scene={s} />
       ))}
     </>
   )

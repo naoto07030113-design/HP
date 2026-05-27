@@ -9,47 +9,39 @@ export default function HeroOverlay() {
 
   useEffect(() => {
     const ctx = gsap.context(() => {
-      // Fade out as user scrolls past the entrance
+      // Dissolve gently as the visitor steps into the conservatory
       gsap.to(containerRef.current, {
         opacity: 0,
-        y: -30,
-        ease: 'power2.in',
+        y: -20,
+        ease: 'power2.inOut',
         scrollTrigger: {
           trigger: '#scroll-root',
-          start: '8% top',
-          end: '20% top',
-          scrub: 1.2,
+          start: '7% top',
+          end: '18% top',
+          scrub: 1.5,
         },
       })
 
-      // Staggered entrance animations
-      gsap.fromTo('.bio-tag',
-        { opacity: 0, y: 18 },
-        { opacity: 1, y: 0, duration: 1.4, delay: 0.2, ease: 'power3.out' }
+      // Entrance sequence — unhurried, breath by breath
+      gsap.fromTo('.hero-eyebrow',
+        { opacity: 0, y: 12 },
+        { opacity: 1, y: 0, duration: 1.6, delay: 0.4, ease: 'power2.out' }
       )
-      gsap.fromTo('.bio-title',
-        { opacity: 0, y: 36 },
-        { opacity: 1, y: 0, duration: 1.6, delay: 0.5, ease: 'power3.out' }
+      gsap.fromTo('.hero-wordmark',
+        { opacity: 0, y: 28, letterSpacing: '0.25em' },
+        { opacity: 1, y: 0, letterSpacing: '0.14em', duration: 2.0, delay: 0.7, ease: 'power3.out' }
       )
-      gsap.fromTo('.bio-subtitle',
-        { opacity: 0, y: 22 },
-        { opacity: 1, y: 0, duration: 1.2, delay: 0.9, ease: 'power3.out' }
+      gsap.fromTo('.hero-rule',
+        { scaleX: 0 },
+        { scaleX: 1, duration: 2.0, delay: 1.2, ease: 'power3.inOut', transformOrigin: 'left' }
       )
-      gsap.fromTo('.bio-divider',
-        { scaleX: 0, transformOrigin: 'left center' },
-        { scaleX: 1, duration: 1.8, delay: 0.8, ease: 'power3.inOut' }
+      gsap.fromTo('.hero-tagline',
+        { opacity: 0, y: 14 },
+        { opacity: 1, y: 0, duration: 1.4, delay: 1.6, ease: 'power2.out' }
       )
-      gsap.fromTo('.bio-desc',
-        { opacity: 0, y: 16 },
-        { opacity: 1, y: 0, duration: 1.0, delay: 1.3, ease: 'power3.out' }
-      )
-      gsap.fromTo('.bio-cta',
-        { opacity: 0, y: 16 },
-        { opacity: 1, y: 0, duration: 1.0, delay: 1.7, ease: 'power3.out' }
-      )
-      gsap.fromTo('.bio-scroll',
+      gsap.fromTo('.hero-scroll',
         { opacity: 0 },
-        { opacity: 1, duration: 1.0, delay: 2.4, ease: 'power3.out' }
+        { opacity: 1, duration: 1.2, delay: 2.6, ease: 'power2.out' }
       )
     }, containerRef)
 
@@ -59,135 +51,126 @@ export default function HeroOverlay() {
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 z-20 pointer-events-none flex flex-col justify-center"
-      style={{ padding: '0 8vw' }}
+      className="fixed inset-0 z-20 pointer-events-none"
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'flex-end',
+        padding: '0 9vw 12vh',
+      }}
     >
-      {/* Content block */}
-      <div style={{ maxWidth: 580 }}>
-
-        {/* Tag line */}
-        <div
-          className="bio-tag label-tag mb-7 flex items-center gap-3"
-          style={{ opacity: 0 }}
-        >
-          <div style={{ width: 28, height: 1, background: '#6ab850' }} />
-          A Living Sanctuary · Nature · Fermentation · Care
-        </div>
-
-        {/* Main title */}
-        <h1 style={{ marginBottom: '0.3em' }}>
-          <div
-            className="bio-title font-display text-cream"
-            style={{
-              fontSize: 'clamp(3.5rem, 10vw, 8rem)',
-              fontWeight: 400,
-              lineHeight: 0.95,
-              letterSpacing: '0.06em',
-              opacity: 0,
-              color: '#f4f0e8',
-            }}
-          >
-            BIO PARK
-          </div>
-        </h1>
-
-        {/* Subtitle */}
-        <div
-          className="bio-subtitle font-display"
-          style={{
-            fontSize: 'clamp(0.9rem, 2vw, 1.35rem)',
-            fontWeight: 300,
-            fontStyle: 'italic',
-            color: 'rgba(244,240,232,0.55)',
-            letterSpacing: '0.04em',
-            marginBottom: '1.8rem',
-            opacity: 0,
-          }}
-        >
-          A Monumental Greenhouse of Growth
-        </div>
-
-        {/* Divider */}
-        <div
-          className="bio-divider"
-          style={{
-            height: 1,
-            width: 220,
-            background: 'linear-gradient(90deg, rgba(106,184,80,0.7), rgba(138,184,128,0.3), transparent)',
-            marginBottom: '1.8rem',
-            opacity: 0,
-          }}
-        />
-
-        {/* Description */}
-        <p
-          className="bio-desc font-body"
-          style={{
-            fontSize: 'clamp(0.78rem, 1.4vw, 0.92rem)',
-            fontWeight: 300,
-            lineHeight: 1.85,
-            color: 'rgba(244,240,232,0.42)',
-            maxWidth: 440,
-            marginBottom: '2.4rem',
-            opacity: 0,
-            letterSpacing: '0.03em',
-          }}
-        >
-          Step inside a breathtaking botanical conservatory — where natural
-          light filters through glass and steel, and life grows in
-          extraordinary abundance.
-        </p>
-
-        {/* CTA */}
-        <div
-          className="bio-cta flex items-center gap-5 pointer-events-auto"
-          style={{ opacity: 0 }}
-        >
-          <button
-            className="btn-primary"
-            onClick={() => {
-              const el = document.getElementById('grand-hall')
-              el?.scrollIntoView({ behavior: 'smooth' })
-            }}
-          >
-            Enter the Greenhouse
-          </button>
-          <span
-            className="font-body"
-            style={{ fontSize: '0.68rem', color: 'rgba(244,240,232,0.25)', letterSpacing: '0.15em' }}
-          >
-            Scroll to explore ↓
-          </span>
-        </div>
+      {/* Eyebrow — very small, very quiet */}
+      <div
+        className="hero-eyebrow font-body"
+        style={{
+          fontSize: '0.58rem',
+          letterSpacing: '0.38em',
+          color: 'rgba(244,240,232,0.38)',
+          marginBottom: '1.6rem',
+          opacity: 0,
+        }}
+      >
+        GREENHOUSE · FERMENTATION · NATURE · CARE
       </div>
 
-      {/* Scroll indicator — bottom center */}
-      <div
-        className="bio-scroll absolute bottom-9 left-1/2 flex flex-col items-center gap-2"
-        style={{ transform: 'translateX(-50%)', opacity: 0 }}
+      {/* Primary wordmark */}
+      <h1
+        className="hero-wordmark font-display"
+        style={{
+          fontSize: 'clamp(4.2rem, 12vw, 10rem)',
+          fontWeight: 400,
+          lineHeight: 0.92,
+          letterSpacing: '0.14em',
+          color: '#f4f0e8',
+          marginBottom: '2rem',
+          opacity: 0,
+        }}
       >
-        <span
-          className="label-tag"
-          style={{ fontSize: '0.52rem', color: 'rgba(138,184,128,0.5)' }}
+        BIO PARK
+      </h1>
+
+      {/* Rule */}
+      <div
+        className="hero-rule"
+        style={{
+          height: 1,
+          width: 'min(280px, 30vw)',
+          background: 'rgba(244,240,232,0.2)',
+          marginBottom: '1.8rem',
+          opacity: 0.9,
+        }}
+      />
+
+      {/* Tagline — italic, editorial */}
+      <p
+        className="hero-tagline font-display"
+        style={{
+          fontSize: 'clamp(0.9rem, 1.8vw, 1.25rem)',
+          fontWeight: 300,
+          fontStyle: 'italic',
+          color: 'rgba(244,240,232,0.48)',
+          letterSpacing: '0.04em',
+          maxWidth: 400,
+          lineHeight: 1.5,
+          opacity: 0,
+        }}
+      >
+        A living sanctuary of extraordinary scale
+      </p>
+
+      {/* Scroll indicator */}
+      <div
+        className="hero-scroll"
+        style={{
+          position: 'absolute',
+          bottom: '4.5vh',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '0.7rem',
+          opacity: 0,
+        }}
+      >
+        <div
+          style={{
+            width: 1,
+            height: 48,
+            background: 'rgba(244,240,232,0.15)',
+            overflow: 'hidden',
+            position: 'relative',
+          }}
         >
-          Scroll
-        </span>
-        <div style={{ width: 1, height: 42, background: 'rgba(106,184,80,0.2)', overflow: 'hidden' }}>
           <div
             style={{
+              position: 'absolute',
+              top: 0, left: 0,
               width: '100%',
-              height: '45%',
-              background: 'linear-gradient(180deg, #6ab850, transparent)',
-              animation: 'scrollDrop 2s ease-in-out infinite',
+              height: '50%',
+              background: 'rgba(244,240,232,0.5)',
+              animation: 'scrollLine 2.4s ease-in-out infinite',
             }}
           />
         </div>
+        <span
+          style={{
+            fontSize: '0.5rem',
+            letterSpacing: '0.3em',
+            color: 'rgba(244,240,232,0.25)',
+            fontFamily: 'Jost, sans-serif',
+          }}
+        >
+          SCROLL
+        </span>
       </div>
 
       <style>{`
-        @keyframes scrollDrop {
-          0%   { transform: translateY(-100%); }
-          100% { transform: translateY(240%); }
+        @keyframes scrollLine {
+          0%   { transform: translateY(-100%); opacity: 0; }
+          20%  { opacity: 1; }
+          80%  { opacity: 1; }
+          100% { transform: translateY(200%); opacity: 0; }
         }
       `}</style>
     </div>

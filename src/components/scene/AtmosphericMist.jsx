@@ -2,32 +2,33 @@ import { useRef, useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 
-// Floating atmospheric particles — mist, pollen, dust
+// ─────────────────────────────────────────────────────────────────
+// Greenhouse atmospheric particles — real greenhouse humidity feel
+//
+// Very sparse. Think: the barely-visible moisture in the air of
+// a real botanical conservatory on a quiet morning.
+// NOT sci-fi particles. NOT visible effects. Just presence.
+// ─────────────────────────────────────────────────────────────────
 export default function AtmosphericMist({ isMobile = false }) {
-  const count = isMobile ? 400 : 900
+  const count = isMobile ? 180 : 380
   const ref = useRef()
 
-  // Initialize particle positions spread across the full greenhouse
-  const { positions, velocities, sizes } = useMemo(() => {
+  const { positions, velocities } = useMemo(() => {
     const pos = new Float32Array(count * 3)
     const vel = new Float32Array(count * 3)
-    const siz = new Float32Array(count)
 
     for (let i = 0; i < count; i++) {
-      // Distributed across greenhouse volume
-      pos[i * 3 + 0] = (Math.random() - 0.5) * 19     // x: -9.5 to 9.5
-      pos[i * 3 + 1] = Math.random() * 10.5            // y: 0 to 10.5
-      pos[i * 3 + 2] = -Math.random() * 90             // z: 0 to -90
+      pos[i * 3 + 0] = (Math.random() - 0.5) * 18
+      pos[i * 3 + 1] = Math.random() * 10
+      pos[i * 3 + 2] = -Math.random() * 88
 
-      // Very slow drift upward with slight random horizontal wander
-      vel[i * 3 + 0] = (Math.random() - 0.5) * 0.0008
-      vel[i * 3 + 1] = 0.0004 + Math.random() * 0.0006
-      vel[i * 3 + 2] = (Math.random() - 0.5) * 0.0005
-
-      siz[i] = 0.015 + Math.random() * 0.04
+      // Extremely slow drift — almost imperceptible
+      vel[i * 3 + 0] = (Math.random() - 0.5) * 0.0004
+      vel[i * 3 + 1] = 0.0002 + Math.random() * 0.0003
+      vel[i * 3 + 2] = (Math.random() - 0.5) * 0.0003
     }
 
-    return { positions: pos, velocities: vel, sizes: siz }
+    return { positions: pos, velocities: vel }
   }, [count])
 
   useFrame(() => {
@@ -39,11 +40,11 @@ export default function AtmosphericMist({ isMobile = false }) {
       pos[i * 3 + 1] += velocities[i * 3 + 1]
       pos[i * 3 + 2] += velocities[i * 3 + 2]
 
-      // Wrap vertically (reset when particle rises too high)
-      if (pos[i * 3 + 1] > 11.5) {
-        pos[i * 3 + 1] = 0.1
-        pos[i * 3 + 0] = (Math.random() - 0.5) * 19
-        pos[i * 3 + 2] = -Math.random() * 90
+      // Gentle wrap
+      if (pos[i * 3 + 1] > 11.0) {
+        pos[i * 3 + 1] = 0.2
+        pos[i * 3 + 0] = (Math.random() - 0.5) * 18
+        pos[i * 3 + 2] = -Math.random() * 88
       }
     }
 
@@ -59,18 +60,12 @@ export default function AtmosphericMist({ isMobile = false }) {
           count={count}
           itemSize={3}
         />
-        <bufferAttribute
-          attach="attributes-size"
-          args={[sizes, 1]}
-          count={count}
-          itemSize={1}
-        />
       </bufferGeometry>
       <pointsMaterial
-        size={0.035}
-        color="#e8f0e0"
+        size={0.055}
+        color="#eef4e8"
         transparent
-        opacity={0.25}
+        opacity={0.15}
         sizeAttenuation
         depthWrite={false}
         blending={THREE.AdditiveBlending}
