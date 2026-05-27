@@ -4,40 +4,40 @@ export default {
   theme: {
     extend: {
       colors: {
-        'forest-dark': '#1a2e18',
-        'forest-mid': '#2d5227',
-        'forest-light': '#4a8c3f',
-        'leaf-bright': '#6ab850',
-        'sage': '#8ab880',
-        'stone': '#9a8870',
-        'stone-light': '#c4b8a4',
-        'cream': '#f4f0e8',
-        'morning': '#fffad0',
+        bg: 'hsl(var(--bg))',
+        surface: 'hsl(var(--surface))',
+        'text-primary': 'hsl(var(--text))',
+        muted: 'hsl(var(--muted))',
+        stroke: 'hsl(var(--stroke))',
+        accent: 'hsl(var(--accent))',
       },
       fontFamily: {
-        display: ['Cormorant Garamond', 'Georgia', 'serif'],
-        body: ['Jost', 'system-ui', 'sans-serif'],
+        body: ['Inter', 'sans-serif'],
+        display: ['Instrument Serif', 'serif'],
       },
       animation: {
-        'float-gentle': 'floatGentle 8s ease-in-out infinite',
-        'fade-up': 'fadeUp 1.2s ease-out forwards',
-        'breathe': 'breathe 4s ease-in-out infinite',
+        'scroll-down': 'scroll-down 1.5s ease-in-out infinite',
+        'role-fade-in': 'role-fade-in 0.4s ease-out',
+        'gradient-shift': 'gradient-shift 6s ease infinite',
       },
       keyframes: {
-        floatGentle: {
-          '0%, 100%': { transform: 'translateY(0px)' },
-          '50%': { transform: 'translateY(-8px)' },
+        'scroll-down': {
+          '0%': { transform: 'translateY(-100%)' },
+          '100%': { transform: 'translateY(200%)' },
         },
-        fadeUp: {
-          from: { opacity: '0', transform: 'translateY(24px)' },
-          to: { opacity: '1', transform: 'translateY(0)' },
+        'role-fade-in': {
+          '0%': { opacity: '0', transform: 'translateY(8px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
         },
-        breathe: {
-          '0%, 100%': { opacity: '0.6' },
-          '50%': { opacity: '1' },
+        'gradient-shift': {
+          '0%': { backgroundPosition: '0% 50%' },
+          '50%': { backgroundPosition: '100% 50%' },
+          '100%': { backgroundPosition: '0% 50%' },
         },
       },
     },
   },
-  plugins: [],
+  plugins: [
+    require('tailwindcss-animate'),
+  ],
 }

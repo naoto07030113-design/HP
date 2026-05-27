@@ -3,6 +3,15 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --bg: 0 0% 4%;
+    --surface: 0 0% 8%;
+    --text: 0 0% 96%;
+    --muted: 0 0% 53%;
+    --stroke: 0 0% 12%;
+    --accent: 0 0% 96%;
+  }
+
   * {
     box-sizing: border-box;
     margin: 0;
@@ -10,14 +19,13 @@
   }
 
   html {
-    scroll-behavior: auto;
-    background: #1a2e18;
-    color: #f4f0e8;
+    scroll-behavior: smooth;
   }
 
   body {
-    font-family: 'Jost', system-ui, sans-serif;
-    background: #1a2e18;
+    background-color: hsl(var(--bg));
+    color: hsl(var(--text));
+    font-family: 'Inter', sans-serif;
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -28,117 +36,58 @@
   }
 
   ::-webkit-scrollbar-track {
-    background: #1a2e18;
+    background: hsl(var(--bg));
   }
 
   ::-webkit-scrollbar-thumb {
-    background: #4a8c3f;
+    background: linear-gradient(180deg, #89AACC 0%, #4E85BF 100%);
     border-radius: 2px;
   }
 }
 
 @layer components {
-  .font-display {
-    font-family: 'Cormorant Garamond', Georgia, serif;
+  .accent-gradient {
+    background: linear-gradient(90deg, #89AACC 0%, #4E85BF 100%);
   }
 
-  .font-body {
-    font-family: 'Jost', system-ui, sans-serif;
+  .accent-gradient-animated {
+    background: linear-gradient(270deg, #89AACC, #4E85BF, #6a9dd4, #89AACC);
+    background-size: 300% 300%;
+    animation: gradient-shift 6s ease infinite;
   }
 
-  /* Glassmorphism panel — light version for bright overlays */
-  .glass-panel {
-    background: rgba(244, 240, 232, 0.12);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border: 1px solid rgba(244, 240, 232, 0.25);
-  }
-
-  /* Dark glass panel for navigation */
-  .glass-panel-dark {
-    background: rgba(26, 46, 24, 0.6);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(106, 184, 80, 0.15);
-  }
-
-  .label-tag {
-    font-family: 'Jost', sans-serif;
-    font-size: 0.6rem;
-    font-weight: 400;
-    letter-spacing: 0.28em;
-    text-transform: uppercase;
-    color: #8ab880;
-  }
-
-  .label-tag-light {
-    font-family: 'Jost', sans-serif;
-    font-size: 0.6rem;
-    font-weight: 400;
-    letter-spacing: 0.28em;
-    text-transform: uppercase;
-    color: rgba(244, 240, 232, 0.5);
-  }
-
-  .btn-primary {
-    background: rgba(244, 240, 232, 0.1);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(244, 240, 232, 0.35);
-    color: #f4f0e8;
-    font-family: 'Jost', sans-serif;
-    font-size: 0.7rem;
-    font-weight: 300;
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
-    padding: 0.9rem 2.8rem;
-    cursor: pointer;
-    transition: all 0.5s ease;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .btn-primary::before {
-    content: '';
+  .gradient-border-ring {
     position: absolute;
-    inset: 0;
-    background: rgba(244, 240, 232, 0.08);
-    opacity: 0;
-    transition: opacity 0.4s ease;
-  }
-
-  .btn-primary:hover {
-    border-color: rgba(244, 240, 232, 0.65);
-    background: rgba(244, 240, 232, 0.18);
-  }
-
-  .btn-primary:hover::before {
-    opacity: 1;
-  }
-
-  .btn-secondary {
-    background: none;
-    border: none;
-    color: rgba(244, 240, 232, 0.45);
-    font-family: 'Jost', sans-serif;
-    font-size: 0.7rem;
-    font-weight: 300;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition: color 0.4s ease;
-    padding: 0.5rem 0;
-  }
-
-  .btn-secondary:hover {
-    color: rgba(244, 240, 232, 0.8);
-  }
-
-  .divider-botanical {
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(138, 184, 128, 0.4), transparent);
+    inset: -2px;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #89AACC 0%, #4E85BF 100%);
+    z-index: -1;
   }
 }
 
-canvas {
-  display: block;
+@keyframes scroll-down {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(200%); }
+}
+
+@keyframes role-fade-in {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.85); }
 }
