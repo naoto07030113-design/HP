@@ -248,14 +248,15 @@ function EndWall() {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Arch ribs — every 5 units along the greenhouse
+// Arch ribs — every 5 units (desktop) or 10 units (mobile)
 // ─────────────────────────────────────────────────────────────────
-function AllArchRibs() {
-  const count = Math.floor(DEPTH / 5)
+function AllArchRibs({ isMobile }) {
+  const spacing = isMobile ? 10 : 5
+  const count   = Math.floor(DEPTH / spacing)
   return (
     <group>
       {Array.from({ length: count }, (_, i) => (
-        <ArchRib key={i} zPos={Z_NEAR - (i + 0.5) * 5} />
+        <ArchRib key={i} zPos={Z_NEAR - (i + 0.5) * spacing} />
       ))}
     </group>
   )
@@ -264,7 +265,7 @@ function AllArchRibs() {
 // ─────────────────────────────────────────────────────────────────
 // Main greenhouse shell
 // ─────────────────────────────────────────────────────────────────
-export default function GreenhouseShell() {
+export default function GreenhouseShell({ isMobile = false }) {
   return (
     <group>
       {/* Glass roof panels */}
@@ -280,7 +281,7 @@ export default function GreenhouseShell() {
       <GlassPanel x1={-W} y1={0} x2={-W} y2={EAVE} />
 
       {/* Structural steel */}
-      <AllArchRibs />
+      <AllArchRibs isMobile={isMobile} />
       <Purlins />
       <EntranceFacade />
       <EndWall />

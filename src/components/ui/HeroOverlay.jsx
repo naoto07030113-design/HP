@@ -9,10 +9,9 @@ export default function HeroOverlay() {
 
   useEffect(() => {
     const ctx = gsap.context(() => {
-      // Dissolve gently as the visitor steps into the conservatory
       gsap.to(containerRef.current, {
         opacity: 0,
-        y: -20,
+        y: -18,
         ease: 'power2.inOut',
         scrollTrigger: {
           trigger: '#scroll-root',
@@ -22,14 +21,13 @@ export default function HeroOverlay() {
         },
       })
 
-      // Entrance sequence — unhurried, breath by breath
       gsap.fromTo('.hero-eyebrow',
         { opacity: 0, y: 12 },
         { opacity: 1, y: 0, duration: 1.6, delay: 0.4, ease: 'power2.out' }
       )
       gsap.fromTo('.hero-wordmark',
-        { opacity: 0, y: 28, letterSpacing: '0.25em' },
-        { opacity: 1, y: 0, letterSpacing: '0.14em', duration: 2.0, delay: 0.7, ease: 'power3.out' }
+        { opacity: 0, y: 28 },
+        { opacity: 1, y: 0, duration: 2.0, delay: 0.7, ease: 'power3.out' }
       )
       gsap.fromTo('.hero-rule',
         { scaleX: 0 },
@@ -51,23 +49,34 @@ export default function HeroOverlay() {
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 z-20 pointer-events-none"
       style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 20,
+        pointerEvents: 'none',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'flex-end',
-        padding: '0 9vw 12vh',
+        padding: 'clamp(1.5rem, 5vw, 4rem) clamp(1.5rem, 7vw, 5rem) clamp(10vh, 14vh, 100px)',
+        boxSizing: 'border-box',
+        /* Prevent horizontal overflow on mobile */
+        overflow: 'hidden',
+        maxWidth: '100vw',
       }}
     >
-      {/* Eyebrow — very small, very quiet */}
+      {/* Eyebrow */}
       <div
-        className="hero-eyebrow font-body"
+        className="hero-eyebrow"
         style={{
-          fontSize: '0.58rem',
-          letterSpacing: '0.38em',
+          fontFamily: 'Jost, sans-serif',
+          fontSize: 'clamp(0.48rem, 1.5vw, 0.58rem)',
+          letterSpacing: '0.30em',
           color: 'rgba(244,240,232,0.38)',
-          marginBottom: '1.6rem',
+          marginBottom: 'clamp(1rem, 2.5vh, 1.6rem)',
           opacity: 0,
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
         }}
       >
         GREENHOUSE · FERMENTATION · NATURE · CARE
@@ -75,15 +84,18 @@ export default function HeroOverlay() {
 
       {/* Primary wordmark */}
       <h1
-        className="hero-wordmark font-display"
+        className="hero-wordmark"
         style={{
-          fontSize: 'clamp(4.2rem, 12vw, 10rem)',
+          fontFamily: 'Cormorant Garamond, Georgia, serif',
+          fontSize: 'clamp(3.2rem, 13vw, 10rem)',
           fontWeight: 400,
           lineHeight: 0.92,
-          letterSpacing: '0.14em',
+          letterSpacing: '0.10em',
           color: '#f4f0e8',
-          marginBottom: '2rem',
+          marginBottom: 'clamp(1.2rem, 3vw, 2rem)',
           opacity: 0,
+          /* Prevent overflow on narrow screens */
+          maxWidth: '100%',
         }}
       >
         BIO PARK
@@ -94,23 +106,23 @@ export default function HeroOverlay() {
         className="hero-rule"
         style={{
           height: 1,
-          width: 'min(280px, 30vw)',
+          width: 'clamp(120px, 25vw, 280px)',
           background: 'rgba(244,240,232,0.2)',
-          marginBottom: '1.8rem',
-          opacity: 0.9,
+          marginBottom: 'clamp(1rem, 2.5vw, 1.8rem)',
         }}
       />
 
-      {/* Tagline — italic, editorial */}
+      {/* Tagline */}
       <p
-        className="hero-tagline font-display"
+        className="hero-tagline"
         style={{
-          fontSize: 'clamp(0.9rem, 1.8vw, 1.25rem)',
+          fontFamily: 'Cormorant Garamond, Georgia, serif',
+          fontSize: 'clamp(0.8rem, 2.5vw, 1.25rem)',
           fontWeight: 300,
           fontStyle: 'italic',
           color: 'rgba(244,240,232,0.48)',
           letterSpacing: '0.04em',
-          maxWidth: 400,
+          maxWidth: 'min(400px, 85vw)',
           lineHeight: 1.5,
           opacity: 0,
         }}
@@ -123,20 +135,20 @@ export default function HeroOverlay() {
         className="hero-scroll"
         style={{
           position: 'absolute',
-          bottom: '4.5vh',
+          bottom: 'clamp(2.5rem, 5vh, 4rem)',
           left: '50%',
           transform: 'translateX(-50%)',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '0.7rem',
+          gap: '0.6rem',
           opacity: 0,
         }}
       >
         <div
           style={{
             width: 1,
-            height: 48,
+            height: 44,
             background: 'rgba(244,240,232,0.15)',
             overflow: 'hidden',
             position: 'relative',
@@ -155,7 +167,7 @@ export default function HeroOverlay() {
         </div>
         <span
           style={{
-            fontSize: '0.5rem',
+            fontSize: '0.48rem',
             letterSpacing: '0.3em',
             color: 'rgba(244,240,232,0.25)',
             fontFamily: 'Jost, sans-serif',

@@ -368,9 +368,65 @@ function PlantRow({ zValues, xL = -8.5, xR = 8.5, seed = 0 }) {
 }
 
 // ─────────────────────────────────────────────────────────────────
+// Mobile plant clusters — ~60 total meshes, simple spheres only
+// ─────────────────────────────────────────────────────────────────
+function MobilePlants() {
+  // One cluster = 3 spheres + 1 cylinder = 4 meshes
+  // 24 clusters × 4 = ~96 meshes total
+  const COLORS = ['#2d6224', '#1e4018', '#3a7a30', '#2a5a20', '#4a8038', '#336828']
+  const clusters = [
+    // [x, z, scaleMultiplier, colorOffset]
+    [-9, 4,   1.3, 0], [ 9, 4,   1.2, 2],
+    [-9,-5,   1.2, 1], [ 9,-5,   1.3, 3],
+    [-9,-12,  1.4, 0], [ 9,-12,  1.3, 4],
+    [-9,-20,  1.3, 2], [ 9,-20,  1.4, 1],
+    [-9,-28,  1.2, 3], [ 9,-28,  1.3, 0],
+    [-9,-36,  1.3, 4], [ 9,-36,  1.2, 2],
+    [-9,-45,  1.2, 1], [ 9,-45,  1.3, 3],
+    [-9,-55,  1.3, 0], [ 9,-55,  1.2, 4],
+    [-9,-63,  1.1, 2], [ 9,-63,  1.2, 1],
+    [-9,-70,  1.4, 3], [ 9,-70,  1.3, 0],
+    [-9,-78,  1.2, 4], [ 9,-78,  1.3, 2],
+    [-8,-16,  1.1, 1], [ 8,-16,  1.0, 3],
+  ]
+
+  return (
+    <group>
+      {clusters.map(([x, z, s, co], i) => {
+        const c1 = COLORS[co % COLORS.length]
+        const c2 = COLORS[(co + 1) % COLORS.length]
+        const c3 = COLORS[(co + 2) % COLORS.length]
+        return (
+          <group key={i} position={[x, 0, z]} scale={s}>
+            <mesh position={[0, 1.1, 0]}>
+              <sphereGeometry args={[1.05, 8, 6]} />
+              <meshStandardMaterial color={c1} roughness={0.9} />
+            </mesh>
+            <mesh position={[0.55, 0.65, 0.3]}>
+              <sphereGeometry args={[0.75, 7, 5]} />
+              <meshStandardMaterial color={c2} roughness={0.92} />
+            </mesh>
+            <mesh position={[-0.45, 0.70,-0.25]}>
+              <sphereGeometry args={[0.70, 7, 5]} />
+              <meshStandardMaterial color={c3} roughness={0.92} />
+            </mesh>
+            <mesh position={[0, 0.22, 0]}>
+              <cylinderGeometry args={[0.07, 0.11, 0.44, 6]} />
+              <meshStandardMaterial color="#2a2018" roughness={0.95} />
+            </mesh>
+          </group>
+        )
+      })}
+    </group>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────
 // All 5 scenes worth of plant life
 // ─────────────────────────────────────────────────────────────────
-export default function PlantLife() {
+export default function PlantLife({ isMobile = false }) {
+  if (isMobile) return <MobilePlants />
+
   return (
     <group>
       {/* ── Scene 1: Entrance ── */}
