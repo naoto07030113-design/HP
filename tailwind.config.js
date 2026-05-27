@@ -4,37 +4,49 @@ export default {
   theme: {
     extend: {
       colors: {
-        'forest-dark': '#1a2e18',
-        'forest-mid': '#2d5227',
-        'forest-light': '#4a8c3f',
-        'leaf-bright': '#6ab850',
-        'sage': '#8ab880',
-        'stone': '#9a8870',
-        'stone-light': '#c4b8a4',
-        'cream': '#f4f0e8',
-        'morning': '#fffad0',
+        bio: {
+          bg:      '#0B130B',
+          surface: '#111B11',
+          text:    '#F5F3EC',
+          muted:   '#A6B0A7',
+          stroke:  '#1E2A1F',
+          green:   '#5C8A63',
+          sage:    '#8DAF74',
+          gold:    '#C9B26B',
+        },
       },
       fontFamily: {
-        display: ['Cormorant Garamond', 'Georgia', 'serif'],
-        body: ['Jost', 'system-ui', 'sans-serif'],
+        display: ['"Cormorant Garamond"', 'Georgia', 'serif'],
+        sans:    ['Inter', 'system-ui', 'sans-serif'],
+      },
+      letterSpacing: {
+        widest2: '0.25em',
+        widest3: '0.35em',
       },
       animation: {
-        'float-gentle': 'floatGentle 8s ease-in-out infinite',
-        'fade-up': 'fadeUp 1.2s ease-out forwards',
-        'breathe': 'breathe 4s ease-in-out infinite',
+        'mist-drift':   'mistDrift 18s ease-in-out infinite',
+        'mist-drift-2': 'mistDrift2 24s ease-in-out infinite',
+        'shaft-pulse':  'shaftPulse 8s ease-in-out infinite',
+        'marquee':      'marquee 40s linear infinite',
+        'spin-slow':    'spin 12s linear infinite',
       },
       keyframes: {
-        floatGentle: {
-          '0%, 100%': { transform: 'translateY(0px)' },
-          '50%': { transform: 'translateY(-8px)' },
+        mistDrift: {
+          '0%, 100%': { transform: 'translateX(0px) translateY(0px)', opacity: '0.6' },
+          '33%':      { transform: 'translateX(20px) translateY(-8px)', opacity: '1' },
+          '66%':      { transform: 'translateX(-15px) translateY(6px)', opacity: '0.7' },
         },
-        fadeUp: {
-          from: { opacity: '0', transform: 'translateY(24px)' },
-          to: { opacity: '1', transform: 'translateY(0)' },
+        mistDrift2: {
+          '0%, 100%': { transform: 'translateX(0px)', opacity: '0.4' },
+          '50%':      { transform: 'translateX(-25px)', opacity: '0.8' },
         },
-        breathe: {
+        shaftPulse: {
           '0%, 100%': { opacity: '0.6' },
-          '50%': { opacity: '1' },
+          '50%':      { opacity: '1' },
+        },
+        marquee: {
+          '0%':   { transform: 'translateX(0%)' },
+          '100%': { transform: 'translateX(-50%)' },
         },
       },
     },
