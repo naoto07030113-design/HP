@@ -11,246 +11,134 @@
 
   html {
     scroll-behavior: auto;
-    background: #080d0b;
-    color: #f0f4f2;
+    background: #1a2e18;
+    color: #f4f0e8;
   }
 
   body {
-    font-family: 'Inter', system-ui, sans-serif;
-    background: #080d0b;
+    font-family: 'Jost', system-ui, sans-serif;
+    background: #1a2e18;
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
   ::-webkit-scrollbar {
-    width: 3px;
+    width: 2px;
   }
 
   ::-webkit-scrollbar-track {
-    background: #0f1a14;
+    background: #1a2e18;
   }
 
   ::-webkit-scrollbar-thumb {
-    background: #2d8653;
+    background: #4a8c3f;
     border-radius: 2px;
   }
 }
 
 @layer components {
+  .font-display {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+  }
+
+  .font-body {
+    font-family: 'Jost', system-ui, sans-serif;
+  }
+
+  /* Glassmorphism panel — light version for bright overlays */
   .glass-panel {
-    background: rgba(255, 255, 255, 0.04);
+    background: rgba(244, 240, 232, 0.12);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(244, 240, 232, 0.25);
+  }
+
+  /* Dark glass panel for navigation */
+  .glass-panel-dark {
+    background: rgba(26, 46, 24, 0.6);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 2px;
-  }
-
-  .glass-panel-gold {
-    background: rgba(201, 168, 76, 0.06);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(201, 168, 76, 0.2);
-    border-radius: 2px;
-  }
-
-  .text-gold {
-    color: #c9a84c;
-  }
-
-  .text-green-glow {
-    color: #52b788;
-    text-shadow: 0 0 30px rgba(82, 183, 136, 0.5);
+    border: 1px solid rgba(106, 184, 80, 0.15);
   }
 
   .label-tag {
-    font-family: 'Inter', sans-serif;
-    font-size: 0.65rem;
-    font-weight: 500;
-    letter-spacing: 0.2em;
+    font-family: 'Jost', sans-serif;
+    font-size: 0.6rem;
+    font-weight: 400;
+    letter-spacing: 0.28em;
     text-transform: uppercase;
-    color: #c9a84c;
+    color: #8ab880;
   }
 
-  .section-number {
-    font-family: 'Playfair Display', serif;
-    font-size: 0.75rem;
-    letter-spacing: 0.3em;
-    color: rgba(201, 168, 76, 0.6);
+  .label-tag-light {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.6rem;
+    font-weight: 400;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: rgba(244, 240, 232, 0.5);
   }
 
-  .jp-text {
-    font-family: 'Noto Serif JP', serif;
+  .btn-primary {
+    background: rgba(244, 240, 232, 0.1);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(244, 240, 232, 0.35);
+    color: #f4f0e8;
+    font-family: 'Jost', sans-serif;
+    font-size: 0.7rem;
     font-weight: 300;
-  }
-
-  .gradient-text {
-    background: linear-gradient(135deg, #f0f4f2 0%, #c9a84c 50%, #52b788 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  .divider-gold {
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(201, 168, 76, 0.5), transparent);
-  }
-
-  .glow-green {
-    box-shadow: 0 0 40px rgba(82, 183, 136, 0.15), 0 0 80px rgba(82, 183, 136, 0.05);
-  }
-
-  .glow-gold {
-    box-shadow: 0 0 40px rgba(201, 168, 76, 0.15), 0 0 80px rgba(201, 168, 76, 0.05);
-  }
-
-  .btn-glass {
-    background: rgba(255, 255, 255, 0.06);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(201, 168, 76, 0.3);
-    color: #c9a84c;
-    font-family: 'Inter', sans-serif;
-    font-size: 0.75rem;
-    font-weight: 500;
-    letter-spacing: 0.15em;
+    letter-spacing: 0.22em;
     text-transform: uppercase;
-    padding: 0.75rem 2rem;
+    padding: 0.9rem 2.8rem;
     cursor: pointer;
-    transition: all 0.4s ease;
+    transition: all 0.5s ease;
     position: relative;
     overflow: hidden;
   }
 
-  .btn-glass::before {
+  .btn-primary::before {
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(135deg, rgba(201, 168, 76, 0.1), transparent);
+    background: rgba(244, 240, 232, 0.08);
     opacity: 0;
     transition: opacity 0.4s ease;
   }
 
-  .btn-glass:hover {
-    border-color: rgba(201, 168, 76, 0.6);
-    color: #e8c97a;
-    box-shadow: 0 0 30px rgba(201, 168, 76, 0.2);
+  .btn-primary:hover {
+    border-color: rgba(244, 240, 232, 0.65);
+    background: rgba(244, 240, 232, 0.18);
   }
 
-  .btn-glass:hover::before {
+  .btn-primary:hover::before {
     opacity: 1;
   }
-}
 
-@layer utilities {
-  .writing-vertical {
-    writing-mode: vertical-rl;
-    text-orientation: mixed;
+  .btn-secondary {
+    background: none;
+    border: none;
+    color: rgba(244, 240, 232, 0.45);
+    font-family: 'Jost', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 300;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: color 0.4s ease;
+    padding: 0.5rem 0;
+  }
+
+  .btn-secondary:hover {
+    color: rgba(244, 240, 232, 0.8);
+  }
+
+  .divider-botanical {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(138, 184, 128, 0.4), transparent);
   }
 }
 
-/* Zone overlay html content */
-.zone-html {
-  width: 420px;
-  pointer-events: none;
-  user-select: none;
-}
-
-.zone-html .zone-tag {
-  font-family: 'Inter', sans-serif;
-  font-size: 0.6rem;
-  letter-spacing: 0.25em;
-  text-transform: uppercase;
-  color: rgba(201, 168, 76, 0.8);
-  margin-bottom: 0.5rem;
-}
-
-.zone-html .zone-number {
-  font-family: 'Playfair Display', serif;
-  font-size: 0.7rem;
-  color: rgba(201, 168, 76, 0.4);
-  letter-spacing: 0.3em;
-  margin-bottom: 1rem;
-}
-
-.zone-html h2 {
-  font-family: 'Playfair Display', serif;
-  font-size: 2rem;
-  font-weight: 500;
-  color: #f0f4f2;
-  line-height: 1.2;
-  margin-bottom: 0.4rem;
-}
-
-.zone-html .jp-title {
-  font-family: 'Noto Serif JP', serif;
-  font-size: 0.85rem;
-  color: rgba(240, 244, 242, 0.4);
-  font-weight: 300;
-  margin-bottom: 1.5rem;
-}
-
-.zone-html .divider {
-  height: 1px;
-  width: 60px;
-  background: linear-gradient(90deg, rgba(201, 168, 76, 0.6), transparent);
-  margin-bottom: 1.5rem;
-}
-
-.zone-html p {
-  font-family: 'Inter', sans-serif;
-  font-size: 0.8rem;
-  line-height: 1.8;
-  color: rgba(240, 244, 242, 0.6);
-  margin-bottom: 1.5rem;
-  font-weight: 300;
-}
-
-.zone-html .feature-list {
-  list-style: none;
-  padding: 0;
-  margin-bottom: 1.5rem;
-}
-
-.zone-html .feature-list li {
-  font-family: 'Inter', sans-serif;
-  font-size: 0.72rem;
-  color: rgba(240, 244, 242, 0.7);
-  font-weight: 300;
-  letter-spacing: 0.05em;
-  padding: 0.4rem 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.zone-html .feature-list li::before {
-  content: '';
-  width: 4px;
-  height: 4px;
-  background: #c9a84c;
-  border-radius: 50%;
-  flex-shrink: 0;
-  box-shadow: 0 0 8px rgba(201, 168, 76, 0.6);
-}
-
-.zone-html .cta-link {
-  font-family: 'Inter', sans-serif;
-  font-size: 0.65rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: #52b788;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.zone-html .cta-link::after {
-  content: '→';
-  font-size: 0.8rem;
-}
-
-/* Particle canvas canvas */
 canvas {
   display: block;
 }
