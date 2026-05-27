@@ -1,383 +1,259 @@
 import { useRef, useMemo, Suspense } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Float, Stars, Environment } from '@react-three/drei'
-import { EffectComposer, Bloom, Vignette, ChromaticAberration } from '@react-three/postprocessing'
+import { Sky, Environment } from '@react-three/drei'
+import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing'
 import { BlendFunction } from 'postprocessing'
 import * as THREE from 'three'
 
-import ParticleField from './ParticleField'
-import AcupunctureZone from './AcupunctureZone'
-import RehabZone from './RehabZone'
-import GroupHomeZone from './GroupHomeZone'
-import BioParkZone from './BioParkZone'
+import GreenhouseShell from './GreenhouseShell'
+import GreenhouseFloor from './GreenhouseFloor'
+import PlantLife from './PlantLife'
+import SunShafts from './SunShafts'
+import AtmosphericMist from './AtmosphericMist'
+import CultivationBeds from './CultivationBeds'
 
-// Hero architectural elements
-function HeroGeometry() {
-  const ringRef = useRef()
-  const ring2Ref = useRef()
-  const coreRef = useRef()
+// ─────────────────────────────────────────────────────────────────
+// Atmospheric fog — light morning greenhouse mist
+// ─────────────────────────────────────────────────────────────────
+function GreenhouseFog() {
+  const { scene } = useThree()
+  useMemo(() => {
+    scene.fog = new THREE.FogExp2('#b8d4a8', 0.009)
+  }, [scene])
+  return null
+}
 
-  useFrame(({ clock }) => {
-    const t = clock.elapsedTime
-    if (ringRef.current) {
-      ringRef.current.rotation.x = t * 0.08
-      ringRef.current.rotation.y = t * 0.12
-    }
-    if (ring2Ref.current) {
-      ring2Ref.current.rotation.x = -t * 0.06
-      ring2Ref.current.rotation.z = t * 0.09
-    }
-    if (coreRef.current) {
-      coreRef.current.rotation.y = t * 0.2
-      coreRef.current.scale.setScalar(1 + Math.sin(t * 0.5) * 0.04)
-    }
-  })
-
+// ─────────────────────────────────────────────────────────────────
+// Reflecting pool — Scene 5, Reflection Hall
+// ─────────────────────────────────────────────────────────────────
+function ReflectionPool() {
   return (
-    <group position={[0, 0, 2]}>
-      {/* Central glowing core */}
-      <mesh ref={coreRef}>
-        <icosahedronGeometry args={[0.5, 1]} />
+    <group position={[0, 0.04, -72]}>
+      {/* Water surface */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <planeGeometry args={[7, 14]} />
         <meshStandardMaterial
-          color="#52b788"
-          emissive="#52b788"
-          emissiveIntensity={1.2}
-          wireframe
-          transparent
-          opacity={0.5}
+          color="#3a5845"
+          roughness={0.02}
+          metalness={0.85}
+          envMapIntensity={2.5}
         />
       </mesh>
 
-      {/* Primary orbit ring */}
-      <mesh ref={ringRef} rotation={[0.5, 0, 0.2]}>
-        <torusGeometry args={[2.2, 0.018, 16, 150]} />
-        <meshStandardMaterial
-          color="#c9a84c"
-          emissive="#c9a84c"
-          emissiveIntensity={0.8}
-          metalness={0.9}
-          roughness={0.05}
-        />
+      {/* Pool surround — raised stone edge */}
+      <mesh position={[0, -0.06, 0]}>
+        <boxGeometry args={[7.4, 0.12, 14.4]} />
+        <meshStandardMaterial color="#9a8e7e" roughness={0.8} metalness={0.08} />
       </mesh>
-
-      {/* Secondary orbit ring */}
-      <mesh ref={ring2Ref} rotation={[-0.3, 0.4, 0]}>
-        <torusGeometry args={[3.2, 0.01, 8, 120]} />
-        <meshStandardMaterial
-          color="#52b788"
-          emissive="#52b788"
-          emissiveIntensity={0.5}
-          transparent
-          opacity={0.6}
-        />
-      </mesh>
-
-      {/* Outer halo */}
-      <Float speed={0.3} rotationIntensity={0.1}>
-        <mesh rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[4.5, 0.006, 8, 180]} />
-          <meshStandardMaterial
-            color="#1a5c3a"
-            emissive="#2d8653"
-            emissiveIntensity={0.4}
-            transparent
-            opacity={0.4}
-          />
-        </mesh>
-      </Float>
-
-      {/* Orbital dots */}
-      {Array.from({ length: 8 }, (_, i) => {
-        const angle = (i / 8) * Math.PI * 2
-        return (
-          <mesh key={i} position={[Math.cos(angle) * 2.2, Math.sin(angle) * 2.2, 0]}>
-            <sphereGeometry args={[0.06, 8, 8]} />
-            <meshStandardMaterial
-              color="#e8c97a"
-              emissive="#e8c97a"
-              emissiveIntensity={1.5}
-            />
-          </mesh>
-        )
-      })}
     </group>
   )
 }
 
-// Ambient floating geometry throughout the scene
-function AmbientFloaters() {
-  const floaters = useMemo(() => {
-    return Array.from({ length: 30 }, (_, i) => ({
-      position: [
-        (Math.random() - 0.5) * 16,
-        (Math.random() - 0.5) * 6,
-        -5 - Math.random() * 55,
-      ],
-      scale: 0.05 + Math.random() * 0.25,
-      color: Math.random() > 0.5 ? '#1a5c3a' : '#0d3320',
-      emissive: Math.random() > 0.7 ? '#52b788' : '#2d8653',
-      emissiveIntensity: 0.1 + Math.random() * 0.3,
-      speed: 0.1 + Math.random() * 0.3,
-      delay: Math.random() * Math.PI * 2,
-      type: Math.floor(Math.random() * 3),
-    }))
-  }, [])
-
-  return (
-    <group>
-      {floaters.map((f, i) => (
-        <Float key={i} speed={f.speed * 2} floatIntensity={0.3} rotationIntensity={0.2}>
-          <mesh position={f.position} scale={f.scale}>
-            {f.type === 0 && <octahedronGeometry args={[1, 0]} />}
-            {f.type === 1 && <tetrahedronGeometry args={[1, 0]} />}
-            {f.type === 2 && <icosahedronGeometry args={[1, 0]} />}
-            <meshStandardMaterial
-              color={f.color}
-              emissive={f.emissive}
-              emissiveIntensity={f.emissiveIntensity}
-              metalness={0.5}
-              roughness={0.3}
-              transparent
-              opacity={0.5}
-              wireframe={Math.random() > 0.5}
-            />
-          </mesh>
-        </Float>
-      ))}
-    </group>
-  )
-}
-
-// Architectural floor grid
-function FloorGrid() {
-  const gridLines = useMemo(() => {
-    const lines = []
-    const count = 20
-    const size = 16
-    const depth = 70
-
-    // Z lines (going into the scene)
-    for (let i = 0; i <= count; i++) {
-      const x = -size / 2 + (i / count) * size
-      lines.push([
-        new THREE.Vector3(x, -2.5, 0),
-        new THREE.Vector3(x, -2.5, -depth),
-      ])
-    }
-
-    // X lines (cross lines) at intervals
-    for (let j = 0; j <= 30; j++) {
-      const z = -(j / 30) * depth
-      lines.push([
-        new THREE.Vector3(-size / 2, -2.5, z),
-        new THREE.Vector3(size / 2, -2.5, z),
-      ])
-    }
-
-    return lines.map((pts) => new THREE.BufferGeometry().setFromPoints(pts))
-  }, [])
-
-  return (
-    <group>
-      {gridLines.map((geo, i) => (
-        <line key={i} geometry={geo}>
-          <lineBasicMaterial
-            color="#1a5c3a"
-            transparent
-            opacity={0.08}
-          />
-        </line>
-      ))}
-    </group>
-  )
-}
-
-// Wall/ceiling elements for architectural feel
-function ArchitecturalWalls() {
-  const leftPanels = useMemo(() => {
-    return Array.from({ length: 8 }, (_, i) => ({
-      z: -5 - i * 8,
-      x: -7.5,
-      w: 0.01,
-      h: 5,
-      opacity: 0.04 + Math.random() * 0.04,
-    }))
-  }, [])
-
-  const rightPanels = useMemo(() => {
-    return Array.from({ length: 8 }, (_, i) => ({
-      z: -5 - i * 8,
-      x: 7.5,
-      w: 0.01,
-      h: 5,
-      opacity: 0.04 + Math.random() * 0.04,
-    }))
-  }, [])
-
-  return (
-    <group>
-      {[...leftPanels, ...rightPanels].map((p, i) => (
-        <mesh key={i} position={[p.x, 0, p.z]}>
-          <planeGeometry args={[0.5, p.h]} />
-          <meshStandardMaterial
-            color="#52b788"
-            transparent
-            opacity={p.opacity}
-            emissive="#1a5c3a"
-            emissiveIntensity={0.5}
-            side={THREE.DoubleSide}
-          />
-        </mesh>
-      ))}
-    </group>
-  )
-}
-
-// Scroll-driven camera rig
+// ─────────────────────────────────────────────────────────────────
+// Scroll-driven camera rig — human eye-level walkthrough
+// ─────────────────────────────────────────────────────────────────
 function CameraRig({ scrollRef }) {
   const { camera } = useThree()
 
+  // Camera position path — gentle naturalistic movement
   const camCurve = useMemo(() => new THREE.CatmullRomCurve3([
-    new THREE.Vector3(0, 0.6, 10),      // 0.0 - Hero entrance
-    new THREE.Vector3(-0.5, 0.5, 6),    // ~0.05 - Pull back
-    new THREE.Vector3(-4.5, 0.8, 0),    // ~0.2 - Zone 1 approach
-    new THREE.Vector3(-4, 0.5, -7),     // ~0.3 - Zone 1 mid
-    new THREE.Vector3(1, 0, -18),       // ~0.42 - Zone 2 approach
-    new THREE.Vector3(3.5, -0.2, -24),  // ~0.5 - Zone 2 mid
-    new THREE.Vector3(2, 0, -30),       // ~0.58 - transition
-    new THREE.Vector3(-3, 0.5, -38),    // ~0.67 - Zone 3 approach
-    new THREE.Vector3(-4, 0.5, -44),    // ~0.75 - Zone 3 mid
-    new THREE.Vector3(1, 0.3, -52),     // ~0.85 - Zone 4 approach
-    new THREE.Vector3(-3, 0.5, -57),    // ~0.93 - Zone 4 mid
-    new THREE.Vector3(0, 0.5, -62),     // 1.0 - End
+    new THREE.Vector3(0,    1.8,  9.5),   // t=0.00 — before entrance
+    new THREE.Vector3(0,    1.75, 5.0),   // t=0.09 — entrance approach
+    new THREE.Vector3(0.4,  1.8,  0.0),   // t=0.14 — crossing the threshold
+    new THREE.Vector3(-0.8, 2.0, -8.0),   // t=0.22 — grand hall opens
+    new THREE.Vector3(0,    2.2, -14.0),  // t=0.30 — grand hall center, looking up
+    new THREE.Vector3(1.2,  1.85,-20.0),  // t=0.37 — grand hall far
+    new THREE.Vector3(0.3,  1.8, -26.0),  // t=0.44 — living path entry
+    new THREE.Vector3(-1.5, 1.8, -32.5),  // t=0.53 — living path deep left
+    new THREE.Vector3(0,    1.8, -39.0),  // t=0.61 — living path exit
+    new THREE.Vector3(0.8,  1.8, -46.0),  // t=0.70 — cultivation entry
+    new THREE.Vector3(-0.5, 1.8, -54.0),  // t=0.78 — cultivation center
+    new THREE.Vector3(0.3,  1.85,-62.0),  // t=0.86 — reflection approach
+    new THREE.Vector3(0,    1.9, -70.0),  // t=0.93 — reflection hall entry
+    new THREE.Vector3(0,    2.0, -76.0),  // t=1.00 — final resting position
   ]), [])
 
+  // Look-at target path — slightly ahead of camera, with gentle drift
   const lookCurve = useMemo(() => new THREE.CatmullRomCurve3([
-    new THREE.Vector3(0, 0, 2),
-    new THREE.Vector3(-0.5, 0, 0),
-    new THREE.Vector3(-3, 0, -5),
-    new THREE.Vector3(-3, 0, -13),
-    new THREE.Vector3(0, 0, -22),
-    new THREE.Vector3(2, 0, -30),
-    new THREE.Vector3(0, 0, -35),
-    new THREE.Vector3(-2, 0, -44),
-    new THREE.Vector3(-3, 0, -50),
-    new THREE.Vector3(0, 0, -58),
-    new THREE.Vector3(-1, 0, -63),
-    new THREE.Vector3(0, 0, -70),
+    new THREE.Vector3(0,    1.7,  2.0),
+    new THREE.Vector3(0,    1.7, -1.0),
+    new THREE.Vector3(0,    1.7, -6.0),
+    new THREE.Vector3(-0.4, 1.8, -14.0),
+    new THREE.Vector3(0,    2.2, -22.0),
+    new THREE.Vector3(0.8,  1.8, -27.0),
+    new THREE.Vector3(0,    1.8, -33.0),
+    new THREE.Vector3(-1.0, 1.8, -39.5),
+    new THREE.Vector3(0,    1.8, -46.0),
+    new THREE.Vector3(0.5,  1.8, -53.0),
+    new THREE.Vector3(-0.3, 1.8, -61.0),
+    new THREE.Vector3(0,    1.85,-68.5),
+    new THREE.Vector3(0,    1.9, -76.0),
+    new THREE.Vector3(0,    1.95,-83.0),
   ]), [])
 
-  const lookTarget = useRef(new THREE.Vector3(0, 0, 2))
+  const lookTarget = useRef(new THREE.Vector3(0, 1.7, 2.0))
 
   useFrame(() => {
     const t = Math.min(Math.max(scrollRef.current, 0), 1)
+
     const targetPos = camCurve.getPoint(t)
     const targetLook = lookCurve.getPoint(t)
 
-    camera.position.lerp(targetPos, 0.04)
-    lookTarget.current.lerp(targetLook, 0.04)
+    // Smooth lerp — feels like a gentle walk
+    camera.position.lerp(targetPos, 0.05)
+    lookTarget.current.lerp(targetLook, 0.05)
     camera.lookAt(lookTarget.current)
   })
 
   return null
 }
 
-// Fog that changes density across zones
-function SceneFog() {
-  const { scene } = useThree()
+// ─────────────────────────────────────────────────────────────────
+// Scene lighting
+// ─────────────────────────────────────────────────────────────────
+function GreenhouseLights() {
+  return (
+    <>
+      {/* Primary sun — warm morning light from the upper-right */}
+      <directionalLight
+        position={[14, 22, 4]}
+        intensity={2.8}
+        color="#fffae8"
+        castShadow
+        shadow-mapSize-width={2048}
+        shadow-mapSize-height={2048}
+        shadow-camera-near={1}
+        shadow-camera-far={140}
+        shadow-camera-left={-55}
+        shadow-camera-right={55}
+        shadow-camera-top={55}
+        shadow-camera-bottom={-55}
+        shadow-bias={-0.0008}
+      />
 
-  useMemo(() => {
-    scene.fog = new THREE.FogExp2('#080d0b', 0.022)
-  }, [scene])
+      {/* Sky dome / hemisphere — cool sky, warm ground bounce */}
+      <hemisphereLight
+        skyColor="#a8cce8"
+        groundColor="#4a6a30"
+        intensity={0.85}
+      />
 
-  return null
+      {/* Soft ambient fill */}
+      <ambientLight intensity={0.12} color="#e8f4e0" />
+
+      {/* Interior fill — soft warm bounce from the plants */}
+      <pointLight position={[0, 0.8, -15]} intensity={0.35} color="#c8e8b8" distance={30} decay={2} />
+      <pointLight position={[0, 0.8, -40]} intensity={0.30} color="#c8e8b8" distance={30} decay={2} />
+      <pointLight position={[0, 0.8, -65]} intensity={0.28} color="#d0e8c0" distance={30} decay={2} />
+
+      {/* Entrance backlight — rim from outside */}
+      <directionalLight position={[0, 8, 20]} intensity={0.6} color="#e8f8ff" />
+    </>
+  )
 }
 
+// ─────────────────────────────────────────────────────────────────
+// Morning sky (visible through the glass roof)
+// ─────────────────────────────────────────────────────────────────
+function MorningSky() {
+  return (
+    <Sky
+      distance={450000}
+      sunPosition={[100, 18, -60]}
+      inclination={0.50}
+      azimuth={0.22}
+      turbidity={7}
+      rayleigh={1.8}
+      mieCoefficient={0.004}
+      mieDirectionalG={0.82}
+    />
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Post-processing — subtle, natural
+// ─────────────────────────────────────────────────────────────────
+function PostProcessing({ isMobile }) {
+  return (
+    <EffectComposer multisampling={isMobile ? 0 : 2}>
+      {/* Very subtle bloom for specular highlights and light scatter */}
+      <Bloom
+        intensity={0.35}
+        luminanceThreshold={0.82}
+        luminanceSmoothing={0.75}
+        mipmapBlur
+        radius={0.5}
+        blendFunction={BlendFunction.ADD}
+      />
+      {/* Organic vignette — frames the view like a lens */}
+      <Vignette
+        offset={0.22}
+        darkness={0.45}
+        eskil={false}
+        blendFunction={BlendFunction.NORMAL}
+      />
+    </EffectComposer>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Main Scene
+// ─────────────────────────────────────────────────────────────────
 export default function MainScene({ scrollRef }) {
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
+
   return (
     <Canvas
       style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%' }}
-      camera={{ position: [0, 0.6, 10], fov: 60, near: 0.1, far: 200 }}
-      gl={{ antialias: true, alpha: false, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.2 }}
-      dpr={[1, 2]}
+      camera={{ position: [0, 1.8, 9.5], fov: 52, near: 0.1, far: 200 }}
+      shadows={!isMobile}
+      gl={{
+        antialias: !isMobile,
+        alpha: false,
+        toneMapping: THREE.ACESFilmicToneMapping,
+        toneMappingExposure: 1.25,
+        powerPreference: 'high-performance',
+      }}
+      dpr={isMobile ? [1, 1] : [1, 1.5]}
     >
-      <SceneFog />
-
-      {/* Scene background */}
-      <color attach="background" args={['#080d0b']} />
-
-      {/* Global ambient light - very dim */}
-      <ambientLight intensity={0.08} color="#0d3320" />
-
-      {/* Main directional fill */}
-      <directionalLight
-        position={[5, 8, 5]}
-        intensity={0.4}
-        color="#c9f0d8"
-      />
-
-      {/* Deep scene fill */}
-      <directionalLight
-        position={[-5, -2, -10]}
-        intensity={0.15}
-        color="#1a5c3a"
-      />
-
-      {/* Camera control */}
-      <CameraRig scrollRef={scrollRef} />
-
-      {/* Environment */}
-      <Stars radius={80} depth={50} count={1500} factor={2} saturation={0.3} fade speed={0.5} />
+      <GreenhouseFog />
 
       <Suspense fallback={null}>
-        {/* Ground plane grid */}
-        <FloorGrid />
-        <ArchitecturalWalls />
+        {/* Sky (visible through glass) */}
+        <MorningSky />
 
-        {/* Hero entrance */}
-        <HeroGeometry />
+        {/* IBL environment (reflections, ambient indirect light) */}
+        <Environment preset="dawn" />
 
-        {/* Ambient floating objects throughout */}
-        <AmbientFloaters />
+        {/* Lighting */}
+        <GreenhouseLights />
 
-        {/* Global particle field */}
-        <ParticleField count={3000} spread={45} />
+        {/* Camera */}
+        <CameraRig scrollRef={scrollRef} />
 
-        {/* Zone 1 — Acupuncture */}
-        <AcupunctureZone />
+        {/* ── Architectural shell ── */}
+        <GreenhouseShell />
 
-        {/* Zone 2 — Rehabilitation */}
-        <RehabZone />
+        {/* ── Floor ── */}
+        <GreenhouseFloor />
 
-        {/* Zone 3 — Group Home */}
-        <GroupHomeZone />
+        {/* ── Botanical life ── */}
+        <PlantLife />
 
-        {/* Zone 4 — BIO PARK */}
-        <BioParkZone />
+        {/* ── Scene 4: Cultivation ── */}
+        <CultivationBeds />
 
-        {/* Post-processing */}
-        <EffectComposer multisampling={0}>
-          <Bloom
-            intensity={1.4}
-            luminanceThreshold={0.2}
-            luminanceSmoothing={0.8}
-            blendFunction={BlendFunction.ADD}
-            mipmapBlur
-            radius={0.6}
-          />
-          <Vignette
-            offset={0.3}
-            darkness={0.7}
-            eskil={false}
-            blendFunction={BlendFunction.NORMAL}
-          />
-          <ChromaticAberration
-            blendFunction={BlendFunction.NORMAL}
-            offset={[0.0008, 0.0008]}
-            radialModulation={false}
-            modulationOffset={0}
-          />
-        </EffectComposer>
+        {/* ── Scene 5: Reflection pool ── */}
+        <ReflectionPool />
+
+        {/* ── Volumetric light ── */}
+        <SunShafts />
+
+        {/* ── Atmosphere ── */}
+        <AtmosphericMist isMobile={isMobile} />
+
+        {/* ── Post-processing ── */}
+        <PostProcessing isMobile={isMobile} />
       </Suspense>
     </Canvas>
   )

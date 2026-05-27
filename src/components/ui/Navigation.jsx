@@ -1,65 +1,76 @@
 import { useEffect, useState } from 'react'
 
 const navItems = [
-  { label: '鍼灸', en: 'Acupuncture', href: '#acupuncture' },
-  { label: 'リハビリ', en: 'Rehab', href: '#rehab' },
-  { label: 'グループホーム', en: 'Group Home', href: '#grouphome' },
-  { label: 'BIO PARK', en: 'Bio Park', href: '#biopark' },
+  { label: 'Entrance',    href: '#entrance'   },
+  { label: 'Grand Hall',  href: '#grand-hall'  },
+  { label: 'Living Path', href: '#living-path' },
+  { label: 'Cultivation', href: '#cultivation' },
+  { label: 'Reflection',  href: '#reflection'  },
 ]
 
-export default function Navigation({ scrollProgress }) {
+export default function Navigation() {
   const [visible, setVisible] = useState(true)
   const [lastScroll, setLastScroll] = useState(0)
+  const [atTop, setAtTop] = useState(true)
 
   useEffect(() => {
     const handleScroll = () => {
       const current = window.scrollY
-      setVisible(current < lastScroll || current < 100)
+      setAtTop(current < 60)
+      setVisible(current < lastScroll || current < 80)
       setLastScroll(current)
     }
-
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
   }, [lastScroll])
 
   return (
     <nav
-      className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-8 py-5 transition-all duration-700"
+      className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between"
       style={{
-        background: 'linear-gradient(180deg, rgba(8,13,11,0.9) 0%, transparent 100%)',
+        padding: '1.4rem 2.5rem',
+        background: atTop
+          ? 'linear-gradient(180deg, rgba(26,46,24,0.85) 0%, transparent 100%)'
+          : 'rgba(26,46,24,0.7)',
+        backdropFilter: atTop ? 'none' : 'blur(16px)',
+        WebkitBackdropFilter: atTop ? 'none' : 'blur(16px)',
+        borderBottom: atTop ? 'none' : '1px solid rgba(106,184,80,0.1)',
         opacity: visible ? 1 : 0,
-        transform: `translateY(${visible ? 0 : -20}px)`,
+        transform: `translateY(${visible ? 0 : -16}px)`,
+        transition: 'opacity 0.6s ease, transform 0.6s ease, background 0.5s ease',
       }}
     >
       {/* Logo */}
-      <div className="flex items-center gap-4">
-        <div className="w-8 h-8 relative">
-          <div
-            className="w-full h-full rounded-full"
-            style={{
-              background: 'conic-gradient(from 0deg, #2d8653, #c9a84c, #52b788, #2d8653)',
-              animation: 'spin 8s linear infinite',
-            }}
-          />
-          <div
-            className="absolute inset-1 rounded-full"
-            style={{ background: '#080d0b' }}
-          />
-          <div
-            className="absolute inset-2.5 rounded-full"
-            style={{ background: '#52b788', boxShadow: '0 0 8px #52b788' }}
-          />
-        </div>
+      <div className="flex items-center gap-3">
+        {/* Leaf mark */}
+        <div
+          style={{
+            width: 28,
+            height: 28,
+            borderRadius: '50% 50% 50% 0',
+            background: 'linear-gradient(135deg, #3a7a30, #6ab850)',
+            transform: 'rotate(-45deg)',
+            boxShadow: '0 0 16px rgba(106,184,80,0.25)',
+          }}
+        />
         <div>
-          <div className="text-xs font-display text-gold tracking-widest">伊藤医療</div>
-          <div className="text-xs font-body text-white/40 tracking-[0.2em] uppercase" style={{ fontSize: '0.55rem' }}>
-            Ito Medical Care
+          <div
+            className="font-display"
+            style={{ fontSize: '1.05rem', fontWeight: 400, letterSpacing: '0.18em', color: '#f4f0e8' }}
+          >
+            BIO PARK
+          </div>
+          <div
+            className="font-body"
+            style={{ fontSize: '0.52rem', letterSpacing: '0.28em', color: 'rgba(138,184,128,0.7)', marginTop: '-1px' }}
+          >
+            Greenhouse & Nature
           </div>
         </div>
       </div>
 
-      {/* Nav links */}
-      <div className="hidden md:flex items-center gap-8">
+      {/* Section links */}
+      <div className="hidden md:flex items-center gap-7">
         {navItems.map((item) => (
           <a
             key={item.href}
@@ -67,30 +78,35 @@ export default function Navigation({ scrollProgress }) {
             onClick={(e) => {
               e.preventDefault()
               const el = document.querySelector(item.href)
-              if (el) el.scrollIntoView({ behavior: 'smooth' })
+              el?.scrollIntoView({ behavior: 'smooth' })
             }}
-            className="group flex flex-col items-center gap-0.5 cursor-pointer"
+            className="font-body group cursor-pointer"
+            style={{
+              fontSize: '0.68rem',
+              letterSpacing: '0.15em',
+              color: 'rgba(244,240,232,0.45)',
+              transition: 'color 0.3s ease',
+              textDecoration: 'none',
+            }}
+            onMouseEnter={e => e.target.style.color = 'rgba(244,240,232,0.9)'}
+            onMouseLeave={e => e.target.style.color = 'rgba(244,240,232,0.45)'}
           >
-            <span
-              className="jp-text text-white/50 group-hover:text-white/90 transition-colors duration-300"
-              style={{ fontSize: '0.7rem' }}
-            >
-              {item.label}
-            </span>
-            <span
-              className="label-tag opacity-0 group-hover:opacity-60 transition-all duration-300"
-              style={{ fontSize: '0.55rem' }}
-            >
-              {item.en}
-            </span>
+            {item.label}
           </a>
         ))}
       </div>
 
       {/* CTA */}
-      <div className="flex items-center gap-4">
-        <button className="btn-glass" style={{ padding: '0.5rem 1.5rem', fontSize: '0.6rem' }}>
-          お問い合わせ
+      <div>
+        <button
+          className="btn-primary"
+          style={{ padding: '0.55rem 1.6rem', fontSize: '0.62rem' }}
+          onClick={() => {
+            const el = document.getElementById('reflection')
+            el?.scrollIntoView({ behavior: 'smooth' })
+          }}
+        >
+          Contact
         </button>
       </div>
     </nav>

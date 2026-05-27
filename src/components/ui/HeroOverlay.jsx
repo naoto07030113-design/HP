@@ -9,53 +9,47 @@ export default function HeroOverlay() {
 
   useEffect(() => {
     const ctx = gsap.context(() => {
-      // Fade out entire hero as user scrolls into zone 1
+      // Fade out as user scrolls past the entrance
       gsap.to(containerRef.current, {
         opacity: 0,
-        y: -40,
+        y: -30,
         ease: 'power2.in',
         scrollTrigger: {
           trigger: '#scroll-root',
-          start: '10% top',
-          end: '22% top',
-          scrub: 1,
+          start: '8% top',
+          end: '20% top',
+          scrub: 1.2,
         },
       })
 
-      gsap.fromTo(
-        '.hero-tag',
-        { opacity: 0, y: 20 },
-        { opacity: 1, y: 0, duration: 1.2, delay: 0.3, ease: 'power3.out' }
+      // Staggered entrance animations
+      gsap.fromTo('.bio-tag',
+        { opacity: 0, y: 18 },
+        { opacity: 1, y: 0, duration: 1.4, delay: 0.2, ease: 'power3.out' }
       )
-      gsap.fromTo(
-        '.hero-title-line',
-        { opacity: 0, y: 40 },
-        { opacity: 1, y: 0, duration: 1.4, delay: 0.6, stagger: 0.15, ease: 'power3.out' }
+      gsap.fromTo('.bio-title',
+        { opacity: 0, y: 36 },
+        { opacity: 1, y: 0, duration: 1.6, delay: 0.5, ease: 'power3.out' }
       )
-      gsap.fromTo(
-        '.hero-sub',
-        { opacity: 0, y: 20 },
-        { opacity: 1, y: 0, duration: 1, delay: 1.2, ease: 'power3.out' }
+      gsap.fromTo('.bio-subtitle',
+        { opacity: 0, y: 22 },
+        { opacity: 1, y: 0, duration: 1.2, delay: 0.9, ease: 'power3.out' }
       )
-      gsap.fromTo(
-        '.hero-divider',
+      gsap.fromTo('.bio-divider',
         { scaleX: 0, transformOrigin: 'left center' },
-        { scaleX: 1, duration: 1.5, delay: 1, ease: 'power3.inOut' }
+        { scaleX: 1, duration: 1.8, delay: 0.8, ease: 'power3.inOut' }
       )
-      gsap.fromTo(
-        '.hero-cta',
-        { opacity: 0, y: 20 },
-        { opacity: 1, y: 0, duration: 1, delay: 1.6, ease: 'power3.out' }
+      gsap.fromTo('.bio-desc',
+        { opacity: 0, y: 16 },
+        { opacity: 1, y: 0, duration: 1.0, delay: 1.3, ease: 'power3.out' }
       )
-      gsap.fromTo(
-        '.hero-jp',
+      gsap.fromTo('.bio-cta',
+        { opacity: 0, y: 16 },
+        { opacity: 1, y: 0, duration: 1.0, delay: 1.7, ease: 'power3.out' }
+      )
+      gsap.fromTo('.bio-scroll',
         { opacity: 0 },
-        { opacity: 1, duration: 1.5, delay: 1.8, ease: 'power3.out' }
-      )
-      gsap.fromTo(
-        '.scroll-indicator',
-        { opacity: 0, y: 10 },
-        { opacity: 1, y: 0, duration: 1, delay: 2.2, ease: 'power3.out' }
+        { opacity: 1, duration: 1.0, delay: 2.4, ease: 'power3.out' }
       )
     }, containerRef)
 
@@ -68,111 +62,132 @@ export default function HeroOverlay() {
       className="fixed inset-0 z-20 pointer-events-none flex flex-col justify-center"
       style={{ padding: '0 8vw' }}
     >
-      {/* Left vertical accent */}
-      <div
-        className="absolute left-6 top-1/2 -translate-y-1/2 hidden lg:flex flex-col items-center gap-3 hero-jp"
-        style={{ opacity: 0 }}
-      >
-        <div className="writing-vertical jp-text text-white/20" style={{ fontSize: '0.7rem', letterSpacing: '0.3em' }}>
-          未来の医療を体験する
-        </div>
-        <div className="w-px h-16" style={{ background: 'linear-gradient(180deg, transparent, rgba(201,168,76,0.4))' }} />
-      </div>
+      {/* Content block */}
+      <div style={{ maxWidth: 580 }}>
 
-      {/* Main content */}
-      <div className="max-w-2xl">
+        {/* Tag line */}
         <div
-          className="hero-tag label-tag mb-6 flex items-center gap-3"
+          className="bio-tag label-tag mb-7 flex items-center gap-3"
           style={{ opacity: 0 }}
         >
-          <div className="w-6 h-px" style={{ background: '#c9a84c' }} />
-          Premium Healthcare · Japan
+          <div style={{ width: 28, height: 1, background: '#6ab850' }} />
+          A Living Sanctuary · Nature · Fermentation · Care
         </div>
 
-        <h1 className="font-display leading-[1.0] mb-6">
+        {/* Main title */}
+        <h1 style={{ marginBottom: '0.3em' }}>
           <div
-            className="hero-title-line text-white"
-            style={{ fontSize: 'clamp(3rem, 8vw, 7rem)', opacity: 0, fontWeight: 400 }}
-          >
-            伊藤医療
-          </div>
-          <div
-            className="hero-title-line"
+            className="bio-title font-display text-cream"
             style={{
-              fontSize: 'clamp(1.5rem, 3.5vw, 3rem)',
+              fontSize: 'clamp(3.5rem, 10vw, 8rem)',
+              fontWeight: 400,
+              lineHeight: 0.95,
+              letterSpacing: '0.06em',
               opacity: 0,
-              fontWeight: 300,
-              letterSpacing: '0.08em',
-              background: 'linear-gradient(135deg, #e8e8e8 0%, #c9a84c 60%, #52b788 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-              marginTop: '0.2em',
+              color: '#f4f0e8',
             }}
           >
-            Ito Medical Care
+            BIO PARK
           </div>
         </h1>
 
+        {/* Subtitle */}
         <div
-          className="hero-divider mb-6"
+          className="bio-subtitle font-display"
           style={{
-            height: '1px',
-            width: '200px',
-            background: 'linear-gradient(90deg, rgba(201,168,76,0.8), rgba(82,183,136,0.4), transparent)',
+            fontSize: 'clamp(0.9rem, 2vw, 1.35rem)',
+            fontWeight: 300,
+            fontStyle: 'italic',
+            color: 'rgba(244,240,232,0.55)',
+            letterSpacing: '0.04em',
+            marginBottom: '1.8rem',
+            opacity: 0,
+          }}
+        >
+          A Monumental Greenhouse of Growth
+        </div>
+
+        {/* Divider */}
+        <div
+          className="bio-divider"
+          style={{
+            height: 1,
+            width: 220,
+            background: 'linear-gradient(90deg, rgba(106,184,80,0.7), rgba(138,184,128,0.3), transparent)',
+            marginBottom: '1.8rem',
             opacity: 0,
           }}
         />
 
+        {/* Description */}
         <p
-          className="hero-sub font-body text-white/50 font-light leading-relaxed mb-8"
-          style={{ fontSize: 'clamp(0.8rem, 1.5vw, 1rem)', maxWidth: '480px', opacity: 0 }}
+          className="bio-desc font-body"
+          style={{
+            fontSize: 'clamp(0.78rem, 1.4vw, 0.92rem)',
+            fontWeight: 300,
+            lineHeight: 1.85,
+            color: 'rgba(244,240,232,0.42)',
+            maxWidth: 440,
+            marginBottom: '2.4rem',
+            opacity: 0,
+            letterSpacing: '0.03em',
+          }}
         >
-          地域の暮らしに、医療と福祉の安心を。
+          Step inside a breathtaking botanical conservatory — where natural
+          light filters through glass and steel, and life grows in
+          extraordinary abundance.
         </p>
 
+        {/* CTA */}
         <div
-          className="hero-cta flex items-center gap-4 pointer-events-auto"
+          className="bio-cta flex items-center gap-5 pointer-events-auto"
           style={{ opacity: 0 }}
         >
-          <button className="btn-glass">
-            施設を探索する
+          <button
+            className="btn-primary"
+            onClick={() => {
+              const el = document.getElementById('grand-hall')
+              el?.scrollIntoView({ behavior: 'smooth' })
+            }}
+          >
+            Enter the Greenhouse
           </button>
-          <span className="text-white/30 font-body" style={{ fontSize: '0.7rem', letterSpacing: '0.1em' }}>
+          <span
+            className="font-body"
+            style={{ fontSize: '0.68rem', color: 'rgba(244,240,232,0.25)', letterSpacing: '0.15em' }}
+          >
             Scroll to explore ↓
           </span>
         </div>
       </div>
 
-      {/* Bottom scroll indicator */}
+      {/* Scroll indicator — bottom center */}
       <div
-        className="scroll-indicator absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2"
-        style={{ opacity: 0 }}
+        className="bio-scroll absolute bottom-9 left-1/2 flex flex-col items-center gap-2"
+        style={{ transform: 'translateX(-50%)', opacity: 0 }}
       >
-        <div className="label-tag" style={{ fontSize: '0.55rem' }}>Scroll</div>
-        <div
-          className="w-px h-10 overflow-hidden"
-          style={{ background: 'rgba(201,168,76,0.2)' }}
+        <span
+          className="label-tag"
+          style={{ fontSize: '0.52rem', color: 'rgba(138,184,128,0.5)' }}
         >
+          Scroll
+        </span>
+        <div style={{ width: 1, height: 42, background: 'rgba(106,184,80,0.2)', overflow: 'hidden' }}>
           <div
             style={{
               width: '100%',
-              height: '40%',
-              background: 'linear-gradient(180deg, #c9a84c, transparent)',
-              animation: 'scrollDown 2s ease-in-out infinite',
+              height: '45%',
+              background: 'linear-gradient(180deg, #6ab850, transparent)',
+              animation: 'scrollDrop 2s ease-in-out infinite',
             }}
           />
         </div>
       </div>
 
       <style>{`
-        @keyframes scrollDown {
-          0% { transform: translateY(-100%); }
-          100% { transform: translateY(250%); }
-        }
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
+        @keyframes scrollDrop {
+          0%   { transform: translateY(-100%); }
+          100% { transform: translateY(240%); }
         }
       `}</style>
     </div>

@@ -11,15 +11,15 @@ export default function ContactOverlay() {
     const ctx = gsap.context(() => {
       gsap.fromTo(
         ref.current,
-        { opacity: 0, y: 40 },
+        { opacity: 0, y: 45 },
         {
           opacity: 1,
           y: 0,
-          duration: 1.2,
+          duration: 1.4,
           ease: 'power3.out',
           scrollTrigger: {
             trigger: '#scroll-root',
-            start: '88% top',
+            start: '84% top',
             end: '100% top',
             toggleActions: 'play none none reverse',
           },
@@ -33,79 +33,117 @@ export default function ContactOverlay() {
     <div
       ref={ref}
       className="fixed inset-0 z-20 pointer-events-none flex flex-col items-center justify-center"
-      style={{ background: 'linear-gradient(180deg, transparent 0%, rgba(8,13,11,0.85) 30%)', opacity: 0 }}
+      style={{
+        background: 'linear-gradient(180deg, transparent 0%, rgba(26,46,24,0.78) 25%, rgba(15,28,14,0.88) 100%)',
+        opacity: 0,
+      }}
     >
-      <div className="pointer-events-auto text-center max-w-xl px-8">
-        <div className="label-tag mb-6">Contact · お問い合わせ</div>
+      <div className="pointer-events-auto text-center" style={{ maxWidth: 560, padding: '0 2rem' }}>
 
+        {/* Tag */}
+        <div className="label-tag mb-7" style={{ color: '#8ab880' }}>
+          Discover BIO PARK
+        </div>
+
+        {/* Main heading */}
         <h2
-          className="font-display text-white mb-3"
-          style={{ fontSize: 'clamp(2rem, 6vw, 4.5rem)', fontWeight: 400, lineHeight: 1.1 }}
-        >
-          未来の医療へ
-        </h2>
-        <h2
-          className="font-display mb-8"
+          className="font-display"
           style={{
-            fontSize: 'clamp(1.2rem, 3vw, 2.2rem)',
-            fontWeight: 300,
-            background: 'linear-gradient(135deg, #c9a84c, #52b788)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
-            letterSpacing: '0.06em',
+            fontSize: 'clamp(2.2rem, 6vw, 5rem)',
+            fontWeight: 400,
+            lineHeight: 1.05,
+            color: '#f4f0e8',
+            marginBottom: '0.25em',
+            letterSpacing: '0.04em',
           }}
         >
-          A New Standard in Care
+          A Living Sanctuary
+        </h2>
+        <h2
+          className="font-display"
+          style={{
+            fontSize: 'clamp(1.0rem, 2.5vw, 2rem)',
+            fontWeight: 300,
+            fontStyle: 'italic',
+            color: 'rgba(138,184,128,0.75)',
+            marginBottom: '2.2rem',
+            letterSpacing: '0.05em',
+          }}
+        >
+          of Growth, Fermentation and Care
         </h2>
 
-        <div className="divider-gold mb-8" />
+        {/* Divider */}
+        <div className="divider-botanical mb-8" style={{ width: 200, margin: '0 auto 2rem' }} />
 
+        {/* Description */}
         <p
-          className="font-body text-white/40 font-light mb-10 leading-relaxed"
-          style={{ fontSize: '0.85rem' }}
+          className="font-body"
+          style={{
+            fontSize: '0.85rem',
+            fontWeight: 300,
+            lineHeight: 1.85,
+            color: 'rgba(244,240,232,0.38)',
+            marginBottom: '2.8rem',
+            letterSpacing: '0.02em',
+          }}
         >
-          Whether you are seeking healing, rehabilitation, community care,
-          or exploring the future of healthcare with BIO PARK —
-          we are here for every step.
+          BIO PARK is more than a greenhouse — it is an immersive philosophy.
+          Where ancient plants meet purposeful cultivation, where nature and
+          human care grow together in a grand glass cathedral.
         </p>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
-          <button className="btn-glass">
-            施設見学を予約する
+        {/* CTA buttons */}
+        <div
+          className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-14"
+        >
+          <button className="btn-primary">
+            Support the Vision
           </button>
-          <button
-            className="font-body text-white/40 hover:text-white/70 transition-colors duration-300"
-            style={{ fontSize: '0.75rem', letterSpacing: '0.1em', background: 'none', border: 'none', cursor: 'pointer' }}
-          >
-            資料をダウンロード →
+          <button className="btn-secondary">
+            Contact Us →
           </button>
         </div>
 
-        {/* Contact info grid */}
-        <div className="grid grid-cols-3 gap-6 mt-8">
+        {/* Info row */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: '1.5rem',
+            borderTop: '1px solid rgba(106,184,80,0.12)',
+            paddingTop: '1.8rem',
+          }}
+        >
           {[
-            { label: '電話', value: '03-0000-0000', en: 'Phone' },
-            { label: '住所', value: '東京都', en: 'Location' },
-            { label: '受付時間', value: '9:00-18:00', en: 'Hours' },
+            { tag: 'Location',  value: 'Japan' },
+            { tag: 'Hours',     value: '9:00–18:00' },
+            { tag: 'Inquiry',   value: 'Open Now' },
           ].map((item) => (
-            <div key={item.label} className="text-center">
-              <div className="label-tag mb-1">{item.en}</div>
-              <div className="jp-text text-white/60" style={{ fontSize: '0.75rem' }}>{item.label}</div>
-              <div className="font-body text-white/40 font-light" style={{ fontSize: '0.7rem', marginTop: '0.25rem' }}>
+            <div key={item.tag} className="text-center">
+              <div className="label-tag mb-1" style={{ fontSize: '0.52rem', color: '#8ab880' }}>
+                {item.tag}
+              </div>
+              <div
+                className="font-body"
+                style={{ fontSize: '0.78rem', fontWeight: 300, color: 'rgba(244,240,232,0.5)', letterSpacing: '0.08em' }}
+              >
                 {item.value}
               </div>
             </div>
           ))}
         </div>
 
-        {/* Bottom brand mark */}
-        <div className="mt-16 flex flex-col items-center gap-2">
-          <div className="divider-gold" style={{ width: '60px' }} />
-          <div className="font-display text-white/20" style={{ fontSize: '0.7rem', letterSpacing: '0.3em' }}>
-            伊藤医療 · Ito Medical Care
+        {/* Bottom mark */}
+        <div style={{ marginTop: '2.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+          <div className="divider-botanical" style={{ width: 50, margin: '0 auto' }} />
+          <div
+            className="font-display"
+            style={{ fontSize: '0.65rem', letterSpacing: '0.35em', color: 'rgba(244,240,232,0.15)' }}
+          >
+            BIO PARK · Greenhouse & Nature
           </div>
-          <div className="label-tag text-white/15" style={{ fontSize: '0.5rem' }}>
+          <div className="label-tag" style={{ fontSize: '0.48rem', color: 'rgba(244,240,232,0.1)' }}>
             © 2025 All Rights Reserved
           </div>
         </div>

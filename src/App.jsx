@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { useLenis } from './hooks/useLenis'
 import { useScrollProgress } from './hooks/useScrollProgress'
 import MainScene from './components/scene/MainScene'
@@ -20,58 +20,38 @@ export default function App() {
   }, [])
 
   return (
-    <div style={{ background: '#080d0b' }}>
-      {/* Loading screen */}
+    <div style={{ background: '#1a2e18' }}>
       {!loaded && <LoadingScreen onComplete={handleLoadComplete} />}
 
-      {/* Fixed 3D canvas — always behind everything */}
+      {/* Fixed 3D canvas — always fills viewport */}
       <MainScene scrollRef={scrollRef} />
 
       {/* Fixed UI layer */}
-      <Navigation scrollRef={scrollRef} />
+      <Navigation />
       <HeroOverlay />
-      <SectionLabels />
+      <SectionLabels scrollRef={scrollRef} />
       <ScrollProgress scrollRef={scrollRef} />
       <ContactOverlay />
 
-      {/* Scrollable container that drives camera animation */}
-      {/* Sections are transparent — they only exist to create scroll distance */}
+      {/*
+        Transparent scroll container — provides scroll height only.
+        Camera animation is driven by scroll progress.
+      */}
       <div id="scroll-root" style={{ position: 'relative', zIndex: 10 }}>
-        {/* Hero */}
-        <section
-          id="hero"
-          style={{ height: '100vh', pointerEvents: 'none' }}
-        />
+        {/* Scene 1 — Greenhouse Entrance */}
+        <section id="entrance" style={{ height: '100vh', pointerEvents: 'none' }} />
 
-        {/* Zone 1 — Acupuncture */}
-        <section
-          id="acupuncture"
-          style={{ height: '120vh', pointerEvents: 'none' }}
-        />
+        {/* Scene 2 — Grand Central Conservatory */}
+        <section id="grand-hall" style={{ height: '150vh', pointerEvents: 'none' }} />
 
-        {/* Zone 2 — Rehab */}
-        <section
-          id="rehab"
-          style={{ height: '120vh', pointerEvents: 'none' }}
-        />
+        {/* Scene 3 — The Living Path */}
+        <section id="living-path" style={{ height: '150vh', pointerEvents: 'none' }} />
 
-        {/* Zone 3 — Group Home */}
-        <section
-          id="grouphome"
-          style={{ height: '120vh', pointerEvents: 'none' }}
-        />
+        {/* Scene 4 — Cultivation & Harvest */}
+        <section id="cultivation" style={{ height: '150vh', pointerEvents: 'none' }} />
 
-        {/* Zone 4 — BIO PARK */}
-        <section
-          id="biopark"
-          style={{ height: '120vh', pointerEvents: 'none' }}
-        />
-
-        {/* Contact */}
-        <section
-          id="contact"
-          style={{ height: '100vh', pointerEvents: 'none' }}
-        />
+        {/* Scene 5 — Reflection Hall */}
+        <section id="reflection" style={{ height: '130vh', pointerEvents: 'none' }} />
       </div>
     </div>
   )

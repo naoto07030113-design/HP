@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 
-const zones = [
-  { label: '鍼灸', id: 0 },
-  { label: 'リハビリ', id: 1 },
-  { label: 'ケア', id: 2 },
-  { label: 'BIO', id: 3 },
+const scenes = [
+  { label: 'Entrance',    id: 0 },
+  { label: 'Grand Hall',  id: 1 },
+  { label: 'Living Path', id: 2 },
+  { label: 'Cultivation', id: 3 },
+  { label: 'Reflection',  id: 4 },
 ]
 
 export default function ScrollProgress({ scrollRef }) {
@@ -20,53 +21,79 @@ export default function ScrollProgress({ scrollRef }) {
     return () => cancelAnimationFrame(raf)
   }, [scrollRef])
 
-  const activeZone = Math.floor(progress * 4)
+  // Which of the 5 scenes is currently active
+  const activeScene = Math.min(Math.floor(progress * 5), 4)
 
   return (
     <div
-      className="fixed right-6 top-1/2 -translate-y-1/2 z-30 flex flex-col items-center gap-5"
-      style={{ pointerEvents: 'none' }}
+      className="fixed right-5 top-1/2 z-30 flex flex-col items-center gap-4"
+      style={{ transform: 'translateY(-50%)', pointerEvents: 'none' }}
     >
-      {/* Vertical progress line */}
-      <div className="relative w-px h-40" style={{ background: 'rgba(255,255,255,0.08)' }}>
+      {/* Vertical progress track */}
+      <div
+        style={{
+          position: 'relative',
+          width: 1,
+          height: 130,
+          background: 'rgba(244,240,232,0.08)',
+        }}
+      >
         <div
-          className="absolute top-0 left-0 w-full transition-all duration-100"
           style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
             height: `${progress * 100}%`,
-            background: 'linear-gradient(180deg, #c9a84c, #52b788)',
-            boxShadow: '0 0 8px rgba(82,183,136,0.6)',
+            background: 'linear-gradient(180deg, #4a8c3f, #8ab880)',
+            transition: 'height 0.1s linear',
           }}
         />
       </div>
 
-      {/* Zone dots */}
-      {zones.map((z) => (
-        <div key={z.id} className="flex items-center gap-2">
+      {/* Scene dots */}
+      {scenes.map((scene) => (
+        <div key={scene.id} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
           <div
-            className="transition-all duration-500"
             style={{
-              width: activeZone === z.id ? '6px' : '4px',
-              height: activeZone === z.id ? '6px' : '4px',
+              width:  activeScene === scene.id ? 6 : 4,
+              height: activeScene === scene.id ? 6 : 4,
               borderRadius: '50%',
-              background: activeZone === z.id ? '#c9a84c' : 'rgba(255,255,255,0.2)',
-              boxShadow: activeZone === z.id ? '0 0 10px rgba(201,168,76,0.8)' : 'none',
+              background: activeScene === scene.id
+                ? '#6ab850'
+                : 'rgba(244,240,232,0.18)',
+              boxShadow: activeScene === scene.id
+                ? '0 0 8px rgba(106,184,80,0.7)'
+                : 'none',
+              transition: 'all 0.5s ease',
             }}
           />
           <span
-            className="jp-text transition-all duration-500 hidden lg:block"
+            className="font-body hidden lg:block"
             style={{
-              fontSize: '0.55rem',
-              color: activeZone === z.id ? 'rgba(201,168,76,0.8)' : 'rgba(255,255,255,0.2)',
+              fontSize: '0.52rem',
               letterSpacing: '0.1em',
+              color: activeScene === scene.id
+                ? 'rgba(138,184,128,0.75)'
+                : 'rgba(244,240,232,0.15)',
+              transition: 'color 0.5s ease',
             }}
           >
-            {z.label}
+            {scene.label}
           </span>
         </div>
       ))}
 
-      {/* Progress number */}
-      <div className="label-tag" style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.2)' }}>
+      {/* Progress percentage */}
+      <div
+        className="font-body"
+        style={{
+          fontSize: '0.5rem',
+          letterSpacing: '0.1em',
+          color: 'rgba(244,240,232,0.15)',
+          marginTop: 4,
+        }}
+      >
         {Math.round(progress * 100)}%
       </div>
     </div>
