@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 const navItems = [
   { label: 'Entrance',    href: '#entrance'   },
@@ -8,21 +8,33 @@ const navItems = [
   { label: 'Reflection',  href: '#reflection'  },
 ]
 
-export default function Navigation() {
+export default function Navigation({ scrollRef }) {
   const [visible, setVisible] = useState(true)
-  const [lastScroll, setLastScroll] = useState(0)
   const [atTop, setAtTop] = useState(true)
+  const [activeScene, setActiveScene] = useState(0)
+  const lastScrollY = useRef(0)
 
   useEffect(() => {
     const handleScroll = () => {
       const current = window.scrollY
       setAtTop(current < 60)
-      setVisible(current < lastScroll || current < 80)
-      setLastScroll(current)
+      setVisible(current < lastScrollY.current || current < 80)
+      lastScrollY.current = current
     }
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
-  }, [lastScroll])
+  }, [])
+
+  useEffect(() => {
+    if (!scrollRef) return
+    let raf
+    const update = () => {
+      setActiveScene(Math.min(Math.floor(scrollRef.current * 5), 4))
+      raf = requestAnimationFrame(update)
+    }
+    raf = requestAnimationFrame(update)
+    return () => cancelAnimationFrame(raf)
+  }, [scrollRef])
 
   return (
     <nav
@@ -71,29 +83,45 @@ export default function Navigation() {
 
       {/* Section links */}
       <div className="hidden md:flex items-center gap-7">
-        {navItems.map((item) => (
-          <a
-            key={item.href}
-            href={item.href}
-            onClick={(e) => {
-              e.preventDefault()
-              const el = document.querySelector(item.href)
-              el?.scrollIntoView({ behavior: 'smooth' })
-            }}
-            className="font-body group cursor-pointer"
-            style={{
-              fontSize: '0.68rem',
-              letterSpacing: '0.15em',
-              color: 'rgba(244,240,232,0.45)',
-              transition: 'color 0.3s ease',
-              textDecoration: 'none',
-            }}
-            onMouseEnter={e => e.target.style.color = 'rgba(244,240,232,0.9)'}
-            onMouseLeave={e => e.target.style.color = 'rgba(244,240,232,0.45)'}
-          >
-            {item.label}
-          </a>
-        ))}
+        {navItems.map((item, idx) => {
+          const isActive = activeScene === idx
+          return (
+            <a
+              key={item.href}
+              href={item.href}
+              onClick={(e) => {
+                e.preventDefault()
+                const el = document.querySelector(item.href)
+                el?.scrollIntoView({ behavior: 'smooth' })
+              }}
+              className="font-body cursor-pointer"
+              style={{
+                fontSize: '0.68rem',
+                letterSpacing: '0.15em',
+                color: isActive ? '#8ab880' : 'rgba(244,240,232,0.45)',
+                transition: 'color 0.4s ease',
+                textDecoration: 'none',
+                position: 'relative',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.color = isActive ? '#a8d098' : 'rgba(244,240,232,0.9)' }}
+              onMouseLeave={e => { e.currentTarget.style.color = isActive ? '#8ab880' : 'rgba(244,240,232,0.45)' }}
+            >
+              {item.label}
+              {isActive && (
+                <span
+                  style={{
+                    position: 'absolute',
+                    bottom: -4,
+                    left: 0,
+                    right: 0,
+                    height: 1,
+                    background: 'linear-gradient(90deg, #6ab850, transparent)',
+                  }}
+                />
+              )}
+            </a>
+          )
+        })}
       </div>
 
       {/* CTA */}

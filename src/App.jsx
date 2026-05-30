@@ -27,7 +27,7 @@ export default function App() {
       <MainScene scrollRef={scrollRef} />
 
       {/* Fixed UI layer */}
-      <Navigation />
+      <Navigation scrollRef={scrollRef} />
       <HeroOverlay />
       <SectionLabels scrollRef={scrollRef} />
       <ScrollProgress scrollRef={scrollRef} />
