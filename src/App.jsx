@@ -8,9 +8,11 @@ import SectionLabels from './components/ui/SectionLabels'
 import ScrollProgress from './components/ui/ScrollProgress'
 import ContactOverlay from './components/ui/ContactOverlay'
 import LoadingScreen from './components/ui/LoadingScreen'
+import SubscriptionOverlay from './components/ui/SubscriptionOverlay'
 
 export default function App() {
   const [loaded, setLoaded] = useState(false)
+  const [subscriptionOpen, setSubscriptionOpen] = useState(false)
 
   useLenis()
   const scrollRef = useScrollProgress()
@@ -27,11 +29,12 @@ export default function App() {
       <MainScene scrollRef={scrollRef} />
 
       {/* Fixed UI layer */}
-      <Navigation />
+      <Navigation onOpenSubscription={() => setSubscriptionOpen(true)} />
       <HeroOverlay />
       <SectionLabels scrollRef={scrollRef} />
       <ScrollProgress scrollRef={scrollRef} />
-      <ContactOverlay />
+      <ContactOverlay onOpenSubscription={() => setSubscriptionOpen(true)} />
+      <SubscriptionOverlay open={subscriptionOpen} onClose={() => setSubscriptionOpen(false)} />
 
       {/*
         Transparent scroll container — provides scroll height only.

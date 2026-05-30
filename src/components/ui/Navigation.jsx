@@ -8,7 +8,7 @@ const navItems = [
   { label: 'Reflection',  href: '#reflection'  },
 ]
 
-export default function Navigation() {
+export default function Navigation({ onOpenSubscription }) {
   const [visible, setVisible] = useState(true)
   const [lastScroll, setLastScroll] = useState(0)
   const [atTop, setAtTop] = useState(true)
@@ -97,7 +97,14 @@ export default function Navigation() {
       </div>
 
       {/* CTA */}
-      <div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <button
+          className="btn-secondary"
+          style={{ fontSize: '0.6rem', letterSpacing: '0.18em', padding: '0.4rem 0' }}
+          onClick={onOpenSubscription}
+        >
+          会員プラン
+        </button>
         <button
           className="btn-primary"
           style={{ padding: '0.55rem 1.6rem', fontSize: '0.62rem' }}

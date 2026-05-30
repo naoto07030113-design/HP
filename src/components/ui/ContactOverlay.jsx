@@ -4,7 +4,7 @@ import ScrollTrigger from 'gsap/ScrollTrigger'
 
 gsap.registerPlugin(ScrollTrigger)
 
-export default function ContactOverlay() {
+export default function ContactOverlay({ onOpenSubscription }) {
   const ref = useRef()
 
   useEffect(() => {
@@ -97,7 +97,7 @@ export default function ContactOverlay() {
         <div
           className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-14"
         >
-          <button className="btn-primary">
+          <button className="btn-primary" onClick={onOpenSubscription}>
             Support the Vision
           </button>
           <button className="btn-secondary">
