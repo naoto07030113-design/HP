@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react'
 
 const scenes = [
-  { label: 'Entrance',    id: 0 },
-  { label: 'Grand Hall',  id: 1 },
-  { label: 'Living Path', id: 2 },
-  { label: 'Cultivation', id: 3 },
-  { label: 'Reflection',  id: 4 },
+  { label: 'Terrazza',   id: 0 },
+  { label: 'Ristorante', id: 1 },
+  { label: 'Cantina',    id: 2 },
+  { label: 'Privata',    id: 3 },
 ]
 
 export default function ScrollProgress({ scrollRef }) {
@@ -14,68 +13,54 @@ export default function ScrollProgress({ scrollRef }) {
   useEffect(() => {
     let raf
     const update = () => {
-      setProgress(scrollRef.current)
+      setProgress(scrollRef.current ?? 0)
       raf = requestAnimationFrame(update)
     }
     raf = requestAnimationFrame(update)
     return () => cancelAnimationFrame(raf)
   }, [scrollRef])
 
-  // Which of the 5 scenes is currently active
-  const activeScene = Math.min(Math.floor(progress * 5), 4)
+  const activeScene = Math.min(Math.floor(progress * 4), 3)
 
   return (
     <div
       className="fixed right-5 top-1/2 z-30 flex flex-col items-center gap-4"
       style={{ transform: 'translateY(-50%)', pointerEvents: 'none' }}
     >
-      {/* Vertical progress track */}
-      <div
-        style={{
-          position: 'relative',
-          width: 1,
-          height: 130,
-          background: 'rgba(244,240,232,0.08)',
-        }}
-      >
+      {/* Vertical track */}
+      <div style={{ position: 'relative', width: 1, height: 120, background: 'rgba(193,150,80,0.08)' }}>
         <div
           style={{
             position: 'absolute',
-            top: 0,
-            left: 0,
+            top: 0, left: 0,
             width: '100%',
             height: `${progress * 100}%`,
-            background: 'linear-gradient(180deg, #4a8c3f, #8ab880)',
-            transition: 'height 0.1s linear',
+            background: 'linear-gradient(180deg, #8b5a2b, #c17842)',
+            transition: 'height 0.12s linear',
           }}
         />
       </div>
 
       {/* Scene dots */}
       {scenes.map((scene) => (
-        <div key={scene.id} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+        <div key={scene.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div
             style={{
-              width:  activeScene === scene.id ? 6 : 4,
-              height: activeScene === scene.id ? 6 : 4,
+              width: activeScene === scene.id ? 6 : 3.5,
+              height: activeScene === scene.id ? 6 : 3.5,
               borderRadius: '50%',
-              background: activeScene === scene.id
-                ? '#6ab850'
-                : 'rgba(244,240,232,0.18)',
-              boxShadow: activeScene === scene.id
-                ? '0 0 8px rgba(106,184,80,0.7)'
-                : 'none',
+              background: activeScene === scene.id ? '#c17842' : 'rgba(193,150,80,0.2)',
+              boxShadow: activeScene === scene.id ? '0 0 10px rgba(193,120,66,0.7)' : 'none',
               transition: 'all 0.5s ease',
             }}
           />
           <span
-            className="font-body hidden lg:block"
+            className="hidden lg:block"
             style={{
-              fontSize: '0.52rem',
+              fontFamily: "'Jost', sans-serif",
+              fontSize: '0.5rem',
               letterSpacing: '0.1em',
-              color: activeScene === scene.id
-                ? 'rgba(138,184,128,0.75)'
-                : 'rgba(244,240,232,0.15)',
+              color: activeScene === scene.id ? 'rgba(193,150,80,0.7)' : 'rgba(240,220,180,0.15)',
               transition: 'color 0.5s ease',
             }}
           >
@@ -84,14 +69,13 @@ export default function ScrollProgress({ scrollRef }) {
         </div>
       ))}
 
-      {/* Progress percentage */}
       <div
-        className="font-body"
         style={{
-          fontSize: '0.5rem',
+          fontFamily: "'Jost', sans-serif",
+          fontSize: '0.48rem',
           letterSpacing: '0.1em',
-          color: 'rgba(244,240,232,0.15)',
-          marginTop: 4,
+          color: 'rgba(193,150,80,0.25)',
+          marginTop: 2,
         }}
       >
         {Math.round(progress * 100)}%

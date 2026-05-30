@@ -11,13 +11,13 @@
 
   html {
     scroll-behavior: auto;
-    background: #1a2e18;
-    color: #f4f0e8;
+    background: #0d0602;
+    color: #f0e6d3;
   }
 
   body {
     font-family: 'Jost', system-ui, sans-serif;
-    background: #1a2e18;
+    background: #0d0602;
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -28,11 +28,11 @@
   }
 
   ::-webkit-scrollbar-track {
-    background: #1a2e18;
+    background: #0d0602;
   }
 
   ::-webkit-scrollbar-thumb {
-    background: #4a8c3f;
+    background: #8b5a2b;
     border-radius: 2px;
   }
 }
@@ -42,103 +42,87 @@
     font-family: 'Cormorant Garamond', Georgia, serif;
   }
 
+  .font-serif {
+    font-family: 'Playfair Display', 'Cormorant Garamond', Georgia, serif;
+  }
+
   .font-body {
     font-family: 'Jost', system-ui, sans-serif;
   }
 
-  /* Glassmorphism panel — light version for bright overlays */
   .glass-panel {
-    background: rgba(244, 240, 232, 0.12);
+    background: rgba(20, 10, 5, 0.45);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
-    border: 1px solid rgba(244, 240, 232, 0.25);
+    border: 1px solid rgba(193, 120, 66, 0.2);
   }
 
-  /* Dark glass panel for navigation */
-  .glass-panel-dark {
-    background: rgba(26, 46, 24, 0.6);
+  .glass-panel-light {
+    background: rgba(240, 220, 180, 0.08);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(106, 184, 80, 0.15);
+    border: 1px solid rgba(240, 220, 180, 0.15);
   }
 
   .label-tag {
     font-family: 'Jost', sans-serif;
-    font-size: 0.6rem;
-    font-weight: 400;
-    letter-spacing: 0.28em;
+    font-size: 0.58rem;
+    font-weight: 300;
+    letter-spacing: 0.32em;
     text-transform: uppercase;
-    color: #8ab880;
-  }
-
-  .label-tag-light {
-    font-family: 'Jost', sans-serif;
-    font-size: 0.6rem;
-    font-weight: 400;
-    letter-spacing: 0.28em;
-    text-transform: uppercase;
-    color: rgba(244, 240, 232, 0.5);
+    color: rgba(193, 160, 100, 0.7);
   }
 
   .btn-primary {
-    background: rgba(244, 240, 232, 0.1);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(244, 240, 232, 0.35);
-    color: #f4f0e8;
+    background: rgba(193, 120, 66, 0.15);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(193, 120, 66, 0.5);
+    color: #f0e6d3;
     font-family: 'Jost', sans-serif;
-    font-size: 0.7rem;
+    font-size: 0.68rem;
     font-weight: 300;
-    letter-spacing: 0.22em;
+    letter-spacing: 0.28em;
     text-transform: uppercase;
-    padding: 0.9rem 2.8rem;
+    padding: 1rem 3rem;
     cursor: pointer;
-    transition: all 0.5s ease;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .btn-primary::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: rgba(244, 240, 232, 0.08);
-    opacity: 0;
-    transition: opacity 0.4s ease;
+    transition: all 0.6s ease;
   }
 
   .btn-primary:hover {
-    border-color: rgba(244, 240, 232, 0.65);
-    background: rgba(244, 240, 232, 0.18);
+    background: rgba(193, 120, 66, 0.35);
+    border-color: rgba(193, 120, 66, 0.9);
   }
 
-  .btn-primary:hover::before {
-    opacity: 1;
-  }
-
-  .btn-secondary {
+  .btn-ghost {
     background: none;
-    border: none;
-    color: rgba(244, 240, 232, 0.45);
+    border: 1px solid rgba(240, 220, 180, 0.25);
+    color: rgba(240, 220, 180, 0.6);
     font-family: 'Jost', sans-serif;
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     font-weight: 300;
-    letter-spacing: 0.18em;
+    letter-spacing: 0.24em;
     text-transform: uppercase;
+    padding: 0.8rem 2.2rem;
     cursor: pointer;
-    transition: color 0.4s ease;
-    padding: 0.5rem 0;
+    transition: all 0.5s ease;
   }
 
-  .btn-secondary:hover {
-    color: rgba(244, 240, 232, 0.8);
+  .btn-ghost:hover {
+    border-color: rgba(240, 220, 180, 0.55);
+    color: rgba(240, 220, 180, 0.9);
   }
 
-  .divider-botanical {
+  .divider-gold {
     height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(138, 184, 128, 0.4), transparent);
+    background: linear-gradient(90deg, transparent, rgba(193, 150, 80, 0.5), transparent);
   }
 }
 
 canvas {
   display: block;
+}
+
+::selection {
+  background: rgba(193, 120, 66, 0.3);
+  color: #f0e6d3;
 }

@@ -9,6 +9,8 @@ import ScrollProgress from './components/ui/ScrollProgress'
 import ContactOverlay from './components/ui/ContactOverlay'
 import LoadingScreen from './components/ui/LoadingScreen'
 
+// RESTAURANT EXPERIENCE — replaces previous greenhouse project
+
 export default function App() {
   const [loaded, setLoaded] = useState(false)
 
@@ -20,10 +22,10 @@ export default function App() {
   }, [])
 
   return (
-    <div style={{ background: '#1a2e18' }}>
+    <div style={{ background: '#0d0602' }}>
       {!loaded && <LoadingScreen onComplete={handleLoadComplete} />}
 
-      {/* Fixed 3D canvas — always fills viewport */}
+      {/* Fixed 3D canvas — fills viewport */}
       <MainScene scrollRef={scrollRef} />
 
       {/* Fixed UI layer */}
@@ -33,25 +35,19 @@ export default function App() {
       <ScrollProgress scrollRef={scrollRef} />
       <ContactOverlay />
 
-      {/*
-        Transparent scroll container — provides scroll height only.
-        Camera animation is driven by scroll progress.
-      */}
+      {/* Transparent scroll container — scroll height drives camera animation */}
       <div id="scroll-root" style={{ position: 'relative', zIndex: 10 }}>
-        {/* Scene 1 — Greenhouse Entrance */}
-        <section id="entrance" style={{ height: '100vh', pointerEvents: 'none' }} />
+        {/* Section 1 — Exterior Terrace */}
+        <section id="entrance" style={{ height: '120vh', pointerEvents: 'none' }} />
 
-        {/* Scene 2 — Grand Central Conservatory */}
-        <section id="grand-hall" style={{ height: '150vh', pointerEvents: 'none' }} />
+        {/* Section 2 — Entrance + Main Dining */}
+        <section id="dining" style={{ height: '150vh', pointerEvents: 'none' }} />
 
-        {/* Scene 3 — The Living Path */}
-        <section id="living-path" style={{ height: '150vh', pointerEvents: 'none' }} />
+        {/* Section 3 — Cantina Corridor */}
+        <section id="cantina" style={{ height: '130vh', pointerEvents: 'none' }} />
 
-        {/* Scene 4 — Cultivation & Harvest */}
-        <section id="cultivation" style={{ height: '150vh', pointerEvents: 'none' }} />
-
-        {/* Scene 5 — Reflection Hall */}
-        <section id="reflection" style={{ height: '130vh', pointerEvents: 'none' }} />
+        {/* Section 4 — Private Dining Room */}
+        <section id="contact" style={{ height: '150vh', pointerEvents: 'none' }} />
       </div>
     </div>
   )

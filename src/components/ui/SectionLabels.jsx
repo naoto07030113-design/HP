@@ -6,44 +6,44 @@ gsap.registerPlugin(ScrollTrigger)
 
 const scenes = [
   {
-    id: 'grand-hall',
+    id: 'entrance',
+    number: '01',
+    tag: 'La Terrazza',
+    title: 'Under the Lemon Sky',
+    description: 'Stone, bougainvillea, and the scent of the sea. A terrace that exists between the world and somewhere more beautiful.',
+    triggerStart: '8%',
+    triggerEnd: '24%',
+    side: 'right',
+  },
+  {
+    id: 'dining',
     number: '02',
-    tag: 'Grand Central Conservatory',
-    title: 'The Living Cathedral',
-    description: 'Monumental glass and steel rise into the morning sky. Sunlight breaks through and touches the earth in gold.',
-    triggerStart: '14%',
-    triggerEnd: '32%',
+    tag: 'Il Ristorante',
+    title: 'Where Families Gather',
+    description: 'White linen, candlelit tables, and the murmur of Italian conversation. The heart of La Costa.',
+    triggerStart: '28%',
+    triggerEnd: '50%',
     side: 'left',
   },
   {
-    id: 'living-path',
+    id: 'cantina',
     number: '03',
-    tag: 'The Living Path',
-    title: 'Deep in Green',
-    description: 'A dense corridor of botanical abundance. Humidity hangs in the air. Light moves through leaves.',
-    triggerStart: '36%',
-    triggerEnd: '54%',
-    side: 'right',
-  },
-  {
-    id: 'cultivation',
-    number: '04',
-    tag: 'Cultivation & Harvest',
-    title: 'Where Life Grows',
-    description: 'Asparagus, lettuce, herbs. Raised beds and hydroponic racks. Purposeful, productive, elegant.',
-    triggerStart: '56%',
+    tag: 'La Cantina',
+    title: 'A Century of Tradition',
+    description: 'Stone-walled passages lit by iron lanterns. Every bottle tells a story from somewhere south of Naples.',
+    triggerStart: '54%',
     triggerEnd: '74%',
-    side: 'left',
+    side: 'right',
   },
   {
-    id: 'reflection',
-    number: '05',
-    tag: 'The Reflection Hall',
-    title: 'Stillness at the End',
-    description: 'A serene, open hall. A mirror pool. The greenhouse breathes around you in quiet luxury.',
-    triggerStart: '76%',
+    id: 'contact',
+    number: '04',
+    tag: 'La Sala Privata',
+    title: 'Your Own Corner',
+    description: 'For evenings that deserve to be unforgettable. Reserve the private room for occasions that matter.',
+    triggerStart: '77%',
     triggerEnd: '96%',
-    side: 'right',
+    side: 'left',
   },
 ]
 
@@ -54,16 +54,16 @@ function SceneLabel({ scene }) {
     const ctx = gsap.context(() => {
       gsap.fromTo(
         ref.current,
-        { opacity: 0, x: scene.side === 'left' ? -35 : 35 },
+        { opacity: 0, x: scene.side === 'left' ? -30 : 30 },
         {
           opacity: 1,
           x: 0,
-          duration: 0.9,
+          duration: 1.0,
           ease: 'power3.out',
           scrollTrigger: {
             trigger: '#scroll-root',
             start: `${scene.triggerStart} top`,
-            end:   `${scene.triggerEnd} top`,
+            end: `${scene.triggerEnd} top`,
             toggleActions: 'play reverse play reverse',
           },
         }
@@ -82,18 +82,18 @@ function SceneLabel({ scene }) {
         opacity: 0,
         bottom: '10vh',
         ...(isLeft ? { left: '4vw' } : { right: '4vw' }),
-        maxWidth: 340,
+        maxWidth: 320,
       }}
     >
-      {/* Large ghost number */}
+      {/* Ghost number */}
       <div
         className="font-display"
         style={{
-          fontSize: 'clamp(4.5rem, 10vw, 7.5rem)',
+          fontSize: 'clamp(5rem, 11vw, 8rem)',
           fontWeight: 300,
-          lineHeight: 0.9,
-          color: 'rgba(244,240,232,0.04)',
-          marginBottom: '0.1em',
+          lineHeight: 0.88,
+          color: 'rgba(193,150,80,0.05)',
+          marginBottom: '0.05em',
           letterSpacing: '-0.02em',
         }}
       >
@@ -101,7 +101,17 @@ function SceneLabel({ scene }) {
       </div>
 
       {/* Tag */}
-      <div className="label-tag mb-2" style={{ color: '#8ab880' }}>
+      <div
+        style={{
+          fontFamily: "'Jost', sans-serif",
+          fontSize: '0.58rem',
+          fontWeight: 300,
+          letterSpacing: '0.34em',
+          color: 'rgba(193,150,80,0.6)',
+          textTransform: 'uppercase',
+          marginBottom: '0.5rem',
+        }}
+      >
         {scene.tag}
       </div>
 
@@ -109,13 +119,13 @@ function SceneLabel({ scene }) {
       <div
         className="font-display"
         style={{
-          fontSize: 'clamp(1.1rem, 2.5vw, 1.75rem)',
+          fontSize: 'clamp(1.2rem, 2.4vw, 1.85rem)',
           fontWeight: 400,
           fontStyle: 'italic',
-          color: 'rgba(244,240,232,0.82)',
-          lineHeight: 1.2,
+          color: 'rgba(240,220,180,0.85)',
+          lineHeight: 1.15,
           marginBottom: '0.75rem',
-          letterSpacing: '0.02em',
+          letterSpacing: '0.015em',
         }}
       >
         {scene.title}
@@ -125,21 +135,21 @@ function SceneLabel({ scene }) {
       <div
         style={{
           height: 1,
-          width: 50,
-          background: 'rgba(106,184,80,0.5)',
-          marginBottom: '0.85rem',
+          width: 44,
+          background: 'rgba(193,150,80,0.45)',
+          marginBottom: '0.8rem',
         }}
       />
 
       {/* Description */}
       <p
-        className="font-body"
         style={{
+          fontFamily: "'Jost', sans-serif",
           fontSize: '0.78rem',
           fontWeight: 300,
-          lineHeight: 1.75,
-          color: 'rgba(244,240,232,0.38)',
-          letterSpacing: '0.025em',
+          lineHeight: 1.8,
+          color: 'rgba(240,220,180,0.35)',
+          letterSpacing: '0.02em',
         }}
       >
         {scene.description}

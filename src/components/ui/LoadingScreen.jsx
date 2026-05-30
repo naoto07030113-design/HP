@@ -9,7 +9,7 @@ export default function LoadingScreen({ onComplete }) {
     const interval = setInterval(() => {
       setCount((c) => {
         if (c >= 100) { clearInterval(interval); return 100 }
-        return c + Math.floor(Math.random() * 6) + 2
+        return Math.min(c + Math.floor(Math.random() * 5) + 2, 100)
       })
     }, 55)
     return () => clearInterval(interval)
@@ -22,8 +22,8 @@ export default function LoadingScreen({ onComplete }) {
     if (count >= 100) {
       setTimeout(() => {
         setFading(true)
-        setTimeout(() => onComplete?.(), 900)
-      }, 350)
+        setTimeout(() => onComplete?.(), 1000)
+      }, 400)
     }
   }, [count, onComplete])
 
@@ -31,22 +31,22 @@ export default function LoadingScreen({ onComplete }) {
     <div
       className="fixed inset-0 z-[100] flex flex-col items-center justify-center"
       style={{
-        background: '#1a2e18',
+        background: '#0d0602',
         opacity: fading ? 0 : 1,
-        transition: 'opacity 0.9s ease-in-out',
+        transition: 'opacity 1.0s ease-in-out',
         pointerEvents: fading ? 'none' : 'all',
       }}
     >
-      {/* Botanical logo mark */}
-      <div className="relative mb-12 flex items-center justify-center" style={{ width: 80, height: 80 }}>
+      {/* Ornamental mark */}
+      <div className="relative mb-12 flex items-center justify-center" style={{ width: 90, height: 90 }}>
         {/* Outer ring */}
         <div
           style={{
             position: 'absolute',
             inset: 0,
             borderRadius: '50%',
-            border: '1px solid rgba(138,184,128,0.25)',
-            animation: 'spinSlow 8s linear infinite',
+            border: '1px solid rgba(193,150,80,0.2)',
+            animation: 'spinSlow 10s linear infinite',
           }}
         />
         {/* Inner ring */}
@@ -55,79 +55,107 @@ export default function LoadingScreen({ onComplete }) {
             position: 'absolute',
             inset: 14,
             borderRadius: '50%',
-            border: '1px solid rgba(138,184,128,0.45)',
-            animation: 'spinSlow 5s linear infinite reverse',
+            border: '1px solid rgba(193,150,80,0.35)',
+            animation: 'spinSlow 6s linear infinite reverse',
           }}
         />
-        {/* Center leaf dot */}
+        {/* Amber center dot */}
         <div
           style={{
             width: 10,
             height: 10,
             borderRadius: '50%',
-            background: '#6ab850',
-            boxShadow: '0 0 18px rgba(106,184,80,0.5)',
-            animation: 'leafPulse 2.5s ease-in-out infinite',
+            background: '#c17842',
+            boxShadow: '0 0 20px rgba(193,120,66,0.65)',
+            animation: 'flamePulse 2.8s ease-in-out infinite',
           }}
         />
-        {/* Four orbital dots */}
-        {[0, 90, 180, 270].map((deg) => (
+        {/* Orbital decorations */}
+        {[0, 72, 144, 216, 288].map((deg) => (
           <div
             key={deg}
             style={{
               position: 'absolute',
-              width: 4,
-              height: 4,
+              width: 3,
+              height: 3,
               borderRadius: '50%',
-              background: 'rgba(138,184,128,0.6)',
+              background: 'rgba(193,150,80,0.5)',
               top: '50%',
               left: '50%',
-              transformOrigin: '2px 2px',
-              transform: `rotate(${deg}deg) translateY(-30px)`,
+              marginTop: -1.5,
+              marginLeft: -1.5,
+              transformOrigin: '1.5px 1.5px',
+              transform: `rotate(${deg}deg) translateY(-34px)`,
             }}
           />
         ))}
       </div>
 
-      {/* Brand name */}
+      {/* Brand */}
       <div
-        className="font-display text-cream mb-1"
+        className="font-display"
         style={{
-          fontSize: '2.1rem',
+          fontSize: '1.9rem',
           fontWeight: 400,
-          letterSpacing: '0.22em',
-          color: '#f4f0e8',
+          letterSpacing: '0.28em',
+          color: '#f0e6d3',
+          marginBottom: '0.4rem',
         }}
       >
-        BIO PARK
+        TRATTORIA
       </div>
       <div
-        className="font-body text-sage mb-12"
-        style={{ fontSize: '0.58rem', letterSpacing: '0.35em', color: '#8ab880' }}
+        className="font-display"
+        style={{
+          fontSize: '1.35rem',
+          fontWeight: 300,
+          fontStyle: 'italic',
+          letterSpacing: '0.18em',
+          color: 'rgba(193,150,80,0.7)',
+          marginBottom: '0.8rem',
+        }}
       >
-        Entering the Greenhouse
+        La Costa
+      </div>
+      <div
+        style={{
+          fontFamily: "'Jost', sans-serif",
+          fontSize: '0.55rem',
+          letterSpacing: '0.38em',
+          color: 'rgba(193,150,80,0.4)',
+          marginBottom: '3rem',
+          textTransform: 'uppercase',
+        }}
+      >
+        Amalfi Coast · Est. 1962
       </div>
 
       {/* Progress bar */}
-      <div style={{ width: 200, height: 1, background: 'rgba(255,255,255,0.07)', position: 'relative' }}>
+      <div style={{ width: 180, height: 1, background: 'rgba(193,150,80,0.1)', position: 'relative' }}>
         <div
           ref={barRef}
           style={{
             position: 'absolute',
-            top: 0, left: 0,
+            top: 0,
+            left: 0,
             height: '100%',
             width: '0%',
-            background: 'linear-gradient(90deg, #3a7a30, #6ab850, #8ab880)',
-            transition: 'width 0.1s ease',
-            boxShadow: '0 0 6px rgba(106,184,80,0.5)',
+            background: 'linear-gradient(90deg, #8b5a2b, #c17842, #dda860)',
+            transition: 'width 0.12s ease',
+            boxShadow: '0 0 8px rgba(193,120,66,0.55)',
           }}
         />
       </div>
       <div
-        className="font-body mt-3"
-        style={{ fontSize: '0.6rem', letterSpacing: '0.18em', color: 'rgba(244,240,232,0.2)' }}
+        style={{
+          fontFamily: "'Jost', sans-serif",
+          fontSize: '0.58rem',
+          letterSpacing: '0.2em',
+          color: 'rgba(240,220,180,0.22)',
+          marginTop: '0.75rem',
+        }}
       >
-        {count < 100 ? `${Math.min(count, 100)}%` : 'Ready'}
+        {count < 100 ? `${Math.min(count, 100)}%` : 'Benvenuti'}
       </div>
 
       <style>{`
@@ -135,9 +163,9 @@ export default function LoadingScreen({ onComplete }) {
           from { transform: rotate(0deg); }
           to   { transform: rotate(360deg); }
         }
-        @keyframes leafPulse {
-          0%, 100% { opacity: 0.7; transform: scale(1); }
-          50%       { opacity: 1;   transform: scale(1.2); }
+        @keyframes flamePulse {
+          0%, 100% { opacity: 0.75; transform: scale(1); }
+          50%       { opacity: 1;   transform: scale(1.25); }
         }
       `}</style>
     </div>

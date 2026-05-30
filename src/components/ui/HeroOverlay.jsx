@@ -9,47 +9,47 @@ export default function HeroOverlay() {
 
   useEffect(() => {
     const ctx = gsap.context(() => {
-      // Fade out as user scrolls past the entrance
+      // Fade out as user scrolls into the restaurant
       gsap.to(containerRef.current, {
         opacity: 0,
-        y: -30,
+        y: -28,
         ease: 'power2.in',
         scrollTrigger: {
           trigger: '#scroll-root',
-          start: '8% top',
-          end: '20% top',
-          scrub: 1.2,
+          start: '6% top',
+          end: '18% top',
+          scrub: 1.5,
         },
       })
 
-      // Staggered entrance animations
-      gsap.fromTo('.bio-tag',
-        { opacity: 0, y: 18 },
-        { opacity: 1, y: 0, duration: 1.4, delay: 0.2, ease: 'power3.out' }
+      // Staggered entrance
+      gsap.fromTo('.hero-eyebrow',
+        { opacity: 0, y: 16 },
+        { opacity: 1, y: 0, duration: 1.6, delay: 0.3, ease: 'power3.out' }
       )
-      gsap.fromTo('.bio-title',
-        { opacity: 0, y: 36 },
-        { opacity: 1, y: 0, duration: 1.6, delay: 0.5, ease: 'power3.out' }
+      gsap.fromTo('.hero-title-line1',
+        { opacity: 0, y: 42 },
+        { opacity: 1, y: 0, duration: 1.8, delay: 0.55, ease: 'power3.out' }
       )
-      gsap.fromTo('.bio-subtitle',
-        { opacity: 0, y: 22 },
-        { opacity: 1, y: 0, duration: 1.2, delay: 0.9, ease: 'power3.out' }
+      gsap.fromTo('.hero-title-line2',
+        { opacity: 0, y: 42 },
+        { opacity: 1, y: 0, duration: 1.8, delay: 0.72, ease: 'power3.out' }
       )
-      gsap.fromTo('.bio-divider',
+      gsap.fromTo('.hero-divider',
         { scaleX: 0, transformOrigin: 'left center' },
-        { scaleX: 1, duration: 1.8, delay: 0.8, ease: 'power3.inOut' }
+        { scaleX: 1, duration: 2.2, delay: 0.9, ease: 'power3.inOut' }
       )
-      gsap.fromTo('.bio-desc',
-        { opacity: 0, y: 16 },
-        { opacity: 1, y: 0, duration: 1.0, delay: 1.3, ease: 'power3.out' }
+      gsap.fromTo('.hero-desc',
+        { opacity: 0, y: 18 },
+        { opacity: 1, y: 0, duration: 1.2, delay: 1.4, ease: 'power3.out' }
       )
-      gsap.fromTo('.bio-cta',
-        { opacity: 0, y: 16 },
-        { opacity: 1, y: 0, duration: 1.0, delay: 1.7, ease: 'power3.out' }
+      gsap.fromTo('.hero-cta',
+        { opacity: 0, y: 14 },
+        { opacity: 1, y: 0, duration: 1.0, delay: 1.9, ease: 'power3.out' }
       )
-      gsap.fromTo('.bio-scroll',
+      gsap.fromTo('.hero-scroll',
         { opacity: 0 },
-        { opacity: 1, duration: 1.0, delay: 2.4, ease: 'power3.out' }
+        { opacity: 1, duration: 1.2, delay: 2.8, ease: 'power3.out' }
       )
     }, containerRef)
 
@@ -62,123 +62,149 @@ export default function HeroOverlay() {
       className="fixed inset-0 z-20 pointer-events-none flex flex-col justify-center"
       style={{ padding: '0 8vw' }}
     >
-      {/* Content block */}
-      <div style={{ maxWidth: 580 }}>
-
-        {/* Tag line */}
+      <div style={{ maxWidth: 600 }}>
+        {/* Eyebrow */}
         <div
-          className="bio-tag label-tag mb-7 flex items-center gap-3"
+          className="hero-eyebrow flex items-center gap-3 mb-8"
           style={{ opacity: 0 }}
         >
-          <div style={{ width: 28, height: 1, background: '#6ab850' }} />
-          A Living Sanctuary · Nature · Fermentation · Care
-        </div>
-
-        {/* Main title */}
-        <h1 style={{ marginBottom: '0.3em' }}>
-          <div
-            className="bio-title font-display text-cream"
+          <div style={{ width: 34, height: 1, background: 'rgba(193,150,80,0.6)' }} />
+          <span
             style={{
-              fontSize: 'clamp(3.5rem, 10vw, 8rem)',
-              fontWeight: 400,
-              lineHeight: 0.95,
-              letterSpacing: '0.06em',
-              opacity: 0,
-              color: '#f4f0e8',
+              fontFamily: "'Jost', sans-serif",
+              fontSize: '0.6rem',
+              fontWeight: 300,
+              letterSpacing: '0.34em',
+              color: 'rgba(193,150,80,0.65)',
+              textTransform: 'uppercase',
             }}
           >
-            BIO PARK
+            Cucina Meridionale · Amalfi Coast
+          </span>
+        </div>
+
+        {/* Main headline */}
+        <h1 style={{ marginBottom: '0.2em' }}>
+          <div
+            className="hero-title-line1 font-display"
+            style={{
+              fontSize: 'clamp(3.8rem, 9.5vw, 8.5rem)',
+              fontWeight: 400,
+              lineHeight: 0.92,
+              letterSpacing: '0.04em',
+              color: '#f0e6d3',
+              opacity: 0,
+            }}
+          >
+            Trattoria
+          </div>
+          <div
+            className="hero-title-line2 font-display"
+            style={{
+              fontSize: 'clamp(3.8rem, 9.5vw, 8.5rem)',
+              fontWeight: 300,
+              fontStyle: 'italic',
+              lineHeight: 0.92,
+              letterSpacing: '0.04em',
+              color: 'rgba(240,220,160,0.88)',
+              opacity: 0,
+            }}
+          >
+            La Costa
           </div>
         </h1>
 
-        {/* Subtitle */}
-        <div
-          className="bio-subtitle font-display"
-          style={{
-            fontSize: 'clamp(0.9rem, 2vw, 1.35rem)',
-            fontWeight: 300,
-            fontStyle: 'italic',
-            color: 'rgba(244,240,232,0.55)',
-            letterSpacing: '0.04em',
-            marginBottom: '1.8rem',
-            opacity: 0,
-          }}
-        >
-          A Monumental Greenhouse of Growth
-        </div>
-
         {/* Divider */}
         <div
-          className="bio-divider"
+          className="hero-divider"
           style={{
             height: 1,
-            width: 220,
-            background: 'linear-gradient(90deg, rgba(106,184,80,0.7), rgba(138,184,128,0.3), transparent)',
+            width: 260,
+            marginTop: '1.8rem',
             marginBottom: '1.8rem',
-            opacity: 0,
+            background: 'linear-gradient(90deg, rgba(193,150,80,0.65), rgba(193,150,80,0.2), transparent)',
           }}
         />
 
         {/* Description */}
         <p
-          className="bio-desc font-body"
+          className="hero-desc"
           style={{
-            fontSize: 'clamp(0.78rem, 1.4vw, 0.92rem)',
+            fontFamily: "'Jost', sans-serif",
+            fontSize: 'clamp(0.8rem, 1.35vw, 0.95rem)',
             fontWeight: 300,
-            lineHeight: 1.85,
-            color: 'rgba(244,240,232,0.42)',
-            maxWidth: 440,
-            marginBottom: '2.4rem',
+            lineHeight: 1.9,
+            color: 'rgba(240,220,180,0.38)',
+            maxWidth: 420,
+            marginBottom: '2.6rem',
             opacity: 0,
-            letterSpacing: '0.03em',
+            letterSpacing: '0.025em',
           }}
         >
-          Step inside a breathtaking botanical conservatory — where natural
-          light filters through glass and steel, and life grows in
-          extraordinary abundance.
+          Where sun-warmed stone meets the scent of sea salt and lemon —
+          step inside our family trattoria on the Amalfi Coast.
         </p>
 
-        {/* CTA */}
+        {/* CTAs */}
         <div
-          className="bio-cta flex items-center gap-5 pointer-events-auto"
+          className="hero-cta flex items-center gap-6 pointer-events-auto"
           style={{ opacity: 0 }}
         >
           <button
             className="btn-primary"
             onClick={() => {
-              const el = document.getElementById('grand-hall')
-              el?.scrollIntoView({ behavior: 'smooth' })
+              document.getElementById('dining')?.scrollIntoView({ behavior: 'smooth' })
             }}
           >
-            Enter the Greenhouse
+            Entra
           </button>
-          <span
-            className="font-body"
-            style={{ fontSize: '0.68rem', color: 'rgba(244,240,232,0.25)', letterSpacing: '0.15em' }}
+          <button
+            className="btn-ghost"
+            onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })}
           >
-            Scroll to explore ↓
-          </span>
+            Prenota
+          </button>
         </div>
       </div>
 
-      {/* Scroll indicator — bottom center */}
+      {/* Scroll indicator */}
       <div
-        className="bio-scroll absolute bottom-9 left-1/2 flex flex-col items-center gap-2"
-        style={{ transform: 'translateX(-50%)', opacity: 0 }}
+        className="hero-scroll absolute"
+        style={{
+          bottom: '2.5rem',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '0.5rem',
+          opacity: 0,
+        }}
       >
         <span
-          className="label-tag"
-          style={{ fontSize: '0.52rem', color: 'rgba(138,184,128,0.5)' }}
+          style={{
+            fontFamily: "'Jost', sans-serif",
+            fontSize: '0.52rem',
+            letterSpacing: '0.3em',
+            color: 'rgba(193,150,80,0.4)',
+          }}
         >
-          Scroll
+          SCORRI
         </span>
-        <div style={{ width: 1, height: 42, background: 'rgba(106,184,80,0.2)', overflow: 'hidden' }}>
+        <div
+          style={{
+            width: 1,
+            height: 44,
+            background: 'rgba(193,150,80,0.18)',
+            overflow: 'hidden',
+          }}
+        >
           <div
             style={{
               width: '100%',
-              height: '45%',
-              background: 'linear-gradient(180deg, #6ab850, transparent)',
-              animation: 'scrollDrop 2s ease-in-out infinite',
+              height: '50%',
+              background: 'linear-gradient(180deg, rgba(193,150,80,0.7), transparent)',
+              animation: 'scrollDrop 2.2s ease-in-out infinite',
             }}
           />
         </div>
@@ -187,7 +213,7 @@ export default function HeroOverlay() {
       <style>{`
         @keyframes scrollDrop {
           0%   { transform: translateY(-100%); }
-          100% { transform: translateY(240%); }
+          100% { transform: translateY(230%); }
         }
       `}</style>
     </div>
