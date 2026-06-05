@@ -10,135 +10,109 @@
   }
 
   html {
-    scroll-behavior: auto;
-    background: #1a2e18;
-    color: #f4f0e8;
+    background: #0A0A0A;
+    color: #FFFFFF;
+    scroll-behavior: smooth;
   }
 
   body {
-    font-family: 'Jost', system-ui, sans-serif;
-    background: #1a2e18;
-    overflow-x: hidden;
+    font-family: 'Noto Sans JP', 'Inter', system-ui, sans-serif;
+    background: #0A0A0A;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
   ::-webkit-scrollbar {
-    width: 2px;
+    width: 4px;
+    height: 4px;
   }
-
   ::-webkit-scrollbar-track {
-    background: #1a2e18;
+    background: #141414;
   }
-
   ::-webkit-scrollbar-thumb {
-    background: #4a8c3f;
+    background: #2A2A2A;
     border-radius: 2px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #C9A84C;
   }
 }
 
 @layer components {
-  .font-display {
-    font-family: 'Cormorant Garamond', Georgia, serif;
+  .card {
+    @apply bg-surface-2 border border-border rounded-lg;
   }
 
-  .font-body {
-    font-family: 'Jost', system-ui, sans-serif;
+  .card-hover {
+    @apply card transition-all duration-200 hover:border-border-light hover:bg-surface-3;
   }
 
-  /* Glassmorphism panel — light version for bright overlays */
-  .glass-panel {
-    background: rgba(244, 240, 232, 0.12);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border: 1px solid rgba(244, 240, 232, 0.25);
+  .btn-gold {
+    @apply bg-gold text-black font-medium px-4 py-2 rounded text-sm transition-all duration-200 hover:bg-gold-light active:bg-gold-dark;
   }
 
-  /* Dark glass panel for navigation */
-  .glass-panel-dark {
-    background: rgba(26, 46, 24, 0.6);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(106, 184, 80, 0.15);
+  .btn-ghost {
+    @apply border border-border text-gray-400 font-medium px-4 py-2 rounded text-sm transition-all duration-200 hover:border-border-light hover:text-white;
   }
 
-  .label-tag {
-    font-family: 'Jost', sans-serif;
-    font-size: 0.6rem;
-    font-weight: 400;
-    letter-spacing: 0.28em;
-    text-transform: uppercase;
-    color: #8ab880;
+  .btn-danger {
+    @apply border border-red-800 text-red-400 font-medium px-4 py-2 rounded text-sm transition-all duration-200 hover:bg-red-900/20 hover:text-red-300;
   }
 
-  .label-tag-light {
-    font-family: 'Jost', sans-serif;
-    font-size: 0.6rem;
-    font-weight: 400;
-    letter-spacing: 0.28em;
-    text-transform: uppercase;
-    color: rgba(244, 240, 232, 0.5);
+  .input-field {
+    @apply w-full bg-surface border border-border rounded px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-gold transition-colors;
   }
 
-  .btn-primary {
-    background: rgba(244, 240, 232, 0.1);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(244, 240, 232, 0.35);
-    color: #f4f0e8;
-    font-family: 'Jost', sans-serif;
-    font-size: 0.7rem;
-    font-weight: 300;
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
-    padding: 0.9rem 2.8rem;
-    cursor: pointer;
-    transition: all 0.5s ease;
-    position: relative;
-    overflow: hidden;
+  .label {
+    @apply block text-xs font-medium text-gray-400 mb-1;
   }
 
-  .btn-primary::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: rgba(244, 240, 232, 0.08);
-    opacity: 0;
-    transition: opacity 0.4s ease;
+  .gold-text {
+    @apply text-gold;
   }
 
-  .btn-primary:hover {
-    border-color: rgba(244, 240, 232, 0.65);
-    background: rgba(244, 240, 232, 0.18);
+  .section-title {
+    @apply text-lg font-semibold text-white;
   }
 
-  .btn-primary:hover::before {
-    opacity: 1;
-  }
-
-  .btn-secondary {
-    background: none;
-    border: none;
-    color: rgba(244, 240, 232, 0.45);
-    font-family: 'Jost', sans-serif;
-    font-size: 0.7rem;
-    font-weight: 300;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition: color 0.4s ease;
-    padding: 0.5rem 0;
-  }
-
-  .btn-secondary:hover {
-    color: rgba(244, 240, 232, 0.8);
-  }
-
-  .divider-botanical {
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(138, 184, 128, 0.4), transparent);
+  .stat-number {
+    @apply text-2xl font-semibold text-white tabular-nums;
   }
 }
 
-canvas {
-  display: block;
+/* Drag and drop */
+.kanban-dragging {
+  opacity: 0.5;
+}
+
+/* Score bar */
+.score-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: #2A2A2A;
+  overflow: hidden;
+}
+
+.score-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.8s ease-out;
+}
+
+/* Tooltip */
+[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1E1E1E;
+  border: 1px solid #2A2A2A;
+  color: #fff;
+  font-size: 0.7rem;
+  padding: 4px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 50;
 }

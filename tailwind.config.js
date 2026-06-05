@@ -4,37 +4,43 @@ export default {
   theme: {
     extend: {
       colors: {
-        'forest-dark': '#1a2e18',
-        'forest-mid': '#2d5227',
-        'forest-light': '#4a8c3f',
-        'leaf-bright': '#6ab850',
-        'sage': '#8ab880',
-        'stone': '#9a8870',
-        'stone-light': '#c4b8a4',
-        'cream': '#f4f0e8',
-        'morning': '#fffad0',
+        gold: {
+          DEFAULT: '#C9A84C',
+          light: '#E2C97E',
+          dark: '#A8893F',
+          muted: 'rgba(201,168,76,0.15)',
+        },
+        surface: {
+          DEFAULT: '#141414',
+          2: '#1E1E1E',
+          3: '#252525',
+        },
+        border: {
+          DEFAULT: '#2A2A2A',
+          light: '#3A3A3A',
+        },
       },
       fontFamily: {
-        display: ['Cormorant Garamond', 'Georgia', 'serif'],
-        body: ['Jost', 'system-ui', 'sans-serif'],
+        sans: ['"Noto Sans JP"', 'Inter', 'system-ui', 'sans-serif'],
+        mono: ['JetBrains Mono', 'monospace'],
       },
       animation: {
-        'float-gentle': 'floatGentle 8s ease-in-out infinite',
-        'fade-up': 'fadeUp 1.2s ease-out forwards',
-        'breathe': 'breathe 4s ease-in-out infinite',
+        'fade-in': 'fadeIn 0.3s ease-out',
+        'slide-in': 'slideIn 0.3s ease-out',
+        'pulse-gold': 'pulseGold 2s ease-in-out infinite',
       },
       keyframes: {
-        floatGentle: {
-          '0%, 100%': { transform: 'translateY(0px)' },
-          '50%': { transform: 'translateY(-8px)' },
+        fadeIn: {
+          from: { opacity: '0' },
+          to: { opacity: '1' },
         },
-        fadeUp: {
-          from: { opacity: '0', transform: 'translateY(24px)' },
+        slideIn: {
+          from: { opacity: '0', transform: 'translateY(8px)' },
           to: { opacity: '1', transform: 'translateY(0)' },
         },
-        breathe: {
-          '0%, 100%': { opacity: '0.6' },
-          '50%': { opacity: '1' },
+        pulseGold: {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0.5' },
         },
       },
     },
