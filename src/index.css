@@ -10,109 +10,30 @@
   }
 
   html {
-    background: #0A0A0A;
-    color: #FFFFFF;
+    background: #ffffff;
+    color: #1e293b;
     scroll-behavior: smooth;
   }
 
   body {
-    font-family: 'Noto Sans JP', 'Inter', system-ui, sans-serif;
-    background: #0A0A0A;
+    font-family: 'Noto Sans JP', 'Inter', system-ui, -apple-system, sans-serif;
+    background: #ffffff;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
   ::-webkit-scrollbar {
-    width: 4px;
-    height: 4px;
+    width: 6px;
+    height: 6px;
   }
   ::-webkit-scrollbar-track {
-    background: #141414;
+    background: #f1f5f9;
   }
   ::-webkit-scrollbar-thumb {
-    background: #2A2A2A;
-    border-radius: 2px;
+    background: #cbd5e1;
+    border-radius: 3px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #C9A84C;
+    background: #94a3b8;
   }
-}
-
-@layer components {
-  .card {
-    @apply bg-surface-2 border border-border rounded-lg;
-  }
-
-  .card-hover {
-    @apply card transition-all duration-200 hover:border-border-light hover:bg-surface-3;
-  }
-
-  .btn-gold {
-    @apply bg-gold text-black font-medium px-4 py-2 rounded text-sm transition-all duration-200 hover:bg-gold-light active:bg-gold-dark;
-  }
-
-  .btn-ghost {
-    @apply border border-border text-gray-400 font-medium px-4 py-2 rounded text-sm transition-all duration-200 hover:border-border-light hover:text-white;
-  }
-
-  .btn-danger {
-    @apply border border-red-800 text-red-400 font-medium px-4 py-2 rounded text-sm transition-all duration-200 hover:bg-red-900/20 hover:text-red-300;
-  }
-
-  .input-field {
-    @apply w-full bg-surface border border-border rounded px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-gold transition-colors;
-  }
-
-  .label {
-    @apply block text-xs font-medium text-gray-400 mb-1;
-  }
-
-  .gold-text {
-    @apply text-gold;
-  }
-
-  .section-title {
-    @apply text-lg font-semibold text-white;
-  }
-
-  .stat-number {
-    @apply text-2xl font-semibold text-white tabular-nums;
-  }
-}
-
-/* Drag and drop */
-.kanban-dragging {
-  opacity: 0.5;
-}
-
-/* Score bar */
-.score-bar {
-  height: 6px;
-  border-radius: 3px;
-  background: #2A2A2A;
-  overflow: hidden;
-}
-
-.score-bar-fill {
-  height: 100%;
-  border-radius: 3px;
-  transition: width 0.8s ease-out;
-}
-
-/* Tooltip */
-[data-tooltip]:hover::after {
-  content: attr(data-tooltip);
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #1E1E1E;
-  border: 1px solid #2A2A2A;
-  color: #fff;
-  font-size: 0.7rem;
-  padding: 4px 8px;
-  border-radius: 4px;
-  white-space: nowrap;
-  pointer-events: none;
-  z-index: 50;
 }

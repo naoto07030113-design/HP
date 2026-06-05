@@ -1,26 +1,19 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import { ProspectProvider } from './contexts/ProspectContext.jsx'
-import Layout from './components/layout/Layout.jsx'
-import Dashboard from './pages/Dashboard.jsx'
-import Prospects from './pages/Prospects.jsx'
-import ProspectDetail from './pages/ProspectDetail.jsx'
-import Kanban from './pages/Kanban.jsx'
-import Import from './pages/Import.jsx'
+import { GeneratorProvider } from './contexts/GeneratorContext'
+import HomePage from './pages/HomePage'
+import CreatePage from './pages/CreatePage'
+import PreviewPage from './pages/PreviewPage'
 
 export default function App() {
   return (
     <BrowserRouter>
-      <ProspectProvider>
+      <GeneratorProvider>
         <Routes>
-          <Route path="/" element={<Layout />}>
-            <Route index element={<Dashboard />} />
-            <Route path="prospects" element={<Prospects />} />
-            <Route path="prospects/:id" element={<ProspectDetail />} />
-            <Route path="kanban" element={<Kanban />} />
-            <Route path="import" element={<Import />} />
-          </Route>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/create" element={<CreatePage />} />
+          <Route path="/preview" element={<PreviewPage />} />
         </Routes>
-      </ProspectProvider>
+      </GeneratorProvider>
     </BrowserRouter>
   )
 }

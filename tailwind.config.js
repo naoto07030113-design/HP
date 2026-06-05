@@ -3,26 +3,8 @@ export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
-      colors: {
-        gold: {
-          DEFAULT: '#C9A84C',
-          light: '#E2C97E',
-          dark: '#A8893F',
-          muted: 'rgba(201,168,76,0.15)',
-        },
-        surface: {
-          DEFAULT: '#141414',
-          2: '#1E1E1E',
-          3: '#252525',
-        },
-        border: {
-          DEFAULT: '#2A2A2A',
-          light: '#3A3A3A',
-        },
-      },
       fontFamily: {
-        sans: ['"Noto Sans JP"', 'Inter', 'system-ui', 'sans-serif'],
-        mono: ['JetBrains Mono', 'monospace'],
+        sans: ['"Noto Sans JP"', 'Inter', 'system-ui', '-apple-system', 'sans-serif'],
       },
       animation: {
         'fade-in': 'fadeIn 0.3s ease-out',
