@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { createClient } from '@supabase/supabase-js'
+import { createBrowserClient } from '@supabase/ssr'
 import { BarChart3 } from 'lucide-react'
 
 const SUPABASE_URL = 'https://unbfufnqajavptbsrsfc.supabase.co'
@@ -18,7 +18,7 @@ export default function LoginPage() {
     setLoading(true)
     setError(null)
     try {
-      const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+      const supabase = createBrowserClient(SUPABASE_URL, SUPABASE_ANON_KEY)
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
