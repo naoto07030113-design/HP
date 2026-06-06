@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { createBrowserClient } from '@supabase/ssr'
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/lib/supabase'
 import { BarChart3 } from 'lucide-react'
 
 export default function LoginPage() {
@@ -13,18 +14,28 @@ export default function LoginPage() {
   async function handleGoogleLogin() {
     setLoading(true)
     setError(null)
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    })
-    if (error) {
-      setError(error.message)
+    try {
+      const supabase = createBrowserClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: { access_type: 'offline', prompt: 'consent' },
+        },
+      })
+      if (error) {
+        setError(`認証エラー: ${error.message}`)
+        setLoading(false)
+        return
+      }
+      if (data?.url) {
+        window.location.href = data.url
+      } else {
+        setError('リダイレクトURLが取得できませんでした。Supabase の Google プロバイダー設定を確認してください。')
+        setLoading(false)
+      }
+    } catch (e: unknown) {
+      setError(`予期しないエラー: ${e instanceof Error ? e.message : String(e)}`)
       setLoading(false)
     }
   }
