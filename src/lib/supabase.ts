@@ -1,21 +1,23 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
-// Client-side singleton (lazy init)
+// NEXT_PUBLIC_ vars are baked at build time — fallback to hardcoded values
+const SUPABASE_URL =
+  process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://unbfufnqajavptbsrsfc.supabase.co'
+const SUPABASE_ANON_KEY =
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVuYmZ1Zm5xYWphdnB0YnNyc2ZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3MzQ4NDYsImV4cCI6MjA5NjMxMDg0Nn0.wGKf5-81xc6pqB38UKt4vXl4DntwZ4pajkF8f_XwAp8'
+
+export { SUPABASE_URL, SUPABASE_ANON_KEY }
+
 let _client: SupabaseClient | null = null
 
 export function getSupabaseClient(): SupabaseClient {
   if (!_client) {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    if (!url || !key) {
-      throw new Error('Missing Supabase environment variables')
-    }
-    _client = createClient(url, key)
+    _client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
   }
   return _client
 }
 
-// Named export for client components (lazy)
 export const supabase = {
   get auth() { return getSupabaseClient().auth },
   get from() { return getSupabaseClient().from.bind(getSupabaseClient()) },
@@ -26,15 +28,10 @@ export const supabase = {
 }
 
 export function createServiceClient(): SupabaseClient {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !serviceKey) {
-    throw new Error('Missing Supabase service role environment variables')
-  }
-  return createClient(url, serviceKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
+  const serviceKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ??
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVuYmZ1Zm5xYWphdnB0YnNyc2ZjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDczNDg0NiwiZXhwIjoyMDk2MzEwODQ2fQ.QqH4wnNyNVKasUFaLz4Ymobx-V2oxBwe1ISxjiWUeVU'
+  return createClient(SUPABASE_URL, serviceKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
   })
 }
