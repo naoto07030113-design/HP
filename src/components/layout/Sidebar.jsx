@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import { useProspects } from '../../contexts/ProspectContext.jsx'
 import { useBlog } from '../../contexts/BlogContext.jsx'
+import { useHP } from '../../contexts/HPContext.jsx'
 
 const SALES_NAV = [
   { to: '/', label: 'ダッシュボード', icon: DashIcon, exact: true },
@@ -16,11 +17,18 @@ const BLOG_NAV = [
   { to: '/blog/settings', label: 'ブログ設定', icon: SettingsIcon },
 ]
 
+const HP_NAV = [
+  { to: '/hp', label: 'HP管理', icon: HPIcon, exact: true },
+  { to: '/hp/editor/company', label: '会社HP編集', icon: EditIcon },
+]
+
 export default function Sidebar({ open, onClose }) {
   const { prospects } = useProspects()
   const { articles } = useBlog()
+  const { clinics } = useHP()
   const activeCount = prospects.filter(p => p.status === '営業中' || p.status === '返信あり' || p.status === '商談').length
   const todaysArticle = articles.find(a => new Date(a.createdAt).toDateString() === new Date().toDateString())
+  const publishedClinics = clinics.filter(c => c.status === 'published').length
 
   return (
     <>
@@ -102,6 +110,40 @@ export default function Sidebar({ open, onClose }) {
               <span>{label}</span>
               {to === '/blog' && articles.length > 0 && (
                 <span className="ml-auto text-xs text-gray-600">{articles.length}</span>
+              )}
+            </NavLink>
+          ))}
+
+          {/* Divider */}
+          <div className="border-t border-border my-2" />
+
+          {/* HP section */}
+          <div className="flex items-center justify-between px-3 py-2">
+            <span className="text-xs text-gray-600">HP管理</span>
+            {publishedClinics > 0 && (
+              <span className="text-xs text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded-full border border-emerald-400/20">
+                {publishedClinics}院公開中
+              </span>
+            )}
+          </div>
+          {HP_NAV.map(({ to, label, icon: Icon, exact }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={exact}
+              onClick={onClose}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2.5 rounded text-sm transition-all duration-150 ${
+                  isActive
+                    ? 'bg-gold-muted text-gold border border-gold/20'
+                    : 'text-gray-400 hover:text-white hover:bg-surface-3'
+                }`
+              }
+            >
+              <Icon />
+              <span>{label}</span>
+              {to === '/hp' && clinics.length > 0 && (
+                <span className="ml-auto text-xs text-gray-600">{clinics.length}院</span>
               )}
             </NavLink>
           ))}
@@ -200,6 +242,15 @@ function ImportIcon() {
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
       <path d="M8 1v9M5 7l3 3 3-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
       <path d="M2 11v2a1 1 0 001 1h10a1 1 0 001-1v-2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+    </svg>
+  )
+}
+
+function HPIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.5"/>
+      <path d="M1.5 8h13M8 1.5C6 4 5 6 5 8s1 4 3 6.5M8 1.5C10 4 11 6 11 8s-1 4-3 6.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
     </svg>
   )
 }
