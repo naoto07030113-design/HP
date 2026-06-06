@@ -5,6 +5,9 @@ import { createServiceClient } from '@/lib/supabase'
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
+  if (!process.env.OPENAI_API_KEY) {
+    return NextResponse.json({ error: 'OpenAI APIキーが設定されていません。.env.local に OPENAI_API_KEY を設定してください。' }, { status: 503 })
+  }
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   const supabase = createServiceClient()
   const body = await req.json()

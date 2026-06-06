@@ -89,12 +89,13 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent>
             <ol className="list-decimal list-inside space-y-2 text-sm text-gray-600">
-              <li>Supabaseプロジェクトを作成し、<code>supabase/migrations/001_initial.sql</code> を実行</li>
-              <li><code>.env.local</code> に環境変数を設定</li>
-              <li>Supabase AuthでEmailプロバイダーを有効化</li>
-              <li>Supabase Authでユーザーを作成しログイン</li>
-              <li>事業者一覧からCSVインポートまたは手動で追加</li>
-              <li>各事業者の「Web診断」タブでAI分析を実行</li>
+              <li>Supabaseプロジェクトを作成し、SQL Editorで <code>supabase/migrations/001_initial_schema.sql</code> を実行</li>
+              <li>Supabase Authentication &gt; Providers で <strong>Google</strong> を有効化し、OAuthクライアントIDとシークレットを設定</li>
+              <li>Supabase Authentication &gt; URL Configuration で Redirect URL に <code>{`${process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}/auth/callback`}</code> を追加</li>
+              <li><code>.env.local</code> に Supabase URL・Key と OpenAI APIキー を設定してサーバーを再起動</li>
+              <li>ログイン画面から Googleアカウントでサインイン</li>
+              <li>事業者一覧からCSVインポートまたは手動で事業者を追加</li>
+              <li>各事業者の「Web診断」からAI分析を実行（OpenAI APIキー必須）</li>
             </ol>
           </CardContent>
         </Card>
