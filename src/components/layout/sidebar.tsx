@@ -11,18 +11,20 @@ import {
   PlusCircle,
   LogOut,
   Upload,
+  MapPin,
 } from 'lucide-react'
 import { createBrowserClient } from '@supabase/ssr'
 
 const navItems = [
   { href: '/dashboard', label: 'ダッシュボード', icon: LayoutDashboard },
   { href: '/businesses', label: '事業者一覧', icon: Building2 },
-  { href: '/businesses/new', label: '新規追加', icon: PlusCircle },
+  { href: '/businesses/search', label: 'Places検索', icon: MapPin },
+  { href: '/businesses/new', label: '手動追加', icon: PlusCircle },
   { href: '/businesses/import', label: 'CSVインポート', icon: Upload },
   { href: '/settings', label: '設定', icon: Settings },
 ]
 
-const exactMatchRoutes = ['/dashboard', '/businesses/new', '/businesses/import']
+const exactMatchRoutes = ['/dashboard', '/businesses/new', '/businesses/import', '/businesses/search']
 
 export function Sidebar() {
   const pathname = usePathname()
