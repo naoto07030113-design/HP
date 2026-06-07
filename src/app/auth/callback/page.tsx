@@ -20,7 +20,7 @@ export default function AuthCallbackPage() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session) {
         subscription.unsubscribe()
-        router.replace('/dashboard')
+        window.location.href = '/dashboard'
       } else if (event === 'SIGNED_OUT') {
         subscription.unsubscribe()
         setError('ログインに失敗しました')
@@ -31,14 +31,14 @@ export default function AuthCallbackPage() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         subscription.unsubscribe()
-        router.replace('/dashboard')
+        window.location.href = '/dashboard'
       }
     })
 
     const timeout = setTimeout(async () => {
       const { data: { session }, error } = await supabase.auth.getSession()
       if (session) {
-        router.replace('/dashboard')
+        window.location.href = '/dashboard'
       } else {
         setError(error?.message ?? '認証がタイムアウトしました。もう一度お試しください。')
       }
