@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 
 const SUPABASE_URL = 'https://unbfufnqajavptbsrsfc.supabase.co'
@@ -10,25 +11,45 @@ export async function GET(request: NextRequest) {
   const code = requestUrl.searchParams.get('code')
   const origin = requestUrl.origin
 
-  if (code) {
-    const response = NextResponse.redirect(`${origin}/dashboard`)
+  if (!code) {
+    return NextResponse.redirect(`${origin}/login?error=no_code`)
+  }
+
+  try {
+    const cookieStore = cookies()
 
     const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       cookies: {
         getAll() {
-          return request.cookies.getAll()
+          return cookieStore.getAll()
         },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            response.cookies.set(name, value, options as Parameters<typeof response.cookies.set>[2])
-          })
+        setAll(cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options as Parameters<typeof cookieStore.set>[2])
+            )
+          } catch {
+            // ignore in server components
+          }
         },
       },
     })
 
-    await supabase.auth.exchangeCodeForSession(code)
-    return response
-  }
+    const { error } = await supabase.auth.exchangeCodeForSession(code)
 
-  return NextResponse.redirect(`${origin}/dashboard`)
+    if (error) {
+      console.error('exchangeCodeForSession error:', error)
+      return NextResponse.redirect(
+        `${origin}/login?error=${encodeURIComponent(error.message)}`
+      )
+    }
+
+    return NextResponse.redirect(`${origin}/dashboard`)
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    console.error('auth callback error:', msg)
+    return NextResponse.redirect(
+      `${origin}/login?error=${encodeURIComponent(msg)}`
+    )
+  }
 }

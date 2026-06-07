@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { createBrowserClient } from '@supabase/ssr'
@@ -13,6 +14,12 @@ const SUPABASE_ANON_KEY =
 export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    const urlError = searchParams.get('error')
+    if (urlError) setError(`コールバックエラー: ${urlError}`)
+  }, [searchParams])
 
   async function handleGoogleLogin() {
     setLoading(true)
