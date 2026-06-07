@@ -10,6 +10,7 @@ export async function middleware(request: NextRequest) {
   const isAuthRoute = pathname.startsWith('/login') || pathname.startsWith('/auth')
   const isApiRoute = pathname.startsWith('/api')
 
+  // auth/api ルートはそのまま通す
   if (isAuthRoute || isApiRoute) {
     return NextResponse.next({ request })
   }
@@ -40,10 +41,11 @@ export async function middleware(request: NextRequest) {
     const { data } = await supabase.auth.getUser()
     user = data.user
   } catch {
-    // getUser() が失敗してもloginにリダイレクトせずそのまま通す
+    // getUser() が失敗しても /login にリダイレクトせずそのまま通す
     return supabaseResponse
   }
 
+  // 未ログインなら /login へ
   if (!user) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
