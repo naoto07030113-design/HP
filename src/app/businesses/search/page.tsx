@@ -84,8 +84,13 @@ export default function PlacesSearchPage() {
           fetch_details: true,
         }),
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? '検索に失敗しました')
+      let data: { error?: string; results?: PlaceResult[] }
+      try {
+        data = await res.json()
+      } catch {
+        throw new Error(`サーバーエラー (HTTP ${res.status})`)
+      }
+      if (!res.ok) throw new Error(data.error ?? `検索に失敗しました (HTTP ${res.status})`)
       setResults(data.results ?? [])
     } catch (e: unknown) {
       setSearchError(e instanceof Error ? e.message : '検索に失敗しました')
@@ -128,8 +133,13 @@ export default function PlacesSearchPage() {
           source_name: 'Google Places API',
         }),
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? 'インポートに失敗しました')
+      let data: ImportResult & { error?: string }
+      try {
+        data = await res.json()
+      } catch {
+        throw new Error(`サーバーエラー (HTTP ${res.status})`)
+      }
+      if (!res.ok) throw new Error(data.error ?? `インポートに失敗しました (HTTP ${res.status})`)
       setImportResult(data)
       // Remove imported from selection
       const importedNames = new Set(data.imported as string[])

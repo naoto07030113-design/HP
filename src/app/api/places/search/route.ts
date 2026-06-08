@@ -96,80 +96,101 @@ async function fetchPlaceDetails(placeId: string, apiKey: string): Promise<{ web
 }
 
 export async function POST(req: NextRequest) {
-  const apiKey = process.env.GOOGLE_PLACES_API_KEY
-  if (!apiKey) {
-    return NextResponse.json(
-      { error: 'GOOGLE_PLACES_API_KEY が設定されていません' },
-      { status: 503 }
-    )
-  }
+  try {
+    const apiKey = process.env.GOOGLE_PLACES_API_KEY
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: 'GOOGLE_PLACES_API_KEY が設定されていません' },
+        { status: 503 }
+      )
+    }
 
-  const { keyword, area, min_rating = 4.0, fetch_details = true } = await req.json()
+    let body: { keyword: string; area: string; min_rating?: number; fetch_details?: boolean }
+    try {
+      body = await req.json()
+    } catch {
+      return NextResponse.json({ error: 'リクエストの解析に失敗しました' }, { status: 400 })
+    }
 
-  if (!keyword || !area) {
-    return NextResponse.json({ error: 'keyword と area は必須です' }, { status: 400 })
-  }
+    const { keyword, area, min_rating = 4.0, fetch_details = true } = body
 
-  const query = `${keyword} ${area}`
-  const searchUrl = new URL('https://maps.googleapis.com/maps/api/place/textsearch/json')
-  searchUrl.searchParams.set('query', query)
-  searchUrl.searchParams.set('key', apiKey)
-  searchUrl.searchParams.set('language', 'ja')
-  searchUrl.searchParams.set('region', 'jp')
+    if (!keyword || !area) {
+      return NextResponse.json({ error: 'keyword と area は必須です' }, { status: 400 })
+    }
 
-  const searchRes = await fetch(searchUrl.toString())
-  if (!searchRes.ok) {
-    return NextResponse.json({ error: 'Google Places API エラー' }, { status: 502 })
-  }
+    const query = `${keyword} ${area}`
+    const searchUrl = new URL('https://maps.googleapis.com/maps/api/place/textsearch/json')
+    searchUrl.searchParams.set('query', query)
+    searchUrl.searchParams.set('key', apiKey)
+    searchUrl.searchParams.set('language', 'ja')
+    searchUrl.searchParams.set('region', 'jp')
 
-  const searchData = await searchRes.json()
+    const searchRes = await fetch(searchUrl.toString())
+    if (!searchRes.ok) {
+      return NextResponse.json({ error: 'Google Places API エラー' }, { status: 502 })
+    }
 
-  if (searchData.status !== 'OK' && searchData.status !== 'ZERO_RESULTS') {
-    return NextResponse.json(
-      { error: `Places API: ${searchData.status} - ${searchData.error_message ?? ''}` },
-      { status: 502 }
-    )
-  }
+    const searchData = await searchRes.json()
 
-  const rawPlaces = (searchData.results ?? []) as Array<{
-    place_id: string
-    name: string
-    formatted_address: string
-    rating?: number
-    user_ratings_total?: number
-    url?: string
-  }>
+    if (searchData.status !== 'OK' && searchData.status !== 'ZERO_RESULTS') {
+      return NextResponse.json(
+        { error: `Places API: ${searchData.status} - ${searchData.error_message ?? ''}` },
+        { status: 502 }
+      )
+    }
 
-  const filtered = rawPlaces.filter((p) => (p.rating ?? 0) >= min_rating)
+    const rawPlaces = (searchData.results ?? []) as Array<{
+      place_id: string
+      name: string
+      formatted_address: string
+      rating?: number
+      user_ratings_total?: number
+      url?: string
+    }>
 
-  const results: PlaceResult[] = await Promise.all(
-    filtered.map(async (p) => {
-      const details = fetch_details ? await fetchPlaceDetails(p.place_id, apiKey) : {}
-      const scores = calcScores({
-        website: details.website,
-        user_ratings_total: p.user_ratings_total ?? 0,
-        rating: p.rating ?? 0,
+    const filtered = rawPlaces.filter((p) => (p.rating ?? 0) >= min_rating)
+
+    const results: PlaceResult[] = await Promise.all(
+      filtered.map(async (p) => {
+        let details: { website?: string; phone?: string } = {}
+        if (fetch_details) {
+          try {
+            details = await fetchPlaceDetails(p.place_id, apiKey)
+          } catch {
+            // continue with empty details if individual fetch fails
+          }
+        }
+        const scores = calcScores({
+          website: details.website,
+          user_ratings_total: p.user_ratings_total ?? 0,
+          rating: p.rating ?? 0,
+        })
+
+        return {
+          place_id: p.place_id,
+          name: p.name,
+          formatted_address: p.formatted_address,
+          phone: details.phone ?? null,
+          rating: p.rating ?? 0,
+          user_ratings_total: p.user_ratings_total ?? 0,
+          google_map_url: `https://www.google.com/maps/place/?q=place_id:${p.place_id}`,
+          ...scores,
+        }
       })
+    )
 
-      return {
-        place_id: p.place_id,
-        name: p.name,
-        formatted_address: p.formatted_address,
-        phone: details.phone ?? null,
-        rating: p.rating ?? 0,
-        user_ratings_total: p.user_ratings_total ?? 0,
-        google_map_url: `https://www.google.com/maps/place/?q=place_id:${p.place_id}`,
-        ...scores,
-      }
+    results.sort((a, b) => b.priority_score - a.priority_score)
+
+    return NextResponse.json({
+      results,
+      total: results.length,
+      query,
+      status: searchData.status,
     })
-  )
-
-  results.sort((a, b) => b.priority_score - a.priority_score)
-
-  return NextResponse.json({
-    results,
-    total: results.length,
-    query,
-    status: searchData.status,
-  })
+  } catch (e: unknown) {
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : 'サーバーエラーが発生しました' },
+      { status: 500 }
+    )
+  }
 }
