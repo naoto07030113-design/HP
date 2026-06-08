@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import {
   Calendar, ClipboardList, Building2, Users, BookOpen,
-  Clock, Download, Megaphone, ExternalLink,
+  Clock, Download, Megaphone, ExternalLink, UserRound,
 } from 'lucide-react'
 
 const NAV_ITEMS = [
@@ -14,6 +14,7 @@ const NAV_ITEMS = [
     items: [
       { href: '/admin/calendar', label: '予約カレンダー', icon: Calendar },
       { href: '/admin/reservations', label: '予約一覧', icon: ClipboardList },
+      { href: '/admin/patients', label: '患者管理', icon: UserRound },
     ],
   },
   {

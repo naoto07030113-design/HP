@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
 import { format, parseISO, addMinutes } from 'date-fns'
+import { usePatientStore, patientStore } from '@/lib/patient-store'
+import { Search, UserCheck } from 'lucide-react'
 
 interface Props {
   open: boolean
@@ -18,8 +20,8 @@ interface Props {
   clinics: Clinic[]
   staff: Staff[]
   menus: Menu[]
-  defaultDate?: string       // "yyyy-MM-dd"
-  defaultStartTime?: string  // "HH:mm"
+  defaultDate?: string
+  defaultStartTime?: string
   defaultStaffId?: string
   defaultClinicId?: string
   onSubmit: (data: ReservationFormData) => void
@@ -37,22 +39,45 @@ export function ReservationForm({
   open, onOpenChange, initial, clinics, staff, menus,
   defaultDate, defaultStartTime, defaultStaffId, defaultClinicId, onSubmit,
 }: Props) {
+  const allPatients = usePatientStore()
   const [clinicId, setClinicId] = useState(defaultClinicId ?? clinics[0]?.id ?? '')
   const [staffId, setStaffId] = useState(defaultStaffId ?? '')
   const [menuId, setMenuId] = useState('')
+  const [patientId, setPatientId] = useState<string | null>(null)
   const [patientName, setPatientName] = useState('')
   const [patientPhone, setPatientPhone] = useState('')
+  const [patientSearch, setPatientSearch] = useState('')
+  const [showPatientSearch, setShowPatientSearch] = useState(false)
   const [startDate, setStartDate] = useState(defaultDate ?? format(new Date(), 'yyyy-MM-dd'))
   const [startTime, setStartTime] = useState(defaultStartTime ?? '09:00')
   const [endTime, setEndTime] = useState('10:00')
   const [status, setStatus] = useState<Reservation['status']>('confirmed')
   const [memo, setMemo] = useState('')
 
+  const searchedPatients = patientSearch.length >= 1
+    ? patientStore.search(patientSearch, clinicId || undefined).slice(0, 6)
+    : []
+
+  function selectPatient(p: ReturnType<typeof patientStore.getAll>[number]) {
+    setPatientId(p.id)
+    setPatientName(p.name)
+    setPatientPhone(p.phone ?? '')
+    setPatientSearch('')
+    setShowPatientSearch(false)
+  }
+
+  function clearPatient() {
+    setPatientId(null)
+    setPatientName('')
+    setPatientPhone('')
+  }
+
   useEffect(() => {
     if (initial) {
       setClinicId(initial.clinic_id)
       setStaffId(initial.staff_id ?? '')
       setMenuId(initial.menu_id ?? '')
+      setPatientId(initial.patient_id)
       setPatientName(initial.patient_name)
       setPatientPhone(initial.patient_phone ?? '')
       const st = parseISO(initial.start_at)
@@ -66,6 +91,7 @@ export function ReservationForm({
       setClinicId(defaultClinicId ?? clinics[0]?.id ?? '')
       setStaffId(defaultStaffId ?? '')
       setMenuId('')
+      setPatientId(null)
       setPatientName('')
       setPatientPhone('')
       setStartDate(defaultDate ?? format(new Date(), 'yyyy-MM-dd'))
@@ -74,6 +100,8 @@ export function ReservationForm({
       setStatus('confirmed')
       setMemo('')
     }
+    setPatientSearch('')
+    setShowPatientSearch(false)
   }, [open, initial])
 
   function calcEndTime(start: string, durationMin: number): string {
@@ -107,7 +135,7 @@ export function ReservationForm({
       clinic_id: clinicId,
       staff_id: staffId || null,
       menu_id: menuId || null,
-      patient_id: null,
+      patient_id: patientId,
       patient_name: patientName,
       patient_phone: patientPhone || null,
       start_at: buildISO(startDate, startTime),
@@ -125,16 +153,56 @@ export function ReservationForm({
           <DialogTitle>{initial ? '予約を編集' : '予約を追加'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* 患者情報 */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5 col-span-2 sm:col-span-1">
-              <Label htmlFor="patient-name">患者名 *</Label>
-              <Input id="patient-name" value={patientName} onChange={(e) => setPatientName(e.target.value)} placeholder="山本 太郎" required />
-            </div>
-            <div className="space-y-1.5 col-span-2 sm:col-span-1">
-              <Label htmlFor="patient-phone">電話番号</Label>
-              <Input id="patient-phone" value={patientPhone} onChange={(e) => setPatientPhone(e.target.value)} placeholder="090-0000-0000" />
-            </div>
+          {/* 患者選択 */}
+          <div className="space-y-1.5">
+            <Label>患者 *</Label>
+            {patientId ? (
+              <div className="flex items-center gap-2 p-2.5 rounded-lg bg-green-50 border border-green-200">
+                <UserCheck className="w-4 h-4 text-green-700 flex-shrink-0" />
+                <span className="text-sm font-medium text-green-900 flex-1">{patientName}</span>
+                {patientPhone && <span className="text-xs text-muted-foreground">{patientPhone}</span>}
+                <button type="button" onClick={clearPatient} className="text-xs text-muted-foreground hover:text-red-600 ml-1">変更</button>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    value={patientSearch}
+                    onChange={(e) => { setPatientSearch(e.target.value); setShowPatientSearch(true) }}
+                    onFocus={() => setShowPatientSearch(true)}
+                    placeholder="患者名・フリガナ・電話番号で検索..."
+                    className="pl-8"
+                  />
+                </div>
+                {showPatientSearch && searchedPatients.length > 0 && (
+                  <div className="border border-border rounded-lg shadow-md bg-white z-50 overflow-hidden">
+                    {searchedPatients.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => selectPatient(p)}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-green-50 text-left border-b border-green-50 last:border-0"
+                      >
+                        <div>
+                          <span className="font-medium text-green-900">{p.name}</span>
+                          <span className="text-muted-foreground ml-2 text-xs">{p.name_kana}</span>
+                        </div>
+                        {p.phone && <span className="text-xs text-muted-foreground ml-auto">{p.phone}</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {patientSearch && searchedPatients.length === 0 && showPatientSearch && (
+                  <p className="text-xs text-muted-foreground px-1">患者が見つかりません。新患として入力してください。</p>
+                )}
+                {/* 新患として直接入力 */}
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  <Input value={patientName} onChange={(e) => setPatientName(e.target.value)} placeholder="氏名（直接入力）" required={!patientId} />
+                  <Input value={patientPhone} onChange={(e) => setPatientPhone(e.target.value)} placeholder="電話番号" />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 院・スタッフ・メニュー */}
