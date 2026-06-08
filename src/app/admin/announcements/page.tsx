@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { format } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -25,19 +25,34 @@ const TODAY = format(new Date(), 'yyyy-MM-dd')
 const IN_30 = format(new Date(Date.now() + 30 * 86400000), 'yyyy-MM-dd')
 
 const DEFAULT_FORM: AnnouncementFormData = {
-  banner_mode: 'text', title: '', body: '', image_url: null, image_alt: null,
+  banner_mode: 'text', title: '', body: null, image_url: null, image_alt: null,
   attachment_name: null,
   scope: 'company', clinic_id: null, type: 'normal',
   start_date: TODAY, end_date: IN_30, is_active: true,
   display_order: 0, link_url: null, link_label: null,
 }
 
-function fileToBase64(file: File): Promise<string> {
+// 画像を圧縮してbase64に変換（max1000px, JPEG品質0.85）
+function compressImage(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(reader.result as string)
-    reader.onerror = reject
-    reader.readAsDataURL(file)
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      const MAX = 1000
+      const scale = Math.min(1, MAX / Math.max(img.width, img.height))
+      const w = Math.round(img.width * scale)
+      const h = Math.round(img.height * scale)
+      const canvas = document.createElement('canvas')
+      canvas.width = w
+      canvas.height = h
+      const ctx = canvas.getContext('2d')
+      if (!ctx) { reject(new Error('canvas')); return }
+      ctx.drawImage(img, 0, 0, w, h)
+      resolve(canvas.toDataURL('image/jpeg', 0.85))
+    }
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('load')) }
+    img.src = url
   })
 }
 
@@ -48,14 +63,14 @@ export default function AnnouncementsPage() {
   const [editTarget, setEditTarget] = useState<Announcement | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [form, setForm] = useState<AnnouncementFormData>(DEFAULT_FORM)
-  const imgInputRef = useRef<HTMLInputElement>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [imgError, setImgError] = useState('')
 
   const sorted = [...items].sort((a, b) => a.display_order - b.display_order)
 
   function openAdd() {
     setEditTarget(null)
     setForm({ ...DEFAULT_FORM, display_order: items.length })
+    setImgError('')
     setFormOpen(true)
   }
 
@@ -70,6 +85,7 @@ export default function AnnouncementsPage() {
       is_active: a.is_active, display_order: a.display_order,
       link_url: a.link_url, link_label: a.link_label,
     })
+    setImgError('')
     setFormOpen(true)
   }
 
@@ -87,13 +103,14 @@ export default function AnnouncementsPage() {
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
+    setImgError('')
     try {
-      const base64 = await fileToBase64(file)
+      const base64 = await compressImage(file)
       setF('image_url', base64)
-      setF('image_alt', file.name)
+      setF('image_alt', file.name.replace(/\.[^.]+$/, ''))
       setF('banner_mode', 'image')
     } catch {
-      // ignore
+      setImgError('画像の読み込みに失敗しました')
     }
     e.target.value = ''
   }
@@ -125,13 +142,9 @@ export default function AnnouncementsPage() {
           {sorted.map((a, idx) => (
             <div
               key={a.id}
-              className={cn(
-                'bg-white rounded-xl border shadow-sm p-4',
-                !a.is_active && 'opacity-60',
-              )}
+              className={cn('bg-white rounded-xl border shadow-sm p-4', !a.is_active && 'opacity-60')}
             >
               <div className="flex items-start gap-3">
-                {/* 並び替えボタン */}
                 <div className="flex flex-col gap-1 mt-1">
                   <button
                     onClick={() => announcementsStore.reorder(idx, Math.max(0, idx - 1))}
@@ -149,7 +162,6 @@ export default function AnnouncementsPage() {
                   </button>
                 </div>
 
-                {/* 画像プレビュー */}
                 {a.image_url && (
                   <img
                     src={a.image_url}
@@ -178,9 +190,7 @@ export default function AnnouncementsPage() {
                   </div>
                   <p className="font-semibold text-green-900 line-clamp-1">{a.title}</p>
                   {a.body && <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">{a.body}</p>}
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {a.start_date} 〜 {a.end_date}
-                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">{a.start_date} 〜 {a.end_date}</p>
                 </div>
 
                 <div className="flex items-center gap-1 flex-shrink-0">
@@ -252,59 +262,59 @@ export default function AnnouncementsPage() {
 
             <div className="space-y-1.5">
               <Label>本文</Label>
-              <Textarea value={form.body ?? ''} onChange={(e) => setF('body', e.target.value || null)}
-                placeholder="詳細説明..." rows={3} />
+              <Textarea
+                value={form.body ?? ''}
+                onChange={(e) => setF('body', e.target.value || null)}
+                placeholder="詳細説明..."
+                rows={3}
+              />
             </div>
 
-            {/* 画像アップロード */}
+            {/* 画像アップロード --- labelで直接input wrapping（Dialogでも確実に動く） */}
             <div className="space-y-1.5">
               <Label>バナー画像</Label>
               {form.image_url ? (
-                <div className="relative inline-block">
-                  <img
-                    src={form.image_url}
-                    alt={form.image_alt ?? ''}
-                    className="rounded-lg border border-border object-cover h-32 max-w-full"
+                <div className="space-y-2">
+                  <div className="relative inline-block">
+                    <img
+                      src={form.image_url}
+                      alt={form.image_alt ?? ''}
+                      className="rounded-lg border border-border object-cover h-32 max-w-full"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => { setF('image_url', null); setF('image_alt', null); setF('banner_mode', 'text') }}
+                      className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-0.5 hover:bg-black/80"
+                    >
+                      <XIcon className="w-3 h-3" />
+                    </button>
+                  </div>
+                  <Input
+                    value={form.image_alt ?? ''}
+                    onChange={(e) => setF('image_alt', e.target.value || null)}
+                    placeholder="画像の説明文（任意）"
                   />
-                  <button
-                    type="button"
-                    onClick={() => { setF('image_url', null); setF('image_alt', null); setF('banner_mode', 'text') }}
-                    className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-0.5 hover:bg-black/80"
-                  >
-                    <XIcon className="w-3 h-3" />
-                  </button>
                 </div>
               ) : (
-                <button
-                  type="button"
-                  onClick={() => imgInputRef.current?.click()}
-                  className="flex items-center gap-2 px-3 py-2 text-sm border border-dashed border-border rounded-lg hover:bg-muted/50 transition-colors text-muted-foreground w-full"
-                >
-                  <ImageIcon className="w-4 h-4" />
-                  画像を選択（JPG / PNG / GIF / WebP）
-                </button>
+                <label className="flex items-center gap-2 px-3 py-3 text-sm border-2 border-dashed border-border rounded-lg hover:bg-muted/50 hover:border-green-300 transition-colors text-muted-foreground w-full cursor-pointer">
+                  <ImageIcon className="w-4 h-4 flex-shrink-0" />
+                  <span>クリックして画像を選択（JPG / PNG / WebP）</span>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp"
+                    className="sr-only"
+                    onChange={handleImageUpload}
+                  />
+                </label>
               )}
-              <input
-                ref={imgInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleImageUpload}
-              />
-              {form.image_url && (
-                <Input
-                  value={form.image_alt ?? ''}
-                  onChange={(e) => setF('image_alt', e.target.value || null)}
-                  placeholder="画像の代替テキスト（alt）"
-                />
-              )}
+              {imgError && <p className="text-xs text-destructive">{imgError}</p>}
             </div>
 
             {/* ファイル添付 */}
             <div className="space-y-1.5">
               <Label>ファイル添付</Label>
               {form.attachment_name ? (
-                <div className="flex items-center gap-2 px-3 py-2 border border-border rounded-lg bg-blue-50">
+                <div className="flex items-center gap-2 px-3 py-2.5 border border-border rounded-lg bg-blue-50">
                   <Paperclip className="w-4 h-4 text-blue-600 flex-shrink-0" />
                   <span className="text-sm text-blue-800 flex-1 truncate">{form.attachment_name}</span>
                   <button
@@ -316,22 +326,17 @@ export default function AnnouncementsPage() {
                   </button>
                 </div>
               ) : (
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center gap-2 px-3 py-2 text-sm border border-dashed border-border rounded-lg hover:bg-muted/50 transition-colors text-muted-foreground w-full"
-                >
-                  <Paperclip className="w-4 h-4" />
-                  ファイルを添付（PDF / Word / Excel など）
-                </button>
+                <label className="flex items-center gap-2 px-3 py-3 text-sm border-2 border-dashed border-border rounded-lg hover:bg-muted/50 hover:border-green-300 transition-colors text-muted-foreground w-full cursor-pointer">
+                  <Paperclip className="w-4 h-4 flex-shrink-0" />
+                  <span>クリックしてファイルを添付（PDF / Word / Excel）</span>
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip"
+                    className="sr-only"
+                    onChange={handleFileAttach}
+                  />
+                </label>
               )}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip"
-                className="hidden"
-                onChange={handleFileAttach}
-              />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
