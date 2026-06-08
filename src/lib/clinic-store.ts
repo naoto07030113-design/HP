@@ -22,8 +22,8 @@ type StoreState = {
   error: string | null
 }
 
-const KEY_ENC = 'clinic_store_v1_enc'
-const KEY_OLD = 'clinic_store_v1'
+const KEY_ENC = 'clinic_store_v2_enc'
+const KEY_OLD = 'clinic_store_v1_enc'
 
 function initState(): StoreState {
   return {
@@ -229,6 +229,7 @@ export function resetDemoData() {
   if (typeof window !== 'undefined') {
     localStorage.removeItem(KEY_ENC)
     localStorage.removeItem(KEY_OLD)
+    localStorage.removeItem('clinic_store_v1')
   }
   _state = {
     clinics: DEMO_CLINICS,
