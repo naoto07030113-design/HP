@@ -12,12 +12,14 @@ import {
 } from 'lucide-react'
 import { usePatientStore, patientStore } from '@/lib/patient-store'
 import { useClinicStore } from '@/lib/clinic-store'
+import { useAccountingStore } from '@/lib/accounting-store'
 import { PatientForm } from '@/features/patients/components/PatientForm'
 import { PatientReservationHistory } from '@/features/patients/components/PatientReservationHistory'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { ActiveBadge } from '@/components/common/StatusBadge'
 import { GENDER_LABELS, INSURANCE_LABELS, calcAge } from '@/types/patient'
 import type { PatientFormData } from '@/types/patient'
+import { INVOICE_STATUS_LABELS, INVOICE_STATUS_COLORS, PAYMENT_METHOD_LABELS } from '@/types/accounting'
 import { cn } from '@/lib/utils'
 
 function InfoRow({ label, value, icon: Icon }: { label: string; value?: string | null; icon?: React.ElementType }) {
@@ -40,6 +42,7 @@ export default function PatientDetailPage() {
 
   const patients = usePatientStore()
   const store = useClinicStore()
+  const invoices = useAccountingStore()
 
   const patient = patients.find((p) => p.id === patientId)
   const [formOpen, setFormOpen] = useState(false)
@@ -66,6 +69,14 @@ export default function PatientDetailPage() {
   const lastVisit = patientReservations
     .filter((r) => r.status === 'visited')
     .sort((a, b) => (a.start_at > b.start_at ? -1 : 1))[0]
+
+  // この患者の会計履歴（患者名で検索）
+  const patientInvoices = invoices
+    .filter((inv) => inv.patient_name === patient.name)
+    .sort((a, b) => (a.visit_date > b.visit_date ? -1 : 1))
+  const totalPaid = patientInvoices
+    .filter((inv) => inv.status === 'paid')
+    .reduce((sum, inv) => sum + inv.total_amount, 0)
 
   function handleSubmit(data: PatientFormData) {
     if (!patient) return
@@ -127,10 +138,11 @@ export default function PatientDetailPage() {
 
       {/* タブ */}
       <Tabs defaultValue="info">
-        <TabsList className="grid grid-cols-3 w-full sm:w-auto sm:inline-grid">
+        <TabsList className="grid grid-cols-4 w-full sm:w-auto sm:inline-grid">
           <TabsTrigger value="info">基本情報</TabsTrigger>
           <TabsTrigger value="medical">医療情報</TabsTrigger>
           <TabsTrigger value="history">来院履歴 ({patientReservations.length})</TabsTrigger>
+          <TabsTrigger value="accounting">会計履歴 ({patientInvoices.length})</TabsTrigger>
         </TabsList>
 
         {/* 基本情報タブ */}
@@ -219,6 +231,55 @@ export default function PatientDetailPage() {
               staff={store.staff}
               menus={store.menus}
             />
+          </div>
+        </TabsContent>
+
+        {/* 会計履歴タブ */}
+        <TabsContent value="accounting">
+          <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
+            {patientInvoices.length === 0 ? (
+              <p className="py-12 text-center text-sm text-muted-foreground">会計履歴がありません</p>
+            ) : (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-green-100 bg-green-50">
+                        <th className="text-left px-4 py-3 text-green-900 font-semibold">伝票番号</th>
+                        <th className="text-left px-4 py-3 text-green-900 font-semibold">来院日</th>
+                        <th className="text-left px-4 py-3 text-green-900 font-semibold hidden sm:table-cell">担当</th>
+                        <th className="text-left px-4 py-3 text-green-900 font-semibold hidden md:table-cell">支払方法</th>
+                        <th className="text-right px-4 py-3 text-green-900 font-semibold">合計</th>
+                        <th className="text-left px-4 py-3 text-green-900 font-semibold">状態</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-green-50">
+                      {patientInvoices.map((inv) => {
+                        const invStaff = store.staff.find((s) => s.id === inv.staff_id)
+                        return (
+                          <tr key={inv.id} className="hover:bg-green-50/30 transition-colors">
+                            <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{inv.invoice_number}</td>
+                            <td className="px-4 py-3 font-medium text-green-900">{format(new Date(inv.visit_date), 'yyyy年M月d日')}</td>
+                            <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">{invStaff?.name ?? '-'}</td>
+                            <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{PAYMENT_METHOD_LABELS[inv.payment_method]}</td>
+                            <td className="px-4 py-3 text-right font-medium text-green-900">¥{inv.total_amount.toLocaleString()}</td>
+                            <td className="px-4 py-3">
+                              <span className={cn('inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium', INVOICE_STATUS_COLORS[inv.status])}>
+                                {INVOICE_STATUS_LABELS[inv.status]}
+                              </span>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="px-4 py-2.5 border-t border-green-50 bg-green-50/30 flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">{patientInvoices.length}件</span>
+                  <span className="font-semibold text-green-900">支払済合計: ¥{totalPaid.toLocaleString()}</span>
+                </div>
+              </>
+            )}
           </div>
         </TabsContent>
       </Tabs>

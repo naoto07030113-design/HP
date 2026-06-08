@@ -5,17 +5,22 @@ import { format, parseISO } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Plus, Search, Filter } from 'lucide-react'
+import { Plus, Search, Receipt } from 'lucide-react'
 import { useClinicStore, reservationsStore } from '@/lib/clinic-store'
 import { ReservationForm } from '@/features/reservations/components/ReservationForm'
+import { InvoiceForm } from '@/features/accounting/components/InvoiceForm'
+import { accountingStore } from '@/lib/accounting-store'
 import { StatusBadge } from '@/components/common/StatusBadge'
 import { RESERVATION_STATUS_LABELS } from '@/types/clinic'
 import type { Reservation } from '@/types/clinic'
+import type { InvoiceFormData } from '@/types/accounting'
 
 export default function ReservationsPage() {
   const store = useClinicStore()
   const [formOpen, setFormOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<Reservation | null>(null)
+  const [invoiceOpen, setInvoiceOpen] = useState(false)
+  const [invoiceRes, setInvoiceRes] = useState<Reservation | null>(null)
   const [search, setSearch] = useState('')
   const [filterClinic, setFilterClinic] = useState('all')
   const [filterStatus, setFilterStatus] = useState('all')
@@ -41,10 +46,19 @@ export default function ReservationsPage() {
     setFormOpen(true)
   }
 
+  function openInvoice(r: Reservation) {
+    setInvoiceRes(r)
+    setInvoiceOpen(true)
+  }
+
   function handleSubmit(data: Parameters<typeof reservationsStore.create>[0]) {
     if (editTarget) reservationsStore.update(editTarget.id, data)
     else reservationsStore.create(data)
     setEditTarget(null)
+  }
+
+  function handleInvoiceSave(data: InvoiceFormData) {
+    accountingStore.create(data)
   }
 
   return (
@@ -135,9 +149,21 @@ export default function ReservationsPage() {
                     <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">{menu?.name ?? '-'}</td>
                     <td className="px-4 py-3"><StatusBadge status={r.status} /></td>
                     <td className="px-4 py-3">
-                      <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => openEdit(r)}>
-                        編集
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        {r.status === 'visited' && (
+                          <Button
+                            variant="outline" size="sm"
+                            className="h-7 text-xs gap-1 border-green-300 text-green-700 hover:bg-green-50"
+                            onClick={() => openInvoice(r)}
+                          >
+                            <Receipt className="w-3 h-3" />
+                            会計
+                          </Button>
+                        )}
+                        <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => openEdit(r)}>
+                          編集
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 )
@@ -159,6 +185,21 @@ export default function ReservationsPage() {
         defaultClinicId={store.clinics[0]?.id}
         onSubmit={handleSubmit}
       />
+
+      {invoiceRes && (
+        <InvoiceForm
+          open={invoiceOpen}
+          onOpenChange={setInvoiceOpen}
+          defaultReservationId={invoiceRes.id}
+          defaultPatientName={invoiceRes.patient_name}
+          defaultClinicId={invoiceRes.clinic_id}
+          defaultStaffId={invoiceRes.staff_id}
+          defaultMenuId={invoiceRes.menu_id}
+          defaultMenuName={store.menus.find((m) => m.id === invoiceRes.menu_id)?.name}
+          defaultMenuPrice={store.menus.find((m) => m.id === invoiceRes.menu_id)?.price}
+          onSave={handleInvoiceSave}
+        />
+      )}
     </div>
   )
 }
