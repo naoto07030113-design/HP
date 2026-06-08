@@ -44,7 +44,7 @@ export default function ReservePage() {
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-green-800 flex items-center justify-center flex-shrink-0">
-                        <span className="text-white font-bold">葵</span>
+                        <span className="text-white font-bold text-xs tracking-tight">IMC</span>
                       </div>
                       <div>
                         <p className="font-bold text-green-900">{clinic.name}</p>

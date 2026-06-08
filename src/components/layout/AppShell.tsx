@@ -56,7 +56,7 @@ export function AppShell({ children }: Props) {
           </Button>
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded bg-green-800 flex items-center justify-center">
-              <span className="text-white font-bold text-xs">葵</span>
+              <span className="text-white font-bold text-[10px] tracking-tight">IMC</span>
             </div>
             <span className="font-semibold text-green-900 text-sm">統合業務システム</span>
           </div>

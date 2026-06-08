@@ -50,7 +50,7 @@ export function Sidebar({ onClose }: Props) {
       <div className="px-5 py-5 border-b border-green-100">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-green-800 flex items-center justify-center flex-shrink-0">
-            <span className="text-white font-bold text-sm">葵</span>
+            <span className="text-white font-bold text-xs tracking-tight">IMC</span>
           </div>
           <div>
             <p className="font-bold text-green-900 text-sm leading-tight">統合業務システム</p>
