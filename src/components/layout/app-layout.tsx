@@ -1,4 +1,4 @@
-import { Sidebar } from './sidebar'
+import { Sidebar } from './OldSidebar'
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   return (
