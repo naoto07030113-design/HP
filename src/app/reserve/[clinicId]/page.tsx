@@ -195,8 +195,7 @@ export default function ReserveClinicPage() {
                   onClick={() => { setVisitType(vt); goNext() }}
                   className="bg-white rounded-2xl border-2 border-green-100 p-6 text-center hover:border-green-500 hover:bg-green-50 transition-all active:scale-[0.98]"
                 >
-                  <div className="text-3xl mb-2">{vt === 'first' ? '🌱' : '🔄'}</div>
-                  <div className="font-bold text-green-900">
+                  <div className="font-bold text-green-900 text-base">
                     {vt === 'first' ? '初診（はじめて）' : '再来（2回目以降）'}
                   </div>
                 </button>
