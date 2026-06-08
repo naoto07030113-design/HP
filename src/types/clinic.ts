@@ -37,13 +37,40 @@ export interface Menu {
   updated_at: string
 }
 
+export type ShiftType = 'work' | 'off' | 'paid' | 'sick' | 'special'
+
+export const SHIFT_TYPE_LABELS: Record<ShiftType, string> = {
+  work:    '出勤',
+  off:     '公休',
+  paid:    '有給',
+  sick:    '病欠',
+  special: '特別休暇',
+}
+
+export const SHIFT_TYPE_SHORT: Record<ShiftType, string> = {
+  work:    '出',
+  off:     '休',
+  paid:    '有',
+  sick:    '病',
+  special: '特',
+}
+
+export const SHIFT_TYPE_COLORS: Record<ShiftType, string> = {
+  work:    'bg-green-100 text-green-800',
+  off:     'bg-gray-100  text-gray-600',
+  paid:    'bg-blue-100  text-blue-800',
+  sick:    'bg-red-100   text-red-700',
+  special: 'bg-purple-100 text-purple-800',
+}
+
 export interface Shift {
   id: string
   staff_id: string
   clinic_id: string
-  work_date: string  // "2024-01-15"
-  start_time: string // "09:00"
-  end_time: string   // "18:00"
+  work_date: string
+  shift_type: ShiftType
+  start_time: string
+  end_time: string
   break_start: string | null
   break_end: string | null
   created_at: string
