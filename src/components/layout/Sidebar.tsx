@@ -5,28 +5,37 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import {
   Calendar, ClipboardList, Building2, Users, BookOpen,
-  Clock, Download, Megaphone, ExternalLink, UserRound, FileText, Receipt,
+  Clock, Download, Megaphone, ExternalLink, UserRound, FileText,
+  Receipt, BarChart2, MessageSquare, Settings,
 } from 'lucide-react'
 
 const NAV_ITEMS = [
   {
     section: 'メイン',
     items: [
-      { href: '/admin/calendar', label: '予約カレンダー', icon: Calendar },
-      { href: '/admin/reservations', label: '予約一覧', icon: ClipboardList },
-      { href: '/admin/patients', label: '患者管理', icon: UserRound },
-      { href: '/admin/records', label: 'カルテ管理', icon: FileText },
-      { href: '/admin/accounting', label: '会計管理', icon: Receipt },
+      { href: '/admin/calendar',      label: '予約カレンダー',  icon: Calendar },
+      { href: '/admin/reservations',  label: '予約一覧',        icon: ClipboardList },
+      { href: '/admin/patients',      label: '患者管理',        icon: UserRound },
+      { href: '/admin/records',       label: 'カルテ管理',      icon: FileText },
+      { href: '/admin/accounting',    label: '会計管理',        icon: Receipt },
+    ],
+  },
+  {
+    section: '分析・運営',
+    items: [
+      { href: '/admin/analytics',       label: '分析レポート',      icon: BarChart2 },
+      { href: '/admin/communications',  label: 'コミュニケーション', icon: MessageSquare },
     ],
   },
   {
     section: '管理設定',
     items: [
-      { href: '/admin/clinics', label: '院管理', icon: Building2 },
-      { href: '/admin/staff', label: 'スタッフ管理', icon: Users },
-      { href: '/admin/menus', label: 'メニュー管理', icon: BookOpen },
-      { href: '/admin/shifts', label: 'シフト管理', icon: Clock },
-      { href: '/admin/announcements', label: 'お知らせ管理', icon: Megaphone },
+      { href: '/admin/clinics',        label: '院管理',          icon: Building2 },
+      { href: '/admin/staff',          label: 'スタッフ管理',    icon: Users },
+      { href: '/admin/menus',          label: 'メニュー管理',    icon: BookOpen },
+      { href: '/admin/shifts',         label: 'シフト管理',      icon: Clock },
+      { href: '/admin/announcements',  label: 'お知らせ管理',    icon: Megaphone },
+      { href: '/admin/settings',       label: 'システム設定',    icon: Settings },
     ],
   },
   {

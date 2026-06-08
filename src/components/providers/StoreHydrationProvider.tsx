@@ -6,6 +6,7 @@ import { hydratePatientStore } from '@/lib/patient-store'
 import { hydrateMedicalRecordStore } from '@/lib/medical-record-store'
 import { hydrateAnnouncementsStore } from '@/lib/announcement-store'
 import { hydrateAccountingStore } from '@/lib/accounting-store'
+import { hydrateSettingsStore } from '@/lib/settings-store'
 
 export function StoreHydrationProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
@@ -15,6 +16,7 @@ export function StoreHydrationProvider({ children }: { children: React.ReactNode
       hydrateMedicalRecordStore(),
       hydrateAnnouncementsStore(),
       hydrateAccountingStore(),
+      hydrateSettingsStore(),
     ]).catch(() => {})
   }, [])
 
