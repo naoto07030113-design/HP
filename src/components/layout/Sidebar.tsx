@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import {
   Calendar, ClipboardList, Building2, Users, BookOpen,
-  Clock, Download, Megaphone, ExternalLink, UserRound, FileText,
+  Clock, Download, Megaphone, ExternalLink, UserRound, FileText, Receipt,
 } from 'lucide-react'
 
 const NAV_ITEMS = [
@@ -16,6 +16,7 @@ const NAV_ITEMS = [
       { href: '/admin/reservations', label: '予約一覧', icon: ClipboardList },
       { href: '/admin/patients', label: '患者管理', icon: UserRound },
       { href: '/admin/records', label: 'カルテ管理', icon: FileText },
+      { href: '/admin/accounting', label: '会計管理', icon: Receipt },
     ],
   },
   {
@@ -98,7 +99,7 @@ export function Sidebar({ onClose }: Props) {
 
       {/* フッター */}
       <div className="px-4 py-3 border-t border-green-100">
-        <p className="text-xs text-muted-foreground">第1段階: 予約管理 MVP</p>
+        <p className="text-xs text-muted-foreground">イトーメディカルケア 業務システム</p>
       </div>
     </div>
   )
