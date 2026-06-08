@@ -9,6 +9,7 @@ import {
   DEMO_CLINICS, DEMO_STAFF, DEMO_MENUS, DEMO_SHIFTS, DEMO_RESERVATIONS,
 } from './demo-data'
 import { getSupabaseClient } from './supabase'
+import { secureSet, secureGet } from './secure-storage'
 
 type StoreState = {
   clinics: Clinic[]
@@ -21,48 +22,56 @@ type StoreState = {
   error: string | null
 }
 
-const KEY = 'clinic_store_v1'
-
-function loadLocal(): Partial<StoreState> {
-  if (typeof window === 'undefined') return {}
-  try {
-    const raw = localStorage.getItem(KEY)
-    if (!raw) return {}
-    return JSON.parse(raw)
-  } catch {
-    return {}
-  }
-}
-
-function saveLocal(state: StoreState) {
-  if (typeof window === 'undefined') return
-  try {
-    const { loading, error, ...data } = state
-    localStorage.setItem(KEY, JSON.stringify(data))
-  } catch {}
-}
+const KEY_ENC = 'clinic_store_v1_enc'
+const KEY_OLD = 'clinic_store_v1'
 
 function initState(): StoreState {
-  const local = loadLocal()
   return {
-    clinics: local.clinics ?? DEMO_CLINICS,
-    staff: local.staff ?? DEMO_STAFF,
-    menus: local.menus ?? DEMO_MENUS,
-    shifts: local.shifts ?? DEMO_SHIFTS,
-    shiftBlocks: local.shiftBlocks ?? [],
-    reservations: local.reservations ?? DEMO_RESERVATIONS,
+    clinics: DEMO_CLINICS,
+    staff: DEMO_STAFF,
+    menus: DEMO_MENUS,
+    shifts: DEMO_SHIFTS,
+    shiftBlocks: [],
+    reservations: DEMO_RESERVATIONS,
     loading: false,
     error: null,
   }
 }
+
+type StoredState = Omit<StoreState, 'loading' | 'error'>
 
 // Singleton store
 let _state: StoreState = initState()
 let _listeners: Array<() => void> = []
 
 function notify() {
-  saveLocal(_state)
+  const { loading, error, ...data } = _state
+  secureSet(KEY_ENC, data) // 非同期・fire and forget
   _listeners.forEach((fn) => fn())
+}
+
+/** アプリ起動時に一度呼ぶ */
+export async function hydrateClinicStore() {
+  if (typeof window === 'undefined') return
+
+  const data = await secureGet<StoredState>(KEY_ENC)
+  if (data && (data.clinics?.length || data.reservations?.length)) {
+    _state = { ..._state, ...data }
+    _listeners.forEach((fn) => fn())
+    return
+  }
+
+  // 移行: 旧平文キー
+  const old = localStorage.getItem(KEY_OLD)
+  if (old) {
+    try {
+      const parsed = JSON.parse(old) as StoredState
+      _state = { ..._state, ...parsed }
+      _listeners.forEach((fn) => fn())
+      await secureSet(KEY_ENC, parsed)
+      localStorage.removeItem(KEY_OLD)
+    } catch {}
+  }
 }
 
 function setState(updater: (prev: StoreState) => StoreState) {
@@ -217,7 +226,10 @@ export function useClinicStore() {
 }
 
 export function resetDemoData() {
-  if (typeof window !== 'undefined') localStorage.removeItem(KEY)
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem(KEY_ENC)
+    localStorage.removeItem(KEY_OLD)
+  }
   _state = {
     clinics: DEMO_CLINICS,
     staff: DEMO_STAFF,

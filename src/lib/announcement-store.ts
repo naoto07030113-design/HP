@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import type { Announcement } from '@/types/announcement'
 import { format } from 'date-fns'
+import { secureSet, secureGet } from './secure-storage'
 
 const DEMO_ANNOUNCEMENTS: Announcement[] = [
   {
@@ -49,23 +50,39 @@ const DEMO_ANNOUNCEMENTS: Announcement[] = [
   },
 ]
 
-const KEY = 'announcement_store_v2'
+const KEY_ENC = 'announcement_store_v2_enc'
+const KEY_OLD = 'announcement_store_v2'
 
-let _items: Announcement[] = (() => {
-  if (typeof window === 'undefined') return DEMO_ANNOUNCEMENTS
-  try {
-    const raw = localStorage.getItem(KEY)
-    return raw ? JSON.parse(raw) : DEMO_ANNOUNCEMENTS
-  } catch { return DEMO_ANNOUNCEMENTS }
-})()
-
+let _items: Announcement[] = DEMO_ANNOUNCEMENTS
 let _listeners: Array<() => void> = []
 
+function notifyListeners() { _listeners.forEach((fn) => fn()) }
+
 function notify() {
-  if (typeof window !== 'undefined') {
-    try { localStorage.setItem(KEY, JSON.stringify(_items)) } catch {}
+  notifyListeners()
+  secureSet(KEY_ENC, _items)
+}
+
+export async function hydrateAnnouncementsStore() {
+  if (typeof window === 'undefined') return
+
+  const data = await secureGet<Announcement[]>(KEY_ENC)
+  if (data && data.length > 0) {
+    _items = data
+    notifyListeners()
+    return
   }
-  _listeners.forEach((fn) => fn())
+
+  const old = localStorage.getItem(KEY_OLD)
+  if (old) {
+    try {
+      const parsed = JSON.parse(old) as Announcement[]
+      _items = parsed
+      notifyListeners()
+      await secureSet(KEY_ENC, _items)
+      localStorage.removeItem(KEY_OLD)
+    } catch {}
+  }
 }
 
 function genId() { return `ann-${Date.now()}-${Math.random().toString(36).slice(2, 6)}` }

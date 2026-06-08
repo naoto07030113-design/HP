@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import type { Patient } from '@/types/patient'
 import { format, subDays, subMonths } from 'date-fns'
+import { secureSet, secureGet } from './secure-storage'
 
 const NOW = new Date().toISOString()
 const TODAY = format(new Date(), 'yyyy-MM-dd')
@@ -10,24 +11,24 @@ const TODAY = format(new Date(), 'yyyy-MM-dd')
 export const DEMO_PATIENTS: Patient[] = [
   {
     id: 'pat-1', clinic_id: 'clinic-1',
-    name: '山本 太郎', name_kana: 'ヤマモト タロウ',
+    name: '田中 一郎', name_kana: 'タナカ イチロウ',
     gender: 'male', birth_date: '1975-04-12',
-    phone: '090-1111-2222', email: 'yamamoto@example.com',
+    phone: '090-1111-2222', email: 'tanaka@example.com',
     postal_code: '150-0001', address: '東京都渋谷区神宮前1-1-1',
     first_visit_date: format(subMonths(new Date(), 3), 'yyyy-MM-dd'),
     primary_staff_id: 'staff-1',
     insurance_type: 'employee',
     referral_source: 'Google検索',
-    chief_complaint: '慢性的な腰痛。デスクワークが多く、座っていると悪化する。',
-    medical_history: '2018年 椎間板ヘルニア手術歴あり',
+    chief_complaint: '慢性的な右肩の痛みと可動域制限。デスクワーク続きで悪化。',
+    medical_history: '特になし',
     current_medications: 'なし',
     allergies: 'なし',
-    notes: '手術歴があるため施術に注意。強い刺激は避ける。',
+    notes: null,
     is_active: true, created_at: NOW, updated_at: NOW,
   },
   {
     id: 'pat-2', clinic_id: 'clinic-1',
-    name: '小林 由美', name_kana: 'コバヤシ ユミ',
+    name: '佐藤 美咲', name_kana: 'サトウ ミサキ',
     gender: 'female', birth_date: '1988-09-25',
     phone: '090-3333-4444', email: null,
     postal_code: '151-0053', address: '東京都渋谷区代々木2-2-2',
@@ -35,28 +36,28 @@ export const DEMO_PATIENTS: Patient[] = [
     primary_staff_id: 'staff-2',
     insurance_type: 'national',
     referral_source: '知人・家族の紹介',
-    chief_complaint: '肩こり・首の痛み。スマホの使いすぎ。',
+    chief_complaint: '腰痛、左下肢のしびれ。立ち仕事で悪化。',
     medical_history: '特になし',
     current_medications: 'なし',
     allergies: '金属アレルギー（ニッケル）',
-    notes: '鍼治療は金属アレルギーのためステンレス鍼を使用すること。',
+    notes: '鍼はステンレス製を使用すること。',
     is_active: true, created_at: NOW, updated_at: NOW,
   },
   {
     id: 'pat-3', clinic_id: 'clinic-1',
-    name: '松本 花子', name_kana: 'マツモト ハナコ',
-    gender: 'female', birth_date: '1962-01-08',
-    phone: '090-7777-8888', email: null,
-    postal_code: '150-0002', address: '東京都渋谷区渋谷3-3-3',
-    first_visit_date: format(subMonths(new Date(), 6), 'yyyy-MM-dd'),
-    primary_staff_id: 'staff-2',
-    insurance_type: 'national',
-    referral_source: '看板',
-    chief_complaint: '膝の痛み（変形性膝関節症）。歩行時に痛みがある。',
-    medical_history: '高血圧（服薬中）、変形性膝関節症',
-    current_medications: 'アムロジピン 5mg（降圧剤）',
+    name: '鈴木 健太', name_kana: 'スズキ ケンタ',
+    gender: 'male', birth_date: '1995-03-15',
+    phone: '080-5555-7777', email: null,
+    postal_code: '160-0022', address: '東京都新宿区新宿4-4-4',
+    first_visit_date: format(subMonths(new Date(), 2), 'yyyy-MM-dd'),
+    primary_staff_id: 'staff-3',
+    insurance_type: 'employee',
+    referral_source: 'Instagram',
+    chief_complaint: '膝の痛み（バスケ中に受傷）。階段昇降が困難。',
+    medical_history: '特になし',
+    current_medications: 'なし',
     allergies: 'なし',
-    notes: '高血圧のため強い刺激に注意。血圧計で毎回確認する。',
+    notes: 'バスケットボール選手。大会3週間前。',
     is_active: true, created_at: NOW, updated_at: NOW,
   },
   {
@@ -64,8 +65,8 @@ export const DEMO_PATIENTS: Patient[] = [
     name: '中村 勇', name_kana: 'ナカムラ イサム',
     gender: 'male', birth_date: '1990-07-17',
     phone: '080-1234-5678', email: 'nakamura.sports@example.com',
-    postal_code: '160-0022', address: '東京都新宿区新宿4-4-4',
-    first_visit_date: format(subMonths(new Date(), 2), 'yyyy-MM-dd'),
+    postal_code: '160-0023', address: '東京都新宿区西新宿5-5-5',
+    first_visit_date: format(subMonths(new Date(), 4), 'yyyy-MM-dd'),
     primary_staff_id: 'staff-3',
     insurance_type: 'employee',
     referral_source: 'Instagram',
@@ -73,7 +74,7 @@ export const DEMO_PATIENTS: Patient[] = [
     medical_history: '特になし',
     current_medications: 'なし',
     allergies: 'なし',
-    notes: 'フルマラソン出場予定あり。大会に向けてのコンディショニング目的。',
+    notes: 'フルマラソン出場予定。コンディショニング目的。',
     is_active: true, created_at: NOW, updated_at: NOW,
   },
   {
@@ -90,7 +91,7 @@ export const DEMO_PATIENTS: Patient[] = [
     medical_history: '糖尿病（インスリン自己注射）、白内障手術歴',
     current_medications: 'インスリン グラルギン（糖尿病）、メトホルミン',
     allergies: 'ペニシリン系抗生物質',
-    notes: '糖尿病あり。傷の治りが遅い可能性あるため皮膚に注意。インスリン注射のタイミングを確認する。',
+    notes: '糖尿病あり。傷の治りが遅い可能性。インスリン注射タイミングを確認。',
     is_active: true, created_at: NOW, updated_at: NOW,
   },
   {
@@ -112,27 +113,47 @@ export const DEMO_PATIENTS: Patient[] = [
   },
 ]
 
-const KEY = 'patient_store_v1'
+// 暗号化キー（新フォーマット）・旧平文キー（移行用）
+const KEY_ENC = 'patient_store_v1_enc'
+const KEY_OLD = 'patient_store_v1'
 
-function loadLocal(): Patient[] {
-  if (typeof window === 'undefined') return DEMO_PATIENTS
-  try {
-    const raw = localStorage.getItem(KEY)
-    return raw ? JSON.parse(raw) : DEMO_PATIENTS
-  } catch { return DEMO_PATIENTS }
-}
-
-let _patients: Patient[] = loadLocal()
+// メモリ上は常に復号済みの平文データを保持
+let _patients: Patient[] = DEMO_PATIENTS
 let _listeners: Array<() => void> = []
 
+function notifyListeners() { _listeners.forEach((fn) => fn()) }
+
 function notify() {
-  if (typeof window !== 'undefined') {
-    try { localStorage.setItem(KEY, JSON.stringify(_patients)) } catch {}
-  }
-  _listeners.forEach((fn) => fn())
+  notifyListeners()
+  secureSet(KEY_ENC, _patients) // 非同期・fire and forget
 }
 
 function genId() { return `pat-${Date.now()}-${Math.random().toString(36).slice(2, 6)}` }
+
+/** アプリ起動時に一度呼ぶ。暗号化ストレージから復号して状態を更新する */
+export async function hydratePatientStore() {
+  if (typeof window === 'undefined') return
+
+  // 新しい暗号化キーを試す
+  const data = await secureGet<Patient[]>(KEY_ENC)
+  if (data && data.length > 0) {
+    _patients = data
+    notifyListeners()
+    return
+  }
+
+  // 移行: 旧平文キーが残っていれば読み込んで暗号化して保存
+  const old = localStorage.getItem(KEY_OLD)
+  if (old) {
+    try {
+      const parsed = JSON.parse(old) as Patient[]
+      _patients = parsed
+      notifyListeners()
+      await secureSet(KEY_ENC, _patients)
+      localStorage.removeItem(KEY_OLD) // 平文データを削除
+    } catch {}
+  }
+}
 
 export const patientStore = {
   getAll: () => _patients,

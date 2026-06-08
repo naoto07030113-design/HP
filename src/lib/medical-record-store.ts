@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import type { MedicalRecord } from '@/types/medical-record'
+import { secureSet, secureGet } from './secure-storage'
 
 const NOW = new Date().toISOString()
 function daysAgo(n: number) {
@@ -111,23 +112,39 @@ const DEMO_RECORDS: MedicalRecord[] = [
   },
 ]
 
-const KEY = 'medical_record_store_v1'
+const KEY_ENC = 'medical_record_store_v1_enc'
+const KEY_OLD = 'medical_record_store_v1'
 
-let _records: MedicalRecord[] = (() => {
-  if (typeof window === 'undefined') return DEMO_RECORDS
-  try {
-    const raw = localStorage.getItem(KEY)
-    return raw ? JSON.parse(raw) : DEMO_RECORDS
-  } catch { return DEMO_RECORDS }
-})()
-
+let _records: MedicalRecord[] = DEMO_RECORDS
 let _listeners: Array<() => void> = []
 
+function notifyListeners() { _listeners.forEach((fn) => fn()) }
+
 function notify() {
-  if (typeof window !== 'undefined') {
-    try { localStorage.setItem(KEY, JSON.stringify(_records)) } catch {}
+  notifyListeners()
+  secureSet(KEY_ENC, _records)
+}
+
+export async function hydrateMedicalRecordStore() {
+  if (typeof window === 'undefined') return
+
+  const data = await secureGet<MedicalRecord[]>(KEY_ENC)
+  if (data && data.length > 0) {
+    _records = data
+    notifyListeners()
+    return
   }
-  _listeners.forEach((fn) => fn())
+
+  const old = localStorage.getItem(KEY_OLD)
+  if (old) {
+    try {
+      const parsed = JSON.parse(old) as MedicalRecord[]
+      _records = parsed
+      notifyListeners()
+      await secureSet(KEY_ENC, _records)
+      localStorage.removeItem(KEY_OLD)
+    } catch {}
+  }
 }
 
 function genId() {
