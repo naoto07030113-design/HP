@@ -4,8 +4,9 @@ export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   const isAuthRoute = pathname.startsWith('/login') || pathname.startsWith('/auth')
   const isApiRoute = pathname.startsWith('/api')
+  const isSiteRoute = pathname.startsWith('/site')
 
-  if (isAuthRoute || isApiRoute) {
+  if (isAuthRoute || isApiRoute || isSiteRoute) {
     return NextResponse.next({ request })
   }
 
