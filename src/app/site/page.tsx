@@ -63,7 +63,7 @@ export default function CompanyHomePage() {
       <header className="bg-green-900 text-white sticky top-0 z-50 shadow-lg">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <Link href="/site" className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-sm font-bold">伊</div>
+            <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-[10px] font-bold tracking-tight">IMC</div>
             <div className="leading-tight">
               <p className="text-[10px] text-green-400">有限会社</p>
               <p className="text-sm font-bold">イトーメディカルケア</p>
@@ -275,7 +275,7 @@ export default function CompanyHomePage() {
           <div className="grid md:grid-cols-2 gap-10 mb-10">
             <div>
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center font-bold">伊</div>
+                <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center text-xs font-bold tracking-tight">IMC</div>
                 <div className="leading-tight">
                   <p className="text-xs text-green-400">有限会社</p>
                   <p className="font-bold text-lg">イトーメディカルケア</p>
