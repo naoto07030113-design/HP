@@ -214,6 +214,7 @@ export default function PatientDetailPage() {
           <div className="bg-white rounded-xl border border-border shadow-sm p-4">
             <PatientReservationHistory
               patientId={patient.id}
+              patientName={patient.name}
               reservations={store.reservations}
               staff={store.staff}
               menus={store.menus}
