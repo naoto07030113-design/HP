@@ -46,6 +46,7 @@ export function ReservationForm({
   const [patientId, setPatientId] = useState<string | null>(null)
   const [patientName, setPatientName] = useState('')
   const [patientPhone, setPatientPhone] = useState('')
+  const [referralName, setReferralName] = useState('')
   const [patientSearch, setPatientSearch] = useState('')
   const [showPatientSearch, setShowPatientSearch] = useState(false)
   const [startDate, setStartDate] = useState(defaultDate ?? format(new Date(), 'yyyy-MM-dd'))
@@ -80,6 +81,7 @@ export function ReservationForm({
       setPatientId(initial.patient_id)
       setPatientName(initial.patient_name)
       setPatientPhone(initial.patient_phone ?? '')
+      setReferralName(initial.referral_name ?? '')
       const st = parseISO(initial.start_at)
       const et = parseISO(initial.end_at)
       setStartDate(format(st, 'yyyy-MM-dd'))
@@ -94,6 +96,7 @@ export function ReservationForm({
       setPatientId(null)
       setPatientName('')
       setPatientPhone('')
+      setReferralName('')
       setStartDate(defaultDate ?? format(new Date(), 'yyyy-MM-dd'))
       setStartTime(defaultStartTime ?? '09:00')
       setEndTime(calcEndTime(defaultStartTime ?? '09:00', 60))
@@ -138,6 +141,7 @@ export function ReservationForm({
       patient_id: patientId,
       patient_name: patientName,
       patient_phone: patientPhone || null,
+      referral_name: referralName || null,
       start_at: buildISO(startDate, startTime),
       end_at: buildISO(startDate, endTime),
       status,
@@ -157,11 +161,14 @@ export function ReservationForm({
           <div className="space-y-1.5">
             <Label>患者 *</Label>
             {patientId ? (
-              <div className="flex items-center gap-2 p-2.5 rounded-lg bg-green-50 border border-green-200">
-                <UserCheck className="w-4 h-4 text-green-700 flex-shrink-0" />
-                <span className="text-sm font-medium text-green-900 flex-1">{patientName}</span>
-                {patientPhone && <span className="text-xs text-muted-foreground">{patientPhone}</span>}
-                <button type="button" onClick={clearPatient} className="text-xs text-muted-foreground hover:text-red-600 ml-1">変更</button>
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2 p-2.5 rounded-lg bg-green-50 border border-green-200">
+                  <UserCheck className="w-4 h-4 text-green-700 flex-shrink-0" />
+                  <span className="text-sm font-medium text-green-900 flex-1">{patientName}</span>
+                  {patientPhone && <span className="text-xs text-muted-foreground">{patientPhone}</span>}
+                  <button type="button" onClick={clearPatient} className="text-xs text-muted-foreground hover:text-red-600 ml-1">変更</button>
+                </div>
+                <Input value={referralName} onChange={(e) => setReferralName(e.target.value)} placeholder="紹介者氏名（任意）" />
               </div>
             ) : (
               <div className="space-y-1.5">
@@ -201,6 +208,7 @@ export function ReservationForm({
                   <Input value={patientName} onChange={(e) => setPatientName(e.target.value)} placeholder="氏名（直接入力）" required={!patientId} />
                   <Input value={patientPhone} onChange={(e) => setPatientPhone(e.target.value)} placeholder="電話番号" />
                 </div>
+                <Input value={referralName} onChange={(e) => setReferralName(e.target.value)} placeholder="紹介者氏名（任意）" />
               </div>
             )}
           </div>

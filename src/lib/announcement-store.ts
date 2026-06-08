@@ -10,7 +10,7 @@ const DEMO_ANNOUNCEMENTS: Announcement[] = [
     banner_mode: 'text',
     title: '【夏季休業のお知らせ】8月13日(火)〜15日(木) 全院休業',
     body: '誠に勝手ながら、上記期間を夏季休業とさせていただきます。ご不便をおかけして申し訳ございません。',
-    image_url: null, image_path: null, image_alt: null,
+    image_url: null, image_path: null, image_alt: null, attachment_name: null,
     scope: 'company', clinic_id: null,
     type: 'important',
     start_date: format(new Date(), 'yyyy-MM-dd'),
@@ -24,7 +24,7 @@ const DEMO_ANNOUNCEMENTS: Announcement[] = [
     banner_mode: 'text',
     title: '【初回限定キャンペーン】初診カウンセリング料0円！',
     body: '7月末まで、初診カウンセリング（通常5,500円）を無料でご提供しております。',
-    image_url: null, image_path: null, image_alt: null,
+    image_url: null, image_path: null, image_alt: null, attachment_name: null,
     scope: 'company', clinic_id: null,
     type: 'campaign',
     start_date: format(new Date(), 'yyyy-MM-dd'),
@@ -38,7 +38,7 @@ const DEMO_ANNOUNCEMENTS: Announcement[] = [
     banner_mode: 'text',
     title: '【本院 駐車場案内】近隣コインパーキングのご利用をお願いします',
     body: '院前の駐車スペースは満車になりやすい時間帯があります。お近くのコインパーキングをご利用ください。',
-    image_url: null, image_path: null, image_alt: null,
+    image_url: null, image_path: null, image_alt: null, attachment_name: null,
     scope: 'clinic', clinic_id: 'clinic-1',
     type: 'normal',
     start_date: format(new Date(), 'yyyy-MM-dd'),
@@ -83,9 +83,9 @@ export const announcementsStore = {
       })
       .sort((a, b) => a.display_order - b.display_order)
   },
-  create: (data: Omit<Announcement, 'id' | 'created_at' | 'updated_at' | 'image_url' | 'image_path'>) => {
+  create: (data: Omit<Announcement, 'id' | 'created_at' | 'updated_at' | 'image_path'>) => {
     const now = new Date().toISOString()
-    const item: Announcement = { ...data, id: genId(), image_url: null, image_path: null, created_at: now, updated_at: now }
+    const item: Announcement = { ...data, id: genId(), image_path: null, created_at: now, updated_at: now }
     _items = [..._items, item]
     notify()
     return item

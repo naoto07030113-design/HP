@@ -10,6 +10,7 @@ export interface Announcement {
   image_url: string | null
   image_path: string | null
   image_alt: string | null
+  attachment_name: string | null
   scope: AnnouncementScope
   clinic_id: string | null  // scope='clinic' のとき使用
   type: AnnouncementType
@@ -23,7 +24,7 @@ export interface Announcement {
   updated_at: string
 }
 
-export type AnnouncementFormData = Omit<Announcement, 'id' | 'created_at' | 'updated_at' | 'image_url' | 'image_path'>
+export type AnnouncementFormData = Omit<Announcement, 'id' | 'created_at' | 'updated_at' | 'image_path'>
 
 export const ANNOUNCEMENT_TYPE_LABELS: Record<AnnouncementType, string> = {
   normal: '通常',

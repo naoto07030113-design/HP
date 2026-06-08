@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { format } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -9,7 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
-import { Plus, Pencil, Trash2, Megaphone, ArrowUp, ArrowDown } from 'lucide-react'
+import {
+  Plus, Pencil, Trash2, Megaphone, ArrowUp, ArrowDown,
+  ImageIcon, Paperclip, X as XIcon,
+} from 'lucide-react'
 import { useAnnouncementsStore, announcementsStore } from '@/lib/announcement-store'
 import { useClinicStore } from '@/lib/clinic-store'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
@@ -22,10 +25,20 @@ const TODAY = format(new Date(), 'yyyy-MM-dd')
 const IN_30 = format(new Date(Date.now() + 30 * 86400000), 'yyyy-MM-dd')
 
 const DEFAULT_FORM: AnnouncementFormData = {
-  banner_mode: 'text', title: '', body: '', image_alt: null,
+  banner_mode: 'text', title: '', body: '', image_url: null, image_alt: null,
+  attachment_name: null,
   scope: 'company', clinic_id: null, type: 'normal',
   start_date: TODAY, end_date: IN_30, is_active: true,
   display_order: 0, link_url: null, link_label: null,
+}
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
 }
 
 export default function AnnouncementsPage() {
@@ -35,6 +48,8 @@ export default function AnnouncementsPage() {
   const [editTarget, setEditTarget] = useState<Announcement | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [form, setForm] = useState<AnnouncementFormData>(DEFAULT_FORM)
+  const imgInputRef = useRef<HTMLInputElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const sorted = [...items].sort((a, b) => a.display_order - b.display_order)
 
@@ -48,7 +63,9 @@ export default function AnnouncementsPage() {
     setEditTarget(a)
     setForm({
       banner_mode: a.banner_mode, title: a.title, body: a.body,
-      image_alt: a.image_alt, scope: a.scope, clinic_id: a.clinic_id,
+      image_url: a.image_url, image_alt: a.image_alt,
+      attachment_name: a.attachment_name,
+      scope: a.scope, clinic_id: a.clinic_id,
       type: a.type, start_date: a.start_date, end_date: a.end_date,
       is_active: a.is_active, display_order: a.display_order,
       link_url: a.link_url, link_label: a.link_label,
@@ -65,6 +82,27 @@ export default function AnnouncementsPage() {
 
   function setF<K extends keyof AnnouncementFormData>(k: K, v: AnnouncementFormData[K]) {
     setForm((f) => ({ ...f, [k]: v }))
+  }
+
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      const base64 = await fileToBase64(file)
+      setF('image_url', base64)
+      setF('image_alt', file.name)
+      setF('banner_mode', 'image')
+    } catch {
+      // ignore
+    }
+    e.target.value = ''
+  }
+
+  function handleFileAttach(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setF('attachment_name', file.name)
+    e.target.value = ''
   }
 
   return (
@@ -111,6 +149,15 @@ export default function AnnouncementsPage() {
                   </button>
                 </div>
 
+                {/* 画像プレビュー */}
+                {a.image_url && (
+                  <img
+                    src={a.image_url}
+                    alt={a.image_alt ?? ''}
+                    className="w-14 h-14 rounded-lg object-cover flex-shrink-0 border border-border"
+                  />
+                )}
+
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
                     <span className={cn('text-xs px-2 py-0.5 rounded border font-medium', ANNOUNCEMENT_TYPE_COLORS[a.type])}>
@@ -119,6 +166,12 @@ export default function AnnouncementsPage() {
                     <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded border">
                       {a.scope === 'company' ? '全社共通' : store.clinics.find((c) => c.id === a.clinic_id)?.name ?? a.clinic_id}
                     </span>
+                    {a.attachment_name && (
+                      <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded border border-blue-200 flex items-center gap-1">
+                        <Paperclip className="w-3 h-3" />
+                        {a.attachment_name}
+                      </span>
+                    )}
                     {!a.is_active && (
                       <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded border">非公開</span>
                     )}
@@ -179,6 +232,7 @@ export default function AnnouncementsPage() {
                 </Select>
               </div>
             </div>
+
             {form.scope === 'clinic' && (
               <div className="space-y-1.5">
                 <Label>院を選択</Label>
@@ -190,15 +244,96 @@ export default function AnnouncementsPage() {
                 </Select>
               </div>
             )}
+
             <div className="space-y-1.5">
               <Label>タイトル *</Label>
               <Input value={form.title} onChange={(e) => setF('title', e.target.value)} placeholder="お知らせのタイトル" required />
             </div>
+
             <div className="space-y-1.5">
               <Label>本文</Label>
               <Textarea value={form.body ?? ''} onChange={(e) => setF('body', e.target.value || null)}
                 placeholder="詳細説明..." rows={3} />
             </div>
+
+            {/* 画像アップロード */}
+            <div className="space-y-1.5">
+              <Label>バナー画像</Label>
+              {form.image_url ? (
+                <div className="relative inline-block">
+                  <img
+                    src={form.image_url}
+                    alt={form.image_alt ?? ''}
+                    className="rounded-lg border border-border object-cover h-32 max-w-full"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => { setF('image_url', null); setF('image_alt', null); setF('banner_mode', 'text') }}
+                    className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-0.5 hover:bg-black/80"
+                  >
+                    <XIcon className="w-3 h-3" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => imgInputRef.current?.click()}
+                  className="flex items-center gap-2 px-3 py-2 text-sm border border-dashed border-border rounded-lg hover:bg-muted/50 transition-colors text-muted-foreground w-full"
+                >
+                  <ImageIcon className="w-4 h-4" />
+                  画像を選択（JPG / PNG / GIF / WebP）
+                </button>
+              )}
+              <input
+                ref={imgInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleImageUpload}
+              />
+              {form.image_url && (
+                <Input
+                  value={form.image_alt ?? ''}
+                  onChange={(e) => setF('image_alt', e.target.value || null)}
+                  placeholder="画像の代替テキスト（alt）"
+                />
+              )}
+            </div>
+
+            {/* ファイル添付 */}
+            <div className="space-y-1.5">
+              <Label>ファイル添付</Label>
+              {form.attachment_name ? (
+                <div className="flex items-center gap-2 px-3 py-2 border border-border rounded-lg bg-blue-50">
+                  <Paperclip className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                  <span className="text-sm text-blue-800 flex-1 truncate">{form.attachment_name}</span>
+                  <button
+                    type="button"
+                    onClick={() => setF('attachment_name', null)}
+                    className="text-muted-foreground hover:text-red-600"
+                  >
+                    <XIcon className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex items-center gap-2 px-3 py-2 text-sm border border-dashed border-border rounded-lg hover:bg-muted/50 transition-colors text-muted-foreground w-full"
+                >
+                  <Paperclip className="w-4 h-4" />
+                  ファイルを添付（PDF / Word / Excel など）
+                </button>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip"
+                className="hidden"
+                onChange={handleFileAttach}
+              />
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>ボタン文言</Label>
@@ -211,6 +346,7 @@ export default function AnnouncementsPage() {
                   placeholder="https://..." type="url" />
               </div>
             </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>表示開始日</Label>
@@ -221,10 +357,12 @@ export default function AnnouncementsPage() {
                 <Input type="date" value={form.end_date} onChange={(e) => setF('end_date', e.target.value)} />
               </div>
             </div>
+
             <div className="flex items-center gap-3">
               <Switch id="ann-active" checked={form.is_active} onCheckedChange={(v) => setF('is_active', v)} />
               <Label htmlFor="ann-active" className="cursor-pointer">公開する</Label>
             </div>
+
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setFormOpen(false)}>キャンセル</Button>
               <Button type="submit">{editTarget ? '更新' : '追加'}</Button>

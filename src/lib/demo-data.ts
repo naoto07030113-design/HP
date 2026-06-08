@@ -165,6 +165,7 @@ function makeReservation(
     patient_id: null,
     patient_name: patientName,
     patient_phone: phone ?? null,
+    referral_name: null,
     start_at: start.toISOString(),
     end_at: end.toISOString(),
     status,

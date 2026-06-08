@@ -72,6 +72,7 @@ export interface Reservation {
   patient_id: string | null  // 将来: patients テーブルへの外部キー
   patient_name: string
   patient_phone: string | null
+  referral_name: string | null  // 紹介者氏名
   start_at: string  // ISO datetime
   end_at: string
   status: ReservationStatus

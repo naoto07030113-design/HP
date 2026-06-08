@@ -136,6 +136,7 @@ export default function ReserveClinicPage() {
       patient_id: null,
       patient_name: patientName,
       patient_phone: patientPhone || null,
+      referral_name: null,
       start_at: startAt,
       end_at: endAt,
       status: 'confirmed',
