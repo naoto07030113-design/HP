@@ -49,7 +49,7 @@ const DEMO_ANNOUNCEMENTS: Announcement[] = [
   },
 ]
 
-const KEY = 'announcement_store_v1'
+const KEY = 'announcement_store_v2'
 
 let _items: Announcement[] = (() => {
   if (typeof window === 'undefined') return DEMO_ANNOUNCEMENTS
