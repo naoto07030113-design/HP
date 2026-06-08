@@ -17,6 +17,7 @@ import { useAnnouncementsStore, announcementsStore } from '@/lib/announcement-st
 import { useClinicStore } from '@/lib/clinic-store'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { EmptyState } from '@/components/common/EmptyState'
+import { AnnouncementBanners } from '@/components/common/AnnouncementBanner'
 import type { Announcement, AnnouncementFormData, AnnouncementType, AnnouncementScope } from '@/types/announcement'
 import { ANNOUNCEMENT_TYPE_LABELS, ANNOUNCEMENT_TYPE_COLORS } from '@/types/announcement'
 import { cn } from '@/lib/utils'
@@ -122,6 +123,8 @@ export default function AnnouncementsPage() {
     e.target.value = ''
   }
 
+  const activeAnnouncements = announcementsStore.getActive('company')
+
   return (
     <div className="p-4 lg:p-6 space-y-5">
       <div className="flex items-center justify-between">
@@ -134,6 +137,16 @@ export default function AnnouncementsPage() {
           お知らせ追加
         </Button>
       </div>
+
+      {/* バナープレビュー */}
+      {activeAnnouncements.length > 0 && (
+        <div className="space-y-1.5">
+          <p className="text-xs font-medium text-muted-foreground">バナープレビュー（公開中）</p>
+          <div className="rounded-xl border overflow-hidden shadow-sm">
+            <AnnouncementBanners announcements={activeAnnouncements} />
+          </div>
+        </div>
+      )}
 
       {sorted.length === 0 ? (
         <EmptyState icon={Megaphone} title="お知らせが登録されていません" action={{ label: 'お知らせを追加', onClick: openAdd }} />
