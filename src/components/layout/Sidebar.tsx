@@ -6,11 +6,25 @@ import { cn } from '@/lib/utils'
 import {
   Calendar, ClipboardList, ClipboardCheck, Building2, Users, BookOpen,
   Clock, Download, Megaphone, ExternalLink, UserRound, FileText,
-  Receipt, BarChart2, MessageSquare, Settings, LogOut,
+  Receipt, BarChart2, MessageSquare, Settings, LogOut, ShieldCheck,
 } from 'lucide-react'
 import { getSupabaseClient } from '@/lib/supabase'
+import { useCurrentUser, PERMISSIONS, ROLE_LABELS } from '@/lib/auth-store'
 
-const NAV_ITEMS = [
+interface NavItem {
+  href: string
+  label: string
+  icon: React.ElementType
+  show?: (role: ReturnType<typeof useCurrentUser>) => boolean
+}
+
+interface NavGroup {
+  section: string
+  items: NavItem[]
+  show?: (role: ReturnType<typeof useCurrentUser>) => boolean
+}
+
+const NAV_ITEMS: NavGroup[] = [
   {
     section: 'メイン',
     items: [
@@ -19,11 +33,15 @@ const NAV_ITEMS = [
       { href: '/admin/reservations',  label: '予約一覧',        icon: ClipboardList },
       { href: '/admin/patients',      label: '患者管理',        icon: UserRound },
       { href: '/admin/records',       label: 'カルテ管理',      icon: FileText },
-      { href: '/admin/accounting',    label: '会計管理',        icon: Receipt },
+      {
+        href: '/admin/accounting', label: '会計管理', icon: Receipt,
+        show: (u) => u ? PERMISSIONS.canViewAccounting(u.role) : false,
+      },
     ],
   },
   {
     section: '分析・運営',
+    show: (u) => u ? PERMISSIONS.canAccessAnalytics(u.role) : false,
     items: [
       { href: '/admin/analytics',       label: '分析レポート',      icon: BarChart2 },
       { href: '/admin/communications',  label: 'コミュニケーション', icon: MessageSquare },
@@ -31,17 +49,34 @@ const NAV_ITEMS = [
   },
   {
     section: '管理設定',
+    show: (u) => u ? PERMISSIONS.canManageClinics(u.role) || PERMISSIONS.canManageShifts(u.role) : false,
     items: [
-      { href: '/admin/clinics',        label: '院管理',          icon: Building2 },
-      { href: '/admin/staff',          label: 'スタッフ管理',    icon: Users },
-      { href: '/admin/menus',          label: 'メニュー管理',    icon: BookOpen },
+      {
+        href: '/admin/clinics', label: '院管理', icon: Building2,
+        show: (u) => u ? PERMISSIONS.canManageClinics(u.role) : false,
+      },
+      {
+        href: '/admin/staff', label: 'スタッフ管理', icon: Users,
+        show: (u) => u ? PERMISSIONS.canManageStaff(u.role) : false,
+      },
+      {
+        href: '/admin/menus', label: 'メニュー管理', icon: BookOpen,
+        show: (u) => u ? PERMISSIONS.canManageMenus(u.role) : false,
+      },
       { href: '/admin/shifts',         label: 'シフト管理',      icon: Clock },
-      { href: '/admin/announcements',  label: 'お知らせ管理',    icon: Megaphone },
-      { href: '/admin/settings',       label: 'システム設定',    icon: Settings },
+      {
+        href: '/admin/announcements', label: 'お知らせ管理', icon: Megaphone,
+        show: (u) => u ? PERMISSIONS.canManageAnnouncements(u.role) : false,
+      },
+      {
+        href: '/admin/settings', label: 'システム設定', icon: Settings,
+        show: (u) => u ? PERMISSIONS.canAccessSettings(u.role) : false,
+      },
     ],
   },
   {
     section: 'データ',
+    show: (u) => u ? PERMISSIONS.canAccessExports(u.role) : false,
     items: [
       { href: '/admin/exports', label: 'CSV出力', icon: Download },
     ],
@@ -55,6 +90,7 @@ interface Props {
 export function Sidebar({ onClose }: Props) {
   const pathname = usePathname()
   const router = useRouter()
+  const currentUser = useCurrentUser()
 
   async function handleSignOut() {
     onClose?.()
@@ -79,27 +115,32 @@ export function Sidebar({ onClose }: Props) {
 
       {/* ナビゲーション */}
       <nav className="flex-1 overflow-y-auto py-3 px-3">
-        {NAV_ITEMS.map((group) => (
-          <div key={group.section} className="mb-4">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-green-400 px-3 py-1 mb-1">
-              {group.section}
-            </p>
-            {group.items.map(({ href, label, icon: Icon }) => {
-              const active = pathname === href || (href !== '/' && pathname.startsWith(href))
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  onClick={onClose}
-                  className={cn('sidebar-link', active && 'active')}
-                >
-                  <Icon className="w-4 h-4 flex-shrink-0" />
-                  <span>{label}</span>
-                </Link>
-              )
-            })}
-          </div>
-        ))}
+        {NAV_ITEMS.map((group) => {
+          if (group.show && !group.show(currentUser)) return null
+          const visibleItems = group.items.filter((item) => !item.show || item.show(currentUser))
+          if (visibleItems.length === 0) return null
+          return (
+            <div key={group.section} className="mb-4">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-green-400 px-3 py-1 mb-1">
+                {group.section}
+              </p>
+              {visibleItems.map(({ href, label, icon: Icon }) => {
+                const active = pathname === href || (href !== '/' && pathname.startsWith(href))
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    onClick={onClose}
+                    className={cn('sidebar-link', active && 'active')}
+                  >
+                    <Icon className="w-4 h-4 flex-shrink-0" />
+                    <span>{label}</span>
+                  </Link>
+                )
+              })}
+            </div>
+          )
+        })}
 
         {/* 患者予約ポータルリンク */}
         <div className="mt-2 px-3">
@@ -117,7 +158,13 @@ export function Sidebar({ onClose }: Props) {
 
       {/* フッター */}
       <div className="px-4 py-3 border-t border-green-100 space-y-2">
-        <p className="text-xs text-muted-foreground">イトーメディカルケア 業務システム</p>
+        {currentUser && (
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <ShieldCheck className="w-3 h-3 text-green-600" />
+            <span className="truncate max-w-[120px]">{currentUser.displayName || currentUser.email}</span>
+            <span className="text-green-600 font-medium">({ROLE_LABELS[currentUser.role]})</span>
+          </div>
+        )}
         <button
           onClick={handleSignOut}
           className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-red-600 transition-colors"

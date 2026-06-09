@@ -87,8 +87,20 @@ export default function ReserveClinicPage() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [selectedTime, setSelectedTime] = useState<string | null>(null)
   const [patientName, setPatientName] = useState('')
+  const [patientNameKana, setPatientNameKana] = useState('')
+  const [patientGender, setPatientGender] = useState<'male' | 'female' | 'other' | 'unknown'>('unknown')
+  const [patientBirthDate, setPatientBirthDate] = useState('')
   const [patientPhone, setPatientPhone] = useState('')
+  const [patientEmail, setPatientEmail] = useState('')
+  const [patientPostalCode, setPatientPostalCode] = useState('')
+  const [patientAddress, setPatientAddress] = useState('')
+  const [chiefComplaint, setChiefComplaint] = useState('')
+  const [medicalHistory, setMedicalHistory] = useState('')
+  const [currentMedications, setCurrentMedications] = useState('')
+  const [allergies, setAllergies] = useState('')
+  const [referralSource, setReferralSource] = useState('')
   const [memo, setMemo] = useState('')
+  const [submitting, setSubmitting] = useState(false)
   const [calendarOffset, setCalendarOffset] = useState(0)
 
   const availableMenus = store.menus.filter(
@@ -122,26 +134,62 @@ export default function ReserveClinicPage() {
     else router.push('/reserve')
   }
 
-  function handleConfirm() {
+  async function handleConfirm() {
     if (!selectedMenu || !selectedDate || !selectedTime || !patientName) return
+    setSubmitting(true)
     const date = format(selectedDate, 'yyyy-MM-dd')
     const startAt = new Date(`${date}T${selectedTime}:00`).toISOString()
     const endAt = new Date(
       new Date(`${date}T${selectedTime}:00`).getTime() + selectedMenu.duration_min * 60 * 1000,
     ).toISOString()
-    reservationsStore.create({
+
+    const reservationData = {
       clinic_id: clinicId,
       staff_id: selectedStaff?.id ?? null,
       menu_id: selectedMenu.id,
-      patient_id: null,
       patient_name: patientName,
       patient_phone: patientPhone || null,
-      referral_name: null,
       start_at: startAt,
       end_at: endAt,
-      status: 'confirmed',
       memo: memo || null,
-    })
+    }
+
+    if (visitType === 'first') {
+      const patientData = {
+        name: patientName,
+        name_kana: patientNameKana,
+        gender: patientGender,
+        birth_date: patientBirthDate || undefined,
+        phone: patientPhone,
+        email: patientEmail,
+        postal_code: patientPostalCode,
+        address: patientAddress,
+        chief_complaint: chiefComplaint,
+        medical_history: medicalHistory,
+        current_medications: currentMedications,
+        allergies: allergies,
+        referral_source: referralSource,
+      }
+      try {
+        const res = await fetch('/api/intake', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ patient: patientData, reservation: reservationData }),
+        })
+        if (!res.ok) throw new Error('送信エラー')
+      } catch {
+        setSubmitting(false)
+        return
+      }
+    } else {
+      await reservationsStore.create({
+        ...reservationData,
+        patient_id: null,
+        referral_name: null,
+        status: 'confirmed',
+      })
+    }
+    setSubmitting(false)
     setStep('complete')
   }
 
@@ -341,25 +389,159 @@ export default function ReserveClinicPage() {
         {/* Step: 患者情報 */}
         {step === 'info' && (
           <div className="space-y-4">
-            <h2 className="text-lg font-bold text-green-900">患者情報を入力してください</h2>
+            <div>
+              <h2 className="text-lg font-bold text-green-900">
+                {visitType === 'first' ? '問診票の入力' : '患者情報を入力してください'}
+              </h2>
+              {visitType === 'first' && (
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  初診の方は問診票の入力をお願いします。院内でのご記入も可能です。
+                </p>
+              )}
+            </div>
             <div className="bg-white rounded-xl border border-border p-4 space-y-4">
+              {/* 基本情報 - 共通 */}
               <div className="space-y-1.5">
-                <Label htmlFor="name" className="text-sm font-semibold">お名前 *</Label>
+                <Label htmlFor="name" className="text-sm font-semibold">お名前 <span className="text-red-500">*</span></Label>
                 <Input id="name" value={patientName} onChange={(e) => setPatientName(e.target.value)}
                   placeholder="山田 太郎" className="h-10" />
               </div>
+
+              {visitType === 'first' && (
+                <>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="name-kana" className="text-sm font-semibold">フリガナ</Label>
+                    <Input id="name-kana" value={patientNameKana}
+                      onChange={(e) => setPatientNameKana(e.target.value)}
+                      placeholder="ヤマダ タロウ" className="h-10" />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-semibold">性別</Label>
+                    <div className="grid grid-cols-4 gap-2">
+                      {([['male', '男性'], ['female', '女性'], ['other', 'その他'], ['unknown', '回答しない']] as const).map(([v, label]) => (
+                        <button
+                          key={v}
+                          type="button"
+                          onClick={() => setPatientGender(v)}
+                          className={cn(
+                            'rounded-lg border py-2 text-sm font-medium transition-all',
+                            patientGender === v
+                              ? 'border-green-600 bg-green-700 text-white'
+                              : 'border-border bg-white hover:border-green-300 hover:bg-green-50',
+                          )}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="birth-date" className="text-sm font-semibold">生年月日</Label>
+                    <Input id="birth-date" type="date" value={patientBirthDate}
+                      onChange={(e) => setPatientBirthDate(e.target.value)} className="h-10" />
+                  </div>
+                </>
+              )}
+
               <div className="space-y-1.5">
                 <Label htmlFor="phone" className="text-sm font-semibold">電話番号</Label>
                 <Input id="phone" value={patientPhone} onChange={(e) => setPatientPhone(e.target.value)}
                   placeholder="090-0000-0000" type="tel" className="h-10" />
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="memo" className="text-sm font-semibold">症状・ご要望（任意）</Label>
-                <Textarea id="memo" value={memo} onChange={(e) => setMemo(e.target.value)}
-                  placeholder="腰痛・肩こり など" rows={3} />
-              </div>
+
+              {visitType === 'first' && (
+                <>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="email" className="text-sm font-semibold">メールアドレス</Label>
+                    <Input id="email" type="email" value={patientEmail}
+                      onChange={(e) => setPatientEmail(e.target.value)}
+                      placeholder="example@mail.com" className="h-10" />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="postal-code" className="text-sm font-semibold">郵便番号</Label>
+                      <Input id="postal-code" value={patientPostalCode}
+                        onChange={(e) => setPatientPostalCode(e.target.value)}
+                        placeholder="000-0000" className="h-10" />
+                    </div>
+                    <div className="space-y-1.5 col-span-2">
+                      <Label htmlFor="address" className="text-sm font-semibold">住所</Label>
+                      <Input id="address" value={patientAddress}
+                        onChange={(e) => setPatientAddress(e.target.value)}
+                        placeholder="都道府県・市区町村・番地" className="h-10" />
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-green-50">
+                    <p className="text-xs font-semibold text-green-700 mb-3">問診内容</p>
+                    <div className="space-y-4">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="chief-complaint" className="text-sm font-semibold">
+                          主な症状・お悩み <span className="text-red-500">*</span>
+                        </Label>
+                        <Textarea id="chief-complaint" value={chiefComplaint}
+                          onChange={(e) => setChiefComplaint(e.target.value)}
+                          placeholder="腰痛・肩こり・頭痛など" rows={2} />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="medical-history" className="text-sm font-semibold">既往歴</Label>
+                        <Textarea id="medical-history" value={medicalHistory}
+                          onChange={(e) => setMedicalHistory(e.target.value)}
+                          placeholder="過去の病気・手術歴など（ない場合は空欄）" rows={2} />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="medications" className="text-sm font-semibold">現在服用中のお薬</Label>
+                        <Input id="medications" value={currentMedications}
+                          onChange={(e) => setCurrentMedications(e.target.value)}
+                          placeholder="薬品名（ない場合は空欄）" className="h-10" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="allergies" className="text-sm font-semibold">アレルギー</Label>
+                        <Input id="allergies" value={allergies}
+                          onChange={(e) => setAllergies(e.target.value)}
+                          placeholder="食品・薬品・金属など（ない場合は空欄）" className="h-10" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-sm font-semibold">来院のきっかけ</Label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {['紹介', 'インターネット', 'SNS', 'チラシ', '通りがかり', 'その他'].map((src) => (
+                            <button
+                              key={src}
+                              type="button"
+                              onClick={() => setReferralSource(src === referralSource ? '' : src)}
+                              className={cn(
+                                'rounded-lg border py-2 text-xs font-medium transition-all',
+                                referralSource === src
+                                  ? 'border-green-600 bg-green-700 text-white'
+                                  : 'border-border bg-white hover:border-green-300',
+                              )}
+                            >
+                              {src}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {visitType === 'return' && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="memo" className="text-sm font-semibold">今回の症状・ご要望（任意）</Label>
+                  <Textarea id="memo" value={memo} onChange={(e) => setMemo(e.target.value)}
+                    placeholder="腰痛・肩こり など" rows={3} />
+                </div>
+              )}
             </div>
-            <Button className="w-full h-12 text-base" disabled={!patientName.trim()} onClick={goNext}>
+            <Button
+              className="w-full h-12 text-base"
+              disabled={!patientName.trim() || (visitType === 'first' && !chiefComplaint.trim())}
+              onClick={goNext}
+            >
               次へ進む
             </Button>
           </div>
@@ -388,8 +570,19 @@ export default function ReserveClinicPage() {
                 {memo && <Row label="ご要望" value={memo} />}
               </div>
             </div>
-            <Button className="w-full h-12 text-base font-bold" onClick={handleConfirm}>
-              予約を確定する
+            {visitType === 'first' && (
+              <div className="bg-white rounded-xl border border-border p-4 space-y-2 text-sm">
+                <p className="font-semibold text-green-800 mb-1">問診情報</p>
+                {patientNameKana && <Row label="フリガナ" value={patientNameKana} />}
+                {patientGender !== 'unknown' && <Row label="性別" value={{ male: '男性', female: '女性', other: 'その他', unknown: '' }[patientGender]} />}
+                {patientBirthDate && <Row label="生年月日" value={patientBirthDate} />}
+                {patientEmail && <Row label="メール" value={patientEmail} />}
+                {chiefComplaint && <Row label="主な症状" value={chiefComplaint} />}
+                {referralSource && <Row label="来院のきっかけ" value={referralSource} />}
+              </div>
+            )}
+            <Button className="w-full h-12 text-base font-bold" onClick={handleConfirm} disabled={submitting}>
+              {submitting ? '送信中...' : '予約を確定する'}
             </Button>
           </div>
         )}

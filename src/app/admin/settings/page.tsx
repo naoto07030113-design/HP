@@ -6,17 +6,19 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
-  Building2, CalendarDays, Database, Save, RotateCcw, Download, CheckCircle2,
+  Building2, CalendarDays, Database, Save, RotateCcw, Download, CheckCircle2, ShieldCheck,
 } from 'lucide-react'
 import { useSettingsStore, settingsStore } from '@/lib/settings-store'
 import { resetDemoData } from '@/lib/clinic-store'
 import { useClinicStore } from '@/lib/clinic-store'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
+import { PermissionGuard } from '@/components/common/PermissionGuard'
 import { cn } from '@/lib/utils'
 
 const TABS = [
   { key: 'general',  label: '一般設定',  icon: Building2 },
   { key: 'booking',  label: '予約設定',  icon: CalendarDays },
+  { key: 'access',   label: 'アクセス権限', icon: ShieldCheck },
   { key: 'data',     label: 'データ管理', icon: Database },
 ] as const
 
@@ -58,6 +60,7 @@ export default function SettingsPage() {
   }
 
   return (
+    <PermissionGuard allowedRoles={['admin']}>
     <div className="p-4 lg:p-6 space-y-5">
       <div>
         <h1 className="page-title">システム設定</h1>
@@ -194,6 +197,49 @@ export default function SettingsPage() {
       )}
 
       {/* データ管理 */}
+      {/* アクセス権限 */}
+      {activeTab === 'access' && (
+        <div className="space-y-4">
+          <div className="bg-white rounded-xl border shadow-sm p-5 space-y-4">
+            <h2 className="font-semibold text-green-900">スタッフ権限について</h2>
+            <p className="text-sm text-muted-foreground">
+              各ユーザーのアクセス権限は Supabase ダッシュボードでユーザーメタデータとして設定します。
+            </p>
+            <div className="space-y-3">
+              {[
+                { role: 'admin',        label: '管理者',   desc: '全機能へのフルアクセス（デフォルト）' },
+                { role: 'staff',        label: 'スタッフ', desc: '予約・患者・カルテ・会計・シフト管理。分析・レポートも可' },
+                { role: 'receptionist', label: '受付',     desc: '当日受付・予約カレンダー・予約一覧・患者情報のみ' },
+              ].map(({ role, label, desc }) => (
+                <div key={role} className="flex gap-3 p-3 bg-green-50 rounded-lg border border-green-100">
+                  <ShieldCheck className="w-4 h-4 text-green-700 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-semibold text-green-900">{label} <code className="text-xs bg-white border px-1 rounded">{role}</code></p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl border shadow-sm p-5 space-y-3">
+            <h2 className="font-semibold text-green-900">設定方法</h2>
+            <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
+              <li>Supabase ダッシュボード → Authentication → Users を開く</li>
+              <li>対象ユーザーをクリックし「Edit User」を選択</li>
+              <li>「User Metadata」に以下を入力して保存</li>
+            </ol>
+            <div className="bg-slate-50 rounded-lg p-3 font-mono text-xs">
+              {'{ "role": "staff" }'}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              設定可能な値: <code>admin</code> / <code>staff</code> / <code>receptionist</code><br />
+              メタデータが未設定のユーザーは自動的に <code>admin</code> として扱われます。
+            </p>
+          </div>
+        </div>
+      )}
+
       {activeTab === 'data' && (
         <div className="space-y-4">
           <div className="bg-white rounded-xl border shadow-sm p-5 space-y-4">
@@ -248,5 +294,6 @@ export default function SettingsPage() {
         onConfirm={handleReset}
       />
     </div>
+    </PermissionGuard>
   )
 }

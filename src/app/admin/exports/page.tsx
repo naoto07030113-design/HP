@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Download, FileText } from 'lucide-react'
 import { useClinicStore } from '@/lib/clinic-store'
+import { PermissionGuard } from '@/components/common/PermissionGuard'
 import Papa from 'papaparse'
 
 type ExportType = 'all' | 'daily' | 'staff'
@@ -120,6 +121,7 @@ export default function ExportsPage() {
   ] as const
 
   return (
+    <PermissionGuard allowedRoles={['admin']}>
     <div className="p-4 lg:p-6 max-w-2xl space-y-6">
       <div>
         <h1 className="page-title">CSV出力</h1>
@@ -197,5 +199,6 @@ export default function ExportsPage() {
         </Button>
       </div>
     </div>
+    </PermissionGuard>
   )
 }
