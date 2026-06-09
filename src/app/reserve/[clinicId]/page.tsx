@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { format, addDays, isSameDay, parseISO, differenceInMinutes } from 'date-fns'
+import { format, addDays, isSameDay, parseISO } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -62,10 +62,14 @@ function isSlotAvailable(
   const startMin = timeToMinutes(time)
   const endMin = startMin + durationMin
   return !reservations.some((r) => {
-    if (r.status === 'cancelled' || !r.start_at.startsWith(date)) return false
+    if (r.status === 'cancelled' || r.status === 'no_show') return false
     if (staffId && r.staff_id !== staffId) return false
-    const rStart = differenceInMinutes(parseISO(r.start_at), new Date(r.start_at.slice(0, 10)))
-    const rEnd = differenceInMinutes(parseISO(r.end_at), new Date(r.end_at.slice(0, 10)))
+    // Compare in local time to avoid UTC-vs-JST mismatch
+    const rStartDate = parseISO(r.start_at)
+    const rEndDate = parseISO(r.end_at)
+    if (format(rStartDate, 'yyyy-MM-dd') !== date) return false
+    const rStart = rStartDate.getHours() * 60 + rStartDate.getMinutes()
+    const rEnd = rEndDate.getHours() * 60 + rEndDate.getMinutes()
     return startMin < rEnd && endMin > rStart
   })
 }
