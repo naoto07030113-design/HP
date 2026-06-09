@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { format, addDays, subDays, startOfWeek, addWeeks, subWeeks, parseISO } from 'date-fns'
+import { format, addDays, subDays, startOfWeek, addWeeks, subWeeks, addMonths, subMonths, parseISO } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ChevronLeft, ChevronRight, Calendar, Plus } from 'lucide-react'
 import { DayCalendar } from '@/features/reservations/components/calendar/DayCalendar'
 import { WeekCalendar } from '@/features/reservations/components/calendar/WeekCalendar'
+import { MonthCalendar } from '@/features/reservations/components/calendar/MonthCalendar'
 import { ReservationForm } from '@/features/reservations/components/ReservationForm'
 import { useClinicStore } from '@/lib/clinic-store'
 import { reservationsStore, clinicsStore } from '@/lib/clinic-store'
@@ -18,7 +19,7 @@ import { RESERVATION_STATUS_LABELS } from '@/types/clinic'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Select as Select2, SelectContent as SC2, SelectItem as SI2, SelectTrigger as ST2, SelectValue as SV2 } from '@/components/ui/select'
 
-type View = 'day' | 'week'
+type View = 'day' | 'week' | 'month'
 
 export default function CalendarPage() {
   const store = useClinicStore()
@@ -38,11 +39,13 @@ export default function CalendarPage() {
 
   function goBack() {
     if (view === 'day') setCurrentDate((d) => subDays(d, 1))
-    else setCurrentDate((d) => subWeeks(d, 1))
+    else if (view === 'week') setCurrentDate((d) => subWeeks(d, 1))
+    else setCurrentDate((d) => subMonths(d, 1))
   }
   function goForward() {
     if (view === 'day') setCurrentDate((d) => addDays(d, 1))
-    else setCurrentDate((d) => addWeeks(d, 1))
+    else if (view === 'week') setCurrentDate((d) => addWeeks(d, 1))
+    else setCurrentDate((d) => addMonths(d, 1))
   }
   function goToday() { setCurrentDate(new Date()) }
 
@@ -85,7 +88,9 @@ export default function CalendarPage() {
 
   const dateLabel = view === 'day'
     ? format(currentDate, 'yyyy年M月d日（E）', { locale: ja })
-    : `${format(weekStart, 'yyyy年M月d日', { locale: ja })} 〜 ${format(addDays(weekStart, 6), 'M月d日', { locale: ja })}`
+    : view === 'week'
+      ? `${format(weekStart, 'yyyy年M月d日', { locale: ja })} 〜 ${format(addDays(weekStart, 6), 'M月d日', { locale: ja })}`
+      : format(currentDate, 'yyyy年M月', { locale: ja })
 
   return (
     <div className="flex flex-col h-full">
@@ -126,8 +131,9 @@ export default function CalendarPage() {
           {/* 表示切替 */}
           <Tabs value={view} onValueChange={(v) => setView(v as View)}>
             <TabsList className="h-8">
-              <TabsTrigger value="day" className="text-xs px-3 h-7">日別</TabsTrigger>
+              <TabsTrigger value="month" className="text-xs px-3 h-7">月別</TabsTrigger>
               <TabsTrigger value="week" className="text-xs px-3 h-7">週別</TabsTrigger>
+              <TabsTrigger value="day" className="text-xs px-3 h-7">日別</TabsTrigger>
             </TabsList>
           </Tabs>
           <Button size="sm" className="h-8 gap-1.5" onClick={() => openAddForm()}>
@@ -139,6 +145,14 @@ export default function CalendarPage() {
 
       {/* カレンダー本体 */}
       <div className="flex-1 overflow-hidden bg-white">
+        {view === 'month' && (
+          <MonthCalendar
+            month={currentDate}
+            clinicId={selectedClinicId}
+            reservations={store.reservations}
+            onDateClick={(date) => { setCurrentDate(new Date(date + 'T00:00:00')); setView('day') }}
+          />
+        )}
         {clinic && view === 'day' && (
           <DayCalendar
             date={format(currentDate, 'yyyy-MM-dd')}
