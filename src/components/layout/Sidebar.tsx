@@ -7,6 +7,7 @@ import {
   Calendar, ClipboardList, ClipboardCheck, Building2, Users, BookOpen,
   Clock, Download, Megaphone, ExternalLink, UserRound, FileText,
   Receipt, BarChart2, MessageSquare, Settings, LogOut, ShieldCheck,
+  LayoutList, Bell,
 } from 'lucide-react'
 import { getSupabaseClient } from '@/lib/supabase'
 import { useCurrentUser, PERMISSIONS, ROLE_LABELS } from '@/lib/auth-store'
@@ -37,6 +38,10 @@ const NAV_ITEMS: NavGroup[] = [
         href: '/admin/accounting', label: '会計管理', icon: Receipt,
         show: (u) => u ? PERMISSIONS.canViewAccounting(u.role) : false,
       },
+      {
+        href: '/admin/daily', label: '日計表', icon: LayoutList,
+        show: (u) => u ? PERMISSIONS.canViewAccounting(u.role) : false,
+      },
     ],
   },
   {
@@ -44,6 +49,7 @@ const NAV_ITEMS: NavGroup[] = [
     show: (u) => u ? PERMISSIONS.canAccessAnalytics(u.role) : false,
     items: [
       { href: '/admin/analytics',       label: '分析レポート',      icon: BarChart2 },
+      { href: '/admin/reminders',       label: 'リマインド送信',    icon: Bell },
       { href: '/admin/communications',  label: 'コミュニケーション', icon: MessageSquare },
     ],
   },

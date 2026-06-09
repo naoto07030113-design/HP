@@ -1,13 +1,13 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { format, subDays, subMonths, parseISO, startOfMonth } from 'date-fns'
+import { format, subDays, subMonths, parseISO, startOfMonth, differenceInDays } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import { TrendingUp, TrendingDown, Users, CalendarCheck, Repeat2, Receipt } from 'lucide-react'
+import { TrendingUp, TrendingDown, Users, CalendarCheck, Repeat2, Receipt, UserX, PhoneCall } from 'lucide-react'
 import { useClinicStore } from '@/lib/clinic-store'
 import { useAccountingStore, accountingStore } from '@/lib/accounting-store'
 import { useSettingsStore } from '@/lib/settings-store'
-import { patientStore } from '@/lib/patient-store'
+import { patientStore, usePatientStore } from '@/lib/patient-store'
 import { cn } from '@/lib/utils'
 
 const TODAY = format(new Date(), 'yyyy-MM-dd')
@@ -95,8 +95,10 @@ function StatusBar({ data }: { data: { label: string; count: number; color: stri
 export default function AnalyticsPage() {
   useAccountingStore()
   useSettingsStore()
+  usePatientStore()
   const { reservations, staff, menus, clinics } = useClinicStore()
   const [selectedClinic, setSelectedClinic] = useState('all')
+  const [inactiveDays, setInactiveDays] = useState(60)
 
   const allInvoices = accountingStore.getAll()
   const allPatients = patientStore.getAll()
@@ -202,6 +204,45 @@ export default function AnalyticsPage() {
       { label: '無断キャンセル', count: monthly.filter((r) => r.status === 'no_show').length, color: 'bg-red-400' },
     ]
   }, [reservations, selectedClinic])
+
+  // ── 未再診患者リスト ────────────────────────────────────
+  const inactivePatients = useMemo(() => {
+    const threshold = format(subDays(new Date(), inactiveDays), 'yyyy-MM-dd')
+
+    // Build a map of patient_id -> last visit date from reservations
+    const lastVisit = new Map<string, string>()
+    reservations.forEach((r) => {
+      if (r.status !== 'visited') return
+      if (selectedClinic !== 'all' && r.clinic_id !== selectedClinic) return
+      const key = r.patient_id ?? r.patient_name
+      const existing = lastVisit.get(key)
+      const date = r.start_at.slice(0, 10)
+      if (!existing || date > existing) lastVisit.set(key, date)
+    })
+
+    // Find patients whose last visit is older than threshold (or never visited)
+    return allPatients
+      .filter((p) => {
+        if (!p.is_active) return false
+        if (selectedClinic !== 'all' && p.clinic_id !== selectedClinic) return false
+        const last = lastVisit.get(p.id)
+        if (!last) return true // never visited
+        return last < threshold
+      })
+      .map((p) => ({
+        ...p,
+        lastVisitDate: lastVisit.get(p.id) ?? null,
+        daysSince: lastVisit.get(p.id)
+          ? differenceInDays(new Date(), new Date(lastVisit.get(p.id)!))
+          : null,
+      }))
+      .sort((a, b) => {
+        if (a.lastVisitDate === null) return -1
+        if (b.lastVisitDate === null) return 1
+        return a.lastVisitDate < b.lastVisitDate ? -1 : 1
+      })
+      .slice(0, 50)
+  }, [allPatients, reservations, selectedClinic, inactiveDays])
 
   return (
     <div className="p-4 lg:p-6 space-y-6">
@@ -353,6 +394,94 @@ export default function AnalyticsPage() {
       <div className="bg-white rounded-xl border shadow-sm p-4">
         <h2 className="text-sm font-semibold text-green-900 mb-3">今月の予約内訳</h2>
         <StatusBar data={statusBreakdown} />
+      </div>
+
+      {/* 再診促進リスト */}
+      <div className="bg-white rounded-xl border shadow-sm p-4 space-y-4">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-2">
+            <UserX className="w-4 h-4 text-amber-600" />
+            <h2 className="text-sm font-semibold text-green-900">未再診患者リスト</h2>
+            <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-medium">
+              {inactivePatients.length}名
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">最終来院から</span>
+            <div className="flex gap-1">
+              {[30, 60, 90, 180].map((d) => (
+                <button
+                  key={d}
+                  onClick={() => setInactiveDays(d)}
+                  className={cn(
+                    'px-2.5 py-1 text-xs rounded-md border transition-colors font-medium',
+                    inactiveDays === d
+                      ? 'bg-amber-600 text-white border-amber-600'
+                      : 'border-border text-muted-foreground hover:border-amber-400',
+                  )}
+                >
+                  {d}日以上
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {inactivePatients.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-4">
+            {inactiveDays}日以上未来院の患者はいません
+          </p>
+        ) : (
+          <div className="overflow-auto">
+            <table className="w-full text-sm min-w-[500px]">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left py-2 text-xs text-muted-foreground font-medium">患者名</th>
+                  <th className="text-left py-2 text-xs text-muted-foreground font-medium hidden sm:table-cell">電話番号</th>
+                  <th className="text-left py-2 text-xs text-muted-foreground font-medium">最終来院</th>
+                  <th className="text-right py-2 text-xs text-muted-foreground font-medium">経過日数</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {inactivePatients.map((p) => (
+                  <tr key={p.id} className="hover:bg-slate-50/50">
+                    <td className="py-2.5">
+                      <div className="font-medium text-green-900">{p.name}</div>
+                      {p.name_kana && <div className="text-xs text-muted-foreground">{p.name_kana}</div>}
+                    </td>
+                    <td className="py-2.5 text-muted-foreground hidden sm:table-cell">
+                      {p.phone ? (
+                        <a href={`tel:${p.phone}`} className="flex items-center gap-1 hover:text-green-700">
+                          <PhoneCall className="w-3 h-3" />
+                          {p.phone}
+                        </a>
+                      ) : '-'}
+                    </td>
+                    <td className="py-2.5 text-muted-foreground text-sm">
+                      {p.lastVisitDate
+                        ? format(new Date(p.lastVisitDate), 'yyyy年M月d日', { locale: ja })
+                        : <span className="text-amber-600 font-medium">来院歴なし</span>}
+                    </td>
+                    <td className="py-2.5 text-right">
+                      {p.daysSince !== null ? (
+                        <span className={cn(
+                          'text-xs font-semibold px-2 py-0.5 rounded-full',
+                          p.daysSince >= 180 ? 'bg-red-100 text-red-700' :
+                          p.daysSince >= 90 ? 'bg-amber-100 text-amber-700' :
+                          'bg-yellow-50 text-yellow-700',
+                        )}>
+                          {p.daysSince}日
+                        </span>
+                      ) : (
+                        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">-</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   )
