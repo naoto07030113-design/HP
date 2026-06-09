@@ -2,164 +2,105 @@
 
 import { useState, useEffect } from 'react'
 import type { Patient } from '@/types/patient'
-import { format, subDays, subMonths } from 'date-fns'
-import { secureSet, secureGet } from './secure-storage'
+import { getSupabaseClient } from './supabase'
 
-const NOW = new Date().toISOString()
-const TODAY = format(new Date(), 'yyyy-MM-dd')
+// ---------------------------------------------------------------------------
+// Singleton state
+// ---------------------------------------------------------------------------
 
-export const DEMO_PATIENTS: Patient[] = [
-  {
-    id: 'pat-1', clinic_id: 'clinic-1',
-    name: '田中 一郎', name_kana: 'タナカ イチロウ',
-    gender: 'male', birth_date: '1975-04-12',
-    phone: '090-1111-2222', email: 'tanaka@example.com',
-    postal_code: '150-0001', address: '東京都渋谷区神宮前1-1-1',
-    first_visit_date: format(subMonths(new Date(), 3), 'yyyy-MM-dd'),
-    primary_staff_id: 'staff-1',
-    insurance_type: 'employee',
-    referral_source: 'Google検索',
-    chief_complaint: '慢性的な右肩の痛みと可動域制限。デスクワーク続きで悪化。',
-    medical_history: '特になし',
-    current_medications: 'なし',
-    allergies: 'なし',
-    notes: null,
-    is_active: true, created_at: NOW, updated_at: NOW,
-  },
-  {
-    id: 'pat-2', clinic_id: 'clinic-1',
-    name: '佐藤 美咲', name_kana: 'サトウ ミサキ',
-    gender: 'female', birth_date: '1988-09-25',
-    phone: '090-3333-4444', email: null,
-    postal_code: '151-0053', address: '東京都渋谷区代々木2-2-2',
-    first_visit_date: format(subMonths(new Date(), 1), 'yyyy-MM-dd'),
-    primary_staff_id: 'staff-2',
-    insurance_type: 'national',
-    referral_source: '知人・家族の紹介',
-    chief_complaint: '腰痛、左下肢のしびれ。立ち仕事で悪化。',
-    medical_history: '特になし',
-    current_medications: 'なし',
-    allergies: '金属アレルギー（ニッケル）',
-    notes: '鍼はステンレス製を使用すること。',
-    is_active: true, created_at: NOW, updated_at: NOW,
-  },
-  {
-    id: 'pat-3', clinic_id: 'clinic-1',
-    name: '鈴木 健太', name_kana: 'スズキ ケンタ',
-    gender: 'male', birth_date: '1995-03-15',
-    phone: '080-5555-7777', email: null,
-    postal_code: '160-0022', address: '東京都新宿区新宿4-4-4',
-    first_visit_date: format(subMonths(new Date(), 2), 'yyyy-MM-dd'),
-    primary_staff_id: 'staff-3',
-    insurance_type: 'employee',
-    referral_source: 'Instagram',
-    chief_complaint: '膝の痛み（バスケ中に受傷）。階段昇降が困難。',
-    medical_history: '特になし',
-    current_medications: 'なし',
-    allergies: 'なし',
-    notes: 'バスケットボール選手。大会3週間前。',
-    is_active: true, created_at: NOW, updated_at: NOW,
-  },
-  {
-    id: 'pat-4', clinic_id: 'clinic-1',
-    name: '中村 勇', name_kana: 'ナカムラ イサム',
-    gender: 'male', birth_date: '1990-07-17',
-    phone: '080-1234-5678', email: 'nakamura.sports@example.com',
-    postal_code: '160-0023', address: '東京都新宿区西新宿5-5-5',
-    first_visit_date: format(subMonths(new Date(), 4), 'yyyy-MM-dd'),
-    primary_staff_id: 'staff-3',
-    insurance_type: 'employee',
-    referral_source: 'Instagram',
-    chief_complaint: 'マラソン練習中の右膝外側の痛み（腸脛靭帯炎）。',
-    medical_history: '特になし',
-    current_medications: 'なし',
-    allergies: 'なし',
-    notes: 'フルマラソン出場予定。コンディショニング目的。',
-    is_active: true, created_at: NOW, updated_at: NOW,
-  },
-  {
-    id: 'pat-5', clinic_id: 'clinic-1',
-    name: '渡辺 健', name_kana: 'ワタナベ ケン',
-    gender: 'male', birth_date: '1955-11-30',
-    phone: '070-9999-0000', email: null,
-    postal_code: '150-0044', address: '東京都渋谷区円山町5-5-5',
-    first_visit_date: format(subMonths(new Date(), 12), 'yyyy-MM-dd'),
-    primary_staff_id: 'staff-1',
-    insurance_type: 'other',
-    referral_source: 'チラシ・ポスティング',
-    chief_complaint: '四十肩（五十肩）。右腕が上がらない。',
-    medical_history: '糖尿病（インスリン自己注射）、白内障手術歴',
-    current_medications: 'インスリン グラルギン（糖尿病）、メトホルミン',
-    allergies: 'ペニシリン系抗生物質',
-    notes: '糖尿病あり。傷の治りが遅い可能性。インスリン注射タイミングを確認。',
-    is_active: true, created_at: NOW, updated_at: NOW,
-  },
-  {
-    id: 'pat-6', clinic_id: 'clinic-1',
-    name: '新患 一郎', name_kana: 'シンカン イチロウ',
-    gender: 'male', birth_date: '1985-03-20',
-    phone: '080-5555-6666', email: null,
-    postal_code: null, address: null,
-    first_visit_date: TODAY,
-    primary_staff_id: null,
-    insurance_type: 'employee',
-    referral_source: 'Google検索',
-    chief_complaint: '腰痛。引越し作業後から痛みが出た。',
-    medical_history: '特になし',
-    current_medications: 'なし',
-    allergies: 'なし',
-    notes: '本日初診。',
-    is_active: true, created_at: NOW, updated_at: NOW,
-  },
-]
-
-// 暗号化キー（新フォーマット）・旧平文キー（移行用）
-const KEY_ENC = 'patient_store_v1_enc'
-const KEY_OLD = 'patient_store_v1'
-
-// メモリ上は常に復号済みの平文データを保持
-let _patients: Patient[] = DEMO_PATIENTS
+let _patients: Patient[] = []
 let _listeners: Array<() => void> = []
-
-function notifyListeners() { _listeners.forEach((fn) => fn()) }
+let _loadPromise: Promise<void> | null = null
 
 function notify() {
-  notifyListeners()
-  secureSet(KEY_ENC, _patients) // 非同期・fire and forget
+  _listeners.forEach((fn) => fn())
 }
 
-function genId() { return `pat-${Date.now()}-${Math.random().toString(36).slice(2, 6)}` }
+// ---------------------------------------------------------------------------
+// Supabase load + realtime
+// ---------------------------------------------------------------------------
 
-/** アプリ起動時に一度呼ぶ。暗号化ストレージから復号して状態を更新する */
-export async function hydratePatientStore() {
-  if (typeof window === 'undefined') return
+function setupRealtime() {
+  const supabase = getSupabaseClient()
 
-  // 新しい暗号化キーを試す
-  const data = await secureGet<Patient[]>(KEY_ENC)
-  if (data && data.length > 0) {
-    _patients = data
-    notifyListeners()
+  supabase
+    .channel('patients-changes')
+    .on(
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'patients' },
+      (payload) => {
+        const incoming = payload.new as Patient
+        const exists = _patients.some((p) => p.id === incoming.id)
+        if (!exists) {
+          _patients = [incoming, ..._patients]
+          notify()
+        }
+      },
+    )
+    .on(
+      'postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'patients' },
+      (payload) => {
+        const updated = payload.new as Patient
+        _patients = _patients.map((p) => (p.id === updated.id ? updated : p))
+        notify()
+      },
+    )
+    .on(
+      'postgres_changes',
+      { event: 'DELETE', schema: 'public', table: 'patients' },
+      (payload) => {
+        const deleted = payload.old as Pick<Patient, 'id'>
+        _patients = _patients.filter((p) => p.id !== deleted.id)
+        notify()
+      },
+    )
+    .subscribe()
+}
+
+async function loadPatients(): Promise<void> {
+  const supabase = getSupabaseClient()
+  const { data, error } = await supabase
+    .from('patients')
+    .select('*')
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('[patient-store] load error:', error.message)
     return
   }
 
-  // 移行: 旧平文キーが残っていれば読み込んで暗号化して保存
-  const old = localStorage.getItem(KEY_OLD)
-  if (old) {
-    try {
-      const parsed = JSON.parse(old) as Patient[]
-      _patients = parsed
-      notifyListeners()
-      await secureSet(KEY_ENC, _patients)
-      localStorage.removeItem(KEY_OLD) // 平文データを削除
-    } catch {}
-  }
+  _patients = (data ?? []) as Patient[]
+  notify()
+  setupRealtime()
 }
 
+// ---------------------------------------------------------------------------
+// Hydration (called once by StoreHydrationProvider)
+// ---------------------------------------------------------------------------
+
+export async function hydratePatientStore(): Promise<void> {
+  if (typeof window === 'undefined') return
+  if (!_loadPromise) {
+    _loadPromise = loadPatients()
+  }
+  return _loadPromise
+}
+
+// ---------------------------------------------------------------------------
+// patientStore — public CRUD API
+// ---------------------------------------------------------------------------
+
 export const patientStore = {
-  getAll: () => _patients,
-  getById: (id: string) => _patients.find((p) => p.id === id) ?? null,
-  getByClinic: (clinicId: string) => _patients.filter((p) => p.clinic_id === clinicId),
-  search: (query: string, clinicId?: string) => {
+  getAll: (): Patient[] => _patients,
+
+  getById: (id: string): Patient | null =>
+    _patients.find((p) => p.id === id) ?? null,
+
+  getByClinic: (clinicId: string): Patient[] =>
+    _patients.filter((p) => p.clinic_id === clinicId),
+
+  search: (query: string, clinicId?: string): Patient[] => {
     const q = query.toLowerCase()
     return _patients.filter((p) => {
       if (clinicId && p.clinic_id !== clinicId) return false
@@ -171,31 +112,103 @@ export const patientStore = {
       )
     })
   },
-  create: (data: Omit<Patient, 'id' | 'created_at' | 'updated_at'>) => {
+
+  create: async (
+    data: Omit<Patient, 'id' | 'created_at' | 'updated_at'>,
+  ): Promise<Patient> => {
+    const supabase = getSupabaseClient()
     const now = new Date().toISOString()
-    const item: Patient = { ...data, id: genId(), created_at: now, updated_at: now }
-    _patients = [..._patients, item]
+
+    // Optimistic local insert with a temporary id
+    const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+    const optimistic: Patient = { ...data, id: tempId, created_at: now, updated_at: now }
+    _patients = [optimistic, ..._patients]
     notify()
-    return item
+
+    const { data: inserted, error } = await supabase
+      .from('patients')
+      .insert(data)
+      .select()
+      .single()
+
+    if (error) {
+      // Roll back optimistic insert
+      _patients = _patients.filter((p) => p.id !== tempId)
+      notify()
+      throw new Error(error.message)
+    }
+
+    const confirmed = inserted as Patient
+    // Replace optimistic record with confirmed one from DB
+    _patients = _patients.map((p) => (p.id === tempId ? confirmed : p))
+    notify()
+    return confirmed
   },
-  update: (id: string, data: Partial<Patient>) => {
+
+  update: async (id: string, data: Partial<Patient>): Promise<void> => {
+    const supabase = getSupabaseClient()
+    const now = new Date().toISOString()
+
+    // Optimistic update
+    const prev = _patients.find((p) => p.id === id)
     _patients = _patients.map((p) =>
-      p.id === id ? { ...p, ...data, updated_at: new Date().toISOString() } : p,
+      p.id === id ? { ...p, ...data, updated_at: now } : p,
     )
     notify()
+
+    const { error } = await supabase
+      .from('patients')
+      .update({ ...data, updated_at: now })
+      .eq('id', id)
+
+    if (error) {
+      // Roll back
+      if (prev) {
+        _patients = _patients.map((p) => (p.id === id ? prev : p))
+      }
+      notify()
+      throw new Error(error.message)
+    }
   },
-  delete: (id: string) => {
+
+  delete: async (id: string): Promise<void> => {
+    const supabase = getSupabaseClient()
+
+    // Optimistic delete
+    const prev = _patients.find((p) => p.id === id)
     _patients = _patients.filter((p) => p.id !== id)
     notify()
+
+    const { error } = await supabase.from('patients').delete().eq('id', id)
+
+    if (error) {
+      // Roll back
+      if (prev) {
+        _patients = [..._patients, prev].sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+        )
+      }
+      notify()
+      throw new Error(error.message)
+    }
   },
 }
 
-export function usePatientStore() {
+// ---------------------------------------------------------------------------
+// usePatientStore — React hook
+// ---------------------------------------------------------------------------
+
+export function usePatientStore(): Patient[] {
   const [, forceUpdate] = useState(0)
+
   useEffect(() => {
     const fn = () => forceUpdate((n) => n + 1)
     _listeners.push(fn)
-    return () => { _listeners = _listeners.filter((l) => l !== fn) }
+    return () => {
+      _listeners = _listeners.filter((l) => l !== fn)
+    }
   }, [])
+
   return _patients
 }

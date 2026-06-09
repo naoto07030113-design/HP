@@ -3,93 +3,79 @@
 import { useState, useEffect } from 'react'
 import type { Announcement } from '@/types/announcement'
 import { format } from 'date-fns'
-import { secureSet, secureGet } from './secure-storage'
+import { getSupabaseClient } from './supabase'
 
-const DEMO_ANNOUNCEMENTS: Announcement[] = [
-  {
-    id: 'ann-1',
-    banner_mode: 'text',
-    title: '【夏季休業のお知らせ】8月13日(火)〜15日(木) 全院休業',
-    body: '誠に勝手ながら、上記期間を夏季休業とさせていただきます。ご不便をおかけして申し訳ございません。',
-    image_url: null, image_path: null, image_alt: null, attachment_name: null,
-    scope: 'company', clinic_id: null,
-    type: 'important',
-    start_date: format(new Date(), 'yyyy-MM-dd'),
-    end_date: format(new Date(Date.now() + 30 * 86400000), 'yyyy-MM-dd'),
-    is_active: true, display_order: 0,
-    link_url: null, link_label: null,
-    created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'ann-2',
-    banner_mode: 'text',
-    title: '【初回限定キャンペーン】初診カウンセリング料0円！',
-    body: '7月末まで、初診カウンセリング（通常5,500円）を無料でご提供しております。',
-    image_url: null, image_path: null, image_alt: null, attachment_name: null,
-    scope: 'company', clinic_id: null,
-    type: 'campaign',
-    start_date: format(new Date(), 'yyyy-MM-dd'),
-    end_date: format(new Date(Date.now() + 60 * 86400000), 'yyyy-MM-dd'),
-    is_active: true, display_order: 1,
-    link_url: null, link_label: '詳細はこちら',
-    created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'ann-3',
-    banner_mode: 'text',
-    title: '【本院 駐車場案内】近隣コインパーキングのご利用をお願いします',
-    body: '院前の駐車スペースは満車になりやすい時間帯があります。お近くのコインパーキングをご利用ください。',
-    image_url: null, image_path: null, image_alt: null, attachment_name: null,
-    scope: 'clinic', clinic_id: 'clinic-1',
-    type: 'normal',
-    start_date: format(new Date(), 'yyyy-MM-dd'),
-    end_date: format(new Date(Date.now() + 365 * 86400000), 'yyyy-MM-dd'),
-    is_active: true, display_order: 0,
-    link_url: null, link_label: null,
-    created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-  },
-]
-
-const KEY_ENC = 'announcement_store_v2_enc'
-const KEY_OLD = 'announcement_store_v2'
-
-let _items: Announcement[] = DEMO_ANNOUNCEMENTS
+let _items: Announcement[] = []
 let _listeners: Array<() => void> = []
-
-function notifyListeners() { _listeners.forEach((fn) => fn()) }
+let _loadPromise: Promise<void> | null = null
 
 function notify() {
-  notifyListeners()
-  secureSet(KEY_ENC, _items)
+  _listeners.forEach((fn) => fn())
 }
 
-export async function hydrateAnnouncementsStore() {
-  if (typeof window === 'undefined') return
+// ── Data loading ──────────────────────────────────────────
 
-  const data = await secureGet<Announcement[]>(KEY_ENC)
-  if (data && data.length > 0) {
-    _items = data
-    notifyListeners()
+async function loadFromSupabase(): Promise<void> {
+  const supabase = getSupabaseClient()
+
+  const { data, error } = await supabase
+    .from('announcements')
+    .select('*')
+    .order('display_order', { ascending: true })
+    .order('start_date', { ascending: false })
+
+  if (error) {
+    console.error('[announcement-store] load error:', error.message)
     return
   }
 
-  const old = localStorage.getItem(KEY_OLD)
-  if (old) {
-    try {
-      const parsed = JSON.parse(old) as Announcement[]
-      _items = parsed
-      notifyListeners()
-      await secureSet(KEY_ENC, _items)
-      localStorage.removeItem(KEY_OLD)
-    } catch {}
-  }
+  _items = (data ?? []) as Announcement[]
+  notify()
 }
 
-function genId() { return `ann-${Date.now()}-${Math.random().toString(36).slice(2, 6)}` }
+// ── Realtime ──────────────────────────────────────────
+
+function setupRealtime() {
+  const supabase = getSupabaseClient()
+
+  supabase
+    .channel('announcement-store')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'announcements' }, (payload) => {
+      if (payload.eventType === 'INSERT') {
+        _items = [..._items, payload.new as Announcement].sort(
+          (a, b) => a.display_order - b.display_order,
+        )
+        notify()
+      } else if (payload.eventType === 'UPDATE') {
+        _items = _items.map((a) =>
+          a.id === payload.new.id ? (payload.new as Announcement) : a,
+        )
+        notify()
+      } else if (payload.eventType === 'DELETE') {
+        _items = _items.filter((a) => a.id !== payload.old.id)
+        notify()
+      }
+    })
+    .subscribe()
+}
+
+/** Called by StoreHydrationProvider on app startup. Safe to call multiple times. */
+export async function hydrateAnnouncementsStore(): Promise<void> {
+  if (typeof window === 'undefined') return
+  if (!_loadPromise) {
+    _loadPromise = loadFromSupabase().then(() => {
+      setupRealtime()
+    })
+  }
+  return _loadPromise
+}
+
+// ── Store ──────────────────────────────────────────
 
 export const announcementsStore = {
   getAll: () => _items,
-  getActive: (scope: 'company' | 'clinic', clinicId?: string) => {
+
+  getActive: (scope: 'company' | 'clinic', clinicId?: string): Announcement[] => {
     const today = format(new Date(), 'yyyy-MM-dd')
     return _items
       .filter((a) => {
@@ -100,36 +86,95 @@ export const announcementsStore = {
       })
       .sort((a, b) => a.display_order - b.display_order)
   },
-  create: (data: Omit<Announcement, 'id' | 'created_at' | 'updated_at' | 'image_path'>) => {
+
+  create: async (
+    data: Omit<Announcement, 'id' | 'created_at' | 'updated_at' | 'image_path'>,
+  ): Promise<Announcement> => {
+    const supabase = getSupabaseClient()
     const now = new Date().toISOString()
-    const item: Announcement = { ...data, id: genId(), image_path: null, created_at: now, updated_at: now }
-    _items = [..._items, item]
+    const optimistic: Announcement = {
+      ...data,
+      id: `opt-${Date.now()}`,
+      image_path: null,
+      created_at: now,
+      updated_at: now,
+    }
+    _items = [..._items, optimistic]
     notify()
-    return item
-  },
-  update: (id: string, data: Partial<Announcement>) => {
-    _items = _items.map((a) => a.id === id ? { ...a, ...data, updated_at: new Date().toISOString() } : a)
+
+    const { data: created, error } = await supabase
+      .from('announcements')
+      .insert({ ...data, image_path: null })
+      .select()
+      .single()
+
+    if (error) {
+      _items = _items.filter((a) => a.id !== optimistic.id)
+      notify()
+      throw error
+    }
+
+    _items = _items.map((a) =>
+      a.id === optimistic.id ? (created as Announcement) : a,
+    )
     notify()
+    return created as Announcement
   },
-  delete: (id: string) => {
+
+  update: async (id: string, data: Partial<Announcement>): Promise<void> => {
+    const supabase = getSupabaseClient()
+    const now = new Date().toISOString()
+    _items = _items.map((a) =>
+      a.id === id ? { ...a, ...data, updated_at: now } : a,
+    )
+    notify()
+
+    const { error } = await supabase
+      .from('announcements')
+      .update({ ...data, updated_at: now })
+      .eq('id', id)
+
+    if (error) throw error
+  },
+
+  delete: async (id: string): Promise<void> => {
+    const supabase = getSupabaseClient()
     _items = _items.filter((a) => a.id !== id)
     notify()
+
+    const { error } = await supabase.from('announcements').delete().eq('id', id)
+    if (error) throw error
   },
-  reorder: (fromIdx: number, toIdx: number) => {
+
+  reorder: async (fromIdx: number, toIdx: number): Promise<void> => {
+    const supabase = getSupabaseClient()
     const sorted = [..._items].sort((a, b) => a.display_order - b.display_order)
     const [item] = sorted.splice(fromIdx, 1)
     sorted.splice(toIdx, 0, item)
-    _items = sorted.map((a, i) => ({ ...a, display_order: i }))
+    const reordered = sorted.map((a, i) => ({ ...a, display_order: i }))
+    _items = reordered
     notify()
+
+    const updates = reordered.map((a) =>
+      supabase
+        .from('announcements')
+        .update({ display_order: a.display_order })
+        .eq('id', a.id),
+    )
+    await Promise.all(updates)
   },
 }
 
-export function useAnnouncementsStore() {
+// ── React hook ──────────────────────────────────────────
+
+export function useAnnouncementsStore(): Announcement[] {
   const [, forceUpdate] = useState(0)
   useEffect(() => {
     const fn = () => forceUpdate((n) => n + 1)
     _listeners.push(fn)
-    return () => { _listeners = _listeners.filter((l) => l !== fn) }
+    return () => {
+      _listeners = _listeners.filter((l) => l !== fn)
+    }
   }, [])
   return _items
 }

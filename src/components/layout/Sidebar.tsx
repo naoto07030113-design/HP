@@ -1,13 +1,14 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import {
   Calendar, ClipboardList, Building2, Users, BookOpen,
   Clock, Download, Megaphone, ExternalLink, UserRound, FileText,
-  Receipt, BarChart2, MessageSquare, Settings,
+  Receipt, BarChart2, MessageSquare, Settings, LogOut,
 } from 'lucide-react'
+import { getSupabaseClient } from '@/lib/supabase'
 
 const NAV_ITEMS = [
   {
@@ -52,6 +53,13 @@ interface Props {
 
 export function Sidebar({ onClose }: Props) {
   const pathname = usePathname()
+  const router = useRouter()
+
+  async function handleSignOut() {
+    onClose?.()
+    await getSupabaseClient().auth.signOut()
+    router.replace('/admin/login')
+  }
 
   return (
     <div className="flex flex-col h-full bg-white border-r border-green-100">
@@ -107,8 +115,15 @@ export function Sidebar({ onClose }: Props) {
       </nav>
 
       {/* フッター */}
-      <div className="px-4 py-3 border-t border-green-100">
+      <div className="px-4 py-3 border-t border-green-100 space-y-2">
         <p className="text-xs text-muted-foreground">イトーメディカルケア 業務システム</p>
+        <button
+          onClick={handleSignOut}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-red-600 transition-colors"
+        >
+          <LogOut className="w-3.5 h-3.5" />
+          ログアウト
+        </button>
       </div>
     </div>
   )
