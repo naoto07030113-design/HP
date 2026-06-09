@@ -1,5 +1,12 @@
 import Link from 'next/link'
-import { MapPin, ExternalLink, Phone } from 'lucide-react'
+import { MapPin, ExternalLink, Award, Leaf, Building2 } from 'lucide-react'
+import { Noto_Sans_JP } from 'next/font/google'
+
+const notoSans = Noto_Sans_JP({
+  weight: ['400', '500', '700'],
+  subsets: ['latin'],
+  display: 'swap',
+})
 
 const clinics = [
   {
@@ -58,12 +65,14 @@ const clinics = [
 
 export default function CompanyHomePage() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className={`${notoSans.className} min-h-screen bg-white`}>
       {/* ===== Header ===== */}
       <header className="bg-green-900 text-white sticky top-0 z-50 shadow-lg">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <Link href="/site" className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-[10px] font-bold tracking-tight">IMC</div>
+            <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-[10px] font-bold tracking-tight">
+              IMC
+            </div>
             <div className="leading-tight">
               <p className="text-[10px] text-green-400">有限会社</p>
               <p className="text-sm font-bold">イトーメディカルケア</p>
@@ -141,29 +150,33 @@ export default function CompanyHomePage() {
       <section className="py-20 bg-gray-50">
         <div className="max-w-6xl mx-auto px-4">
           <div className="text-center mb-14">
-            <h2 className="text-2xl md:text-3xl font-bold text-green-900 mb-2">イトーメディカルケアの強み</h2>
+            <h2 className="text-2xl md:text-3xl font-bold text-green-900 mb-2">
+              イトーメディカルケアの強み
+            </h2>
             <p className="text-gray-400 text-xs tracking-widest">OUR STRENGTHS</p>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
             {[
               {
-                icon: '🏅',
+                Icon: Award,
                 title: '国家資格保持スタッフ',
                 desc: '柔道整復師・はり師・きゅう師・マッサージ師など、厚生労働省認定の国家資格保持者が施術にあたります。',
               },
               {
-                icon: '🌿',
+                Icon: Leaf,
                 title: 'オーダーメイドの施術',
                 desc: 'カウンセリングを大切にし、患者様の症状・体質・生活スタイルに合わせた施術プランをご提案します。',
               },
               {
-                icon: '🏥',
+                Icon: Building2,
                 title: '4院で地域密着サポート',
                 desc: '袖ケ浦市・富津市の4院が連携。治療院から美容鍼サロンまで、あらゆるニーズにお応えします。',
               },
             ].map((f) => (
               <div key={f.title} className="bg-white rounded-2xl p-8 shadow-sm hover:shadow-md transition">
-                <div className="text-4xl mb-4">{f.icon}</div>
+                <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mb-5">
+                  <f.Icon size={22} className="text-green-800" />
+                </div>
                 <h3 className="font-bold text-lg text-green-900 mb-3">{f.title}</h3>
                 <p className="text-gray-600 text-sm leading-relaxed">{f.desc}</p>
               </div>
@@ -187,7 +200,9 @@ export default function CompanyHomePage() {
               >
                 <div
                   className="p-8 text-white"
-                  style={{ background: `linear-gradient(135deg, ${clinic.bgFrom} 0%, ${clinic.bgTo} 100%)` }}
+                  style={{
+                    background: `linear-gradient(135deg, ${clinic.bgFrom} 0%, ${clinic.bgTo} 100%)`,
+                  }}
                 >
                   <p className="text-[10px] opacity-50 tracking-widest mb-2">{clinic.nameEn}</p>
                   <span className="text-xs bg-white/15 px-2 py-0.5 rounded-full mb-3 inline-block">
@@ -196,7 +211,10 @@ export default function CompanyHomePage() {
                   <h3 className="text-xl font-bold mb-3">{clinic.name}</h3>
                   <div className="flex flex-wrap gap-1">
                     {clinic.services.map((s) => (
-                      <span key={s} className="text-xs bg-white/15 border border-white/20 px-2 py-0.5 rounded-full">
+                      <span
+                        key={s}
+                        className="text-xs bg-white/15 border border-white/20 px-2 py-0.5 rounded-full"
+                      >
                         {s}
                       </span>
                     ))}
@@ -257,7 +275,9 @@ export default function CompanyHomePage() {
                 ].map(([label, value], i) => (
                   <tr
                     key={label}
-                    className={`${i % 2 === 0 ? 'bg-gray-50' : 'bg-white'} border-b border-gray-100 last:border-0`}
+                    className={`${
+                      i % 2 === 0 ? 'bg-gray-50' : 'bg-white'
+                    } border-b border-gray-100 last:border-0`}
                   >
                     <td className="py-4 px-6 font-semibold text-green-900 w-1/3">{label}</td>
                     <td className="py-4 px-6 text-gray-600">{value}</td>
@@ -275,7 +295,9 @@ export default function CompanyHomePage() {
           <div className="grid md:grid-cols-2 gap-10 mb-10">
             <div>
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center text-xs font-bold tracking-tight">IMC</div>
+                <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center text-xs font-bold tracking-tight">
+                  IMC
+                </div>
                 <div className="leading-tight">
                   <p className="text-xs text-green-400">有限会社</p>
                   <p className="font-bold text-lg">イトーメディカルケア</p>
