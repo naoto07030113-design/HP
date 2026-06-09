@@ -3,8 +3,9 @@ import { NextRequest, NextResponse } from 'next/server'
 export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
 
-  // Clinic system routes — auth handled by admin/layout.tsx and reserve pages themselves
+  // Clinic system routes + root — auth handled by admin/layout.tsx and reserve pages themselves
   if (
+    pathname === '/' ||
     pathname.startsWith('/admin') ||
     pathname.startsWith('/reserve') ||
     pathname.startsWith('/auth') ||
