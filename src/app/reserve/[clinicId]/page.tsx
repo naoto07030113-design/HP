@@ -103,6 +103,7 @@ export default function ReserveClinicPage() {
   const [currentMedications, setCurrentMedications] = useState('')
   const [allergies, setAllergies] = useState('')
   const [referralSource, setReferralSource] = useState('')
+  const [referralName, setReferralName] = useState('')
   const [memo, setMemo] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [calendarOffset, setCalendarOffset] = useState(0)
@@ -174,6 +175,7 @@ export default function ReserveClinicPage() {
         current_medications: currentMedications,
         allergies: allergies,
         referral_source: referralSource,
+        referral_name: referralSource === '紹介' ? referralName || null : null,
       }
       try {
         const res = await fetch('/api/intake', {
@@ -190,7 +192,7 @@ export default function ReserveClinicPage() {
       await reservationsStore.create({
         ...reservationData,
         patient_id: null,
-        referral_name: null,
+        referral_name: referralSource === '紹介' ? referralName || null : null,
         status: 'confirmed',
       })
     }
@@ -519,14 +521,18 @@ export default function ReserveClinicPage() {
                           onChange={(e) => setAllergies(e.target.value)}
                           placeholder="食品・薬品・金属など（ない場合は空欄）" className="h-10" />
                       </div>
-                      <div className="space-y-1.5">
+                      <div className="space-y-2">
                         <Label className="text-sm font-semibold">来院のきっかけ</Label>
                         <div className="grid grid-cols-3 gap-2">
                           {['紹介', 'インターネット', 'SNS', 'チラシ', '通りがかり', 'その他'].map((src) => (
                             <button
                               key={src}
                               type="button"
-                              onClick={() => setReferralSource(src === referralSource ? '' : src)}
+                              onClick={() => {
+                                const next = src === referralSource ? '' : src
+                                setReferralSource(next)
+                                if (next !== '紹介') setReferralName('')
+                              }}
                               className={cn(
                                 'rounded-lg border py-2 text-xs font-medium transition-all',
                                 referralSource === src
@@ -538,6 +544,18 @@ export default function ReserveClinicPage() {
                             </button>
                           ))}
                         </div>
+                        {referralSource === '紹介' && (
+                          <div className="space-y-1.5 pt-1">
+                            <Label htmlFor="referral-name" className="text-sm font-semibold">紹介者のお名前</Label>
+                            <Input
+                              id="referral-name"
+                              value={referralName}
+                              onChange={(e) => setReferralName(e.target.value)}
+                              placeholder="山田 太郎"
+                              className="h-10"
+                            />
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -545,11 +563,42 @@ export default function ReserveClinicPage() {
               )}
 
               {visitType === 'return' && (
-                <div className="space-y-1.5">
-                  <Label htmlFor="memo" className="text-sm font-semibold">今回の症状・ご要望（任意）</Label>
-                  <Textarea id="memo" value={memo} onChange={(e) => setMemo(e.target.value)}
-                    placeholder="腰痛・肩こり など" rows={3} />
-                </div>
+                <>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="memo" className="text-sm font-semibold">今回の症状・ご要望（任意）</Label>
+                    <Textarea id="memo" value={memo} onChange={(e) => setMemo(e.target.value)}
+                      placeholder="腰痛・肩こり など" rows={3} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold">ご紹介の方はいますか？（任意）</Label>
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = referralSource === '紹介' ? '' : '紹介'
+                          setReferralSource(next)
+                          if (next !== '紹介') setReferralName('')
+                        }}
+                        className={cn(
+                          'rounded-lg border px-4 py-2 text-sm font-medium transition-all',
+                          referralSource === '紹介'
+                            ? 'border-green-600 bg-green-700 text-white'
+                            : 'border-border bg-white hover:border-green-300',
+                        )}
+                      >
+                        紹介あり
+                      </button>
+                      {referralSource === '紹介' && (
+                        <Input
+                          value={referralName}
+                          onChange={(e) => setReferralName(e.target.value)}
+                          placeholder="紹介者のお名前"
+                          className="h-9 flex-1"
+                        />
+                      )}
+                    </div>
+                  </div>
+                </>
               )}
             </div>
             <Button
@@ -583,6 +632,9 @@ export default function ReserveClinicPage() {
                 <Row label="お名前" value={patientName} />
                 {patientPhone && <Row label="電話番号" value={patientPhone} />}
                 {memo && <Row label="ご要望" value={memo} />}
+                {referralSource === '紹介' && referralName && (
+                  <Row label="紹介者" value={`${referralName}様`} />
+                )}
               </div>
             </div>
             {visitType === 'first' && (
@@ -593,7 +645,12 @@ export default function ReserveClinicPage() {
                 {patientBirthDate && <Row label="生年月日" value={patientBirthDate} />}
                 {patientEmail && <Row label="メール" value={patientEmail} />}
                 {chiefComplaint && <Row label="主な症状" value={chiefComplaint} />}
-                {referralSource && <Row label="来院のきっかけ" value={referralSource} />}
+                {referralSource && (
+                  <Row
+                    label="来院のきっかけ"
+                    value={referralSource === '紹介' && referralName ? `紹介（${referralName}様）` : referralSource}
+                  />
+                )}
               </div>
             )}
             <Button className="w-full h-12 text-base font-bold" onClick={handleConfirm} disabled={submitting}>
