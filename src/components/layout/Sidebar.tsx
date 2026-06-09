@@ -7,7 +7,7 @@ import {
   Calendar, ClipboardList, ClipboardCheck, Building2, Users, BookOpen,
   Clock, Download, Megaphone, ExternalLink, UserRound, FileText,
   Receipt, BarChart2, MessageSquare, Settings, LogOut, ShieldCheck,
-  LayoutList, Bell,
+  LayoutList, Bell, LayoutDashboard, FileBarChart, BrainCircuit,
 } from 'lucide-react'
 import { getSupabaseClient } from '@/lib/supabase'
 import { useCurrentUser, PERMISSIONS, ROLE_LABELS } from '@/lib/auth-store'
@@ -41,6 +41,32 @@ const NAV_ITEMS: NavGroup[] = [
       {
         href: '/admin/daily', label: '日計表', icon: LayoutList,
         show: (u) => u ? PERMISSIONS.canViewAccounting(u.role) : false,
+      },
+    ],
+  },
+  {
+    section: '経営管理',
+    show: (u) => u ? PERMISSIONS.canAccessDashboard(u.role) : false,
+    items: [
+      {
+        href: '/admin/dashboard/executive', label: '経営ダッシュボード', icon: LayoutDashboard,
+        show: (u) => u ? PERMISSIONS.canAccessDashboard(u.role) : false,
+      },
+      {
+        href: '/admin/dashboard/clinic', label: '院別ダッシュボード', icon: Building2,
+        show: (u) => u ? PERMISSIONS.canAccessDashboard(u.role) : false,
+      },
+      {
+        href: '/admin/dashboard/staff', label: 'スタッフ別ダッシュボード', icon: Users,
+        show: (u) => u ? PERMISSIONS.canAccessDashboard(u.role) : false,
+      },
+      {
+        href: '/admin/reports/meeting-ai', label: '経営会議AI', icon: BrainCircuit,
+        show: (u) => u ? PERMISSIONS.canAccessReports(u.role) : false,
+      },
+      {
+        href: '/admin/reports/monthly', label: '月次レポート', icon: FileBarChart,
+        show: (u) => u ? PERMISSIONS.canAccessReports(u.role) : false,
       },
     ],
   },

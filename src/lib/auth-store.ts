@@ -61,11 +61,12 @@ export function useCurrentUser(): CurrentUser | null {
 
 // Permission checks per role
 export const PERMISSIONS = {
-  // These pages/actions are restricted by role
   canAccessSettings:       (r: UserRole) => r === 'admin',
   canAccessAnalytics:      (r: UserRole) => r === 'admin' || r === 'staff',
   canAccessCommunications: (r: UserRole) => r === 'admin' || r === 'staff',
   canAccessExports:        (r: UserRole) => r === 'admin',
+  canAccessDashboard:      (r: UserRole) => r === 'admin' || r === 'staff',
+  canAccessReports:        (r: UserRole) => r === 'admin',
   canManageClinics:        (r: UserRole) => r === 'admin',
   canManageStaff:          (r: UserRole) => r === 'admin',
   canManageMenus:          (r: UserRole) => r === 'admin',
