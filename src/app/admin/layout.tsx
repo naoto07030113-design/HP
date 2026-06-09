@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { getSupabaseClient } from '@/lib/supabase'
 import { AppShell } from '@/components/layout/AppShell'
+import { StoreHydrationProvider } from '@/components/providers/StoreHydrationProvider'
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -43,5 +44,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   if (isLoginPage) return <>{children}</>
 
-  return <AppShell>{children}</AppShell>
+  return (
+    <StoreHydrationProvider>
+      <AppShell>{children}</AppShell>
+    </StoreHydrationProvider>
+  )
 }
