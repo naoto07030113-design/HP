@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { format, addDays, isSameDay, parseISO } from 'date-fns'
+import { format, addDays, isSameDay, parseISO, startOfWeek } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -112,10 +112,11 @@ export default function ReserveClinicPage() {
   )
   const availableStaff = store.staff.filter((s) => s.clinic_id === clinicId && s.is_active && s.is_bookable)
 
-  // カレンダー: 今日から14日分
+  // カレンダー: 今週の日曜から2週間分（週の境界に合わせる）
+  const calendarBaseDate = useMemo(() => startOfWeek(new Date(), { weekStartsOn: 0 }), [])
   const calendarDays = useMemo(() =>
-    Array.from({ length: 14 }, (_, i) => addDays(new Date(), i + calendarOffset * 14)),
-    [calendarOffset],
+    Array.from({ length: 14 }, (_, i) => addDays(calendarBaseDate, i + calendarOffset * 14)),
+    [calendarBaseDate, calendarOffset],
   )
 
   // 利用可能時間帯
@@ -328,32 +329,42 @@ export default function ReserveClinicPage() {
                   <ChevronLeft className="w-5 h-5 text-green-700" />
                 </button>
                 <span className="text-sm font-medium text-green-900">
-                  {format(calendarDays[0], 'yyyy年M月', { locale: ja })}
+                  {format(calendarDays[0], 'M月', { locale: ja })}
+                  {format(calendarDays[0], 'M') !== format(calendarDays[13], 'M') && (
+                    <>〜{format(calendarDays[13], 'M月', { locale: ja })}</>
+                  )}
+                  {' '}{format(calendarDays[0], 'yyyy')}
                 </span>
                 <button onClick={() => setCalendarOffset((o) => o + 1)} className="p-1 rounded hover:bg-green-50">
                   <ChevronRight className="w-5 h-5 text-green-700" />
                 </button>
               </div>
               <div className="grid grid-cols-7 gap-1 text-center">
-                {['月', '火', '水', '木', '金', '土', '日'].map((d, i) => (
-                  <div key={d} className={cn('text-xs font-medium py-1', i === 5 && 'text-blue-500', i === 6 && 'text-red-500')}>
+                {['日', '月', '火', '水', '木', '金', '土'].map((d, i) => (
+                  <div key={d} className={cn('text-xs font-medium py-1', i === 0 && 'text-red-500', i === 6 && 'text-blue-500')}>
                     {d}
                   </div>
                 ))}
               </div>
               <div className="grid grid-cols-7 gap-1">
                 {calendarDays.map((day) => {
-                  const dow = (day.getDay() + 6) % 7
+                  const dow = day.getDay() // 0=日, 6=土
+                  const isPast = day < new Date(new Date().setHours(0, 0, 0, 0))
                   return (
                     <button
                       key={day.toISOString()}
+                      disabled={isPast}
                       onClick={() => { setSelectedDate(day); goNext() }}
                       className={cn(
-                        'rounded-lg py-2.5 text-sm font-medium transition-all hover:bg-green-100',
-                        isSameDay(day, new Date()) && 'border border-green-500',
+                        'rounded-lg py-2.5 text-sm font-medium transition-all',
+                        isPast
+                          ? 'text-gray-300 cursor-not-allowed'
+                          : 'hover:bg-green-100',
+                        isSameDay(day, new Date()) && !isPast && 'border border-green-500',
                         selectedDate && isSameDay(day, selectedDate) && 'bg-green-700 text-white hover:bg-green-800',
-                        dow === 5 && 'text-blue-500',
-                        dow === 6 && 'text-red-500',
+                        !isPast && dow === 0 && 'text-red-500',
+                        !isPast && dow === 6 && 'text-blue-500',
+                        selectedDate && isSameDay(day, selectedDate) && 'text-white',
                       )}
                     >
                       {format(day, 'd')}

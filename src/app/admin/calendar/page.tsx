@@ -34,7 +34,7 @@ export default function CalendarPage() {
   const [detailRes, setDetailRes] = useState<Reservation | null>(null)
 
   const clinic = store.clinics.find((c) => c.id === selectedClinicId)
-  const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 })
+  const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 })
 
   function goBack() {
     if (view === 'day') setCurrentDate((d) => subDays(d, 1))

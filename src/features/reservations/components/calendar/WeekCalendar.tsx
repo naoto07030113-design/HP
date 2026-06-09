@@ -16,8 +16,8 @@ interface Props {
   onReservationClick: (r: Reservation) => void
 }
 
-const DAY_LABELS = ['月', '火', '水', '木', '金', '土', '日']
-const DAY_COLORS = ['', '', '', '', '', 'text-blue-600', 'text-red-600']
+const DAY_LABELS = ['日', '月', '火', '水', '木', '金', '土']
+const DAY_COLORS = ['text-red-600', '', '', '', '', '', 'text-blue-600']
 
 export function WeekCalendar({
   weekStart, clinic, staff, reservations, menus, onDateClick, onReservationClick,
