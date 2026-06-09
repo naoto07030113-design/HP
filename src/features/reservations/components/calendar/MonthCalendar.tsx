@@ -2,6 +2,9 @@
 
 import { useMemo } from 'react'
 import { format, startOfMonth, startOfWeek, addDays, isSameMonth, isToday } from 'date-fns'
+import { ja } from 'date-fns/locale'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import type { Reservation } from '@/types/clinic'
 
 interface Props {
@@ -9,11 +12,14 @@ interface Props {
   clinicId: string
   reservations: Reservation[]
   onDateClick: (date: string) => void
+  onPrevMonth: () => void
+  onNextMonth: () => void
+  onToday: () => void
 }
 
 const DOW = ['日', '月', '火', '水', '木', '金', '土']
 
-export function MonthCalendar({ month, clinicId, reservations, onDateClick }: Props) {
+export function MonthCalendar({ month, clinicId, reservations, onDateClick, onPrevMonth, onNextMonth, onToday }: Props) {
   const weeks = useMemo(() => {
     const start = startOfWeek(startOfMonth(month), { weekStartsOn: 0 })
     return Array.from({ length: 6 }, (_, w) =>
@@ -33,6 +39,24 @@ export function MonthCalendar({ month, clinicId, reservations, onDateClick }: Pr
 
   return (
     <div className="flex flex-col h-full select-none">
+      {/* 月ナビゲーション */}
+      <div className="flex items-center justify-between px-4 py-2 border-b border-green-100 bg-white flex-shrink-0">
+        <div className="flex items-center gap-1">
+          <Button variant="outline" size="icon" className="h-8 w-8" onClick={onPrevMonth}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" size="sm" className="h-8 px-3 text-xs" onClick={onToday}>
+            今月
+          </Button>
+          <Button variant="outline" size="icon" className="h-8 w-8" onClick={onNextMonth}>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+        <span className="text-sm font-semibold text-green-900">
+          {format(month, 'yyyy年M月', { locale: ja })}
+        </span>
+      </div>
+
       {/* 曜日ヘッダー */}
       <div className="grid grid-cols-7 border-b border-green-100 bg-green-50/50">
         {DOW.map((d, i) => (

@@ -151,6 +151,9 @@ export default function CalendarPage() {
             clinicId={selectedClinicId}
             reservations={store.reservations}
             onDateClick={(date) => { setCurrentDate(new Date(date + 'T00:00:00')); setView('day') }}
+            onPrevMonth={goBack}
+            onNextMonth={goForward}
+            onToday={goToday}
           />
         )}
         {clinic && view === 'day' && (
