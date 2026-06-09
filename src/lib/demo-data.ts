@@ -11,8 +11,8 @@ export const DEMO_CLINICS: Clinic[] = [
     name: 'イトー鍼灸整骨院（本院）',
     address: '〒299-0211 千葉県袖ケ浦市野里1770-3',
     phone: '0438-75-5557',
-    open_time: '09:30',
-    close_time: '20:30',
+    open_time: '09:00',
+    close_time: '19:30',
     is_active: true,
     sort_order: 0,
     created_at: NOW,
@@ -32,7 +32,7 @@ export const DEMO_CLINICS: Clinic[] = [
   },
   {
     id: 'clinic-3',
-    name: 'SANRI鍼灸整骨院',
+    name: 'SANRI鍼灸整骨院（イオンモール富津店）',
     address: '〒293-0012 千葉県富津市青木1丁目5番地1 イオンモール富津3F',
     phone: '0439-32-1771',
     open_time: '10:00',
@@ -44,11 +44,11 @@ export const DEMO_CLINICS: Clinic[] = [
   },
   {
     id: 'clinic-4',
-    name: 'Hari-na',
-    address: '千葉県袖ケ浦市',
-    phone: '',
-    open_time: '10:00',
-    close_time: '19:00',
+    name: '伊藤リハビリセンター',
+    address: '〒299-0211 千葉県袖ケ浦市野里1770-3',
+    phone: '0438-75-7737',
+    open_time: '09:00',
+    close_time: '18:00',
     is_active: true,
     sort_order: 3,
     created_at: NOW,
@@ -137,12 +137,12 @@ export const DEMO_STAFF: Staff[] = [
     created_at: NOW,
     updated_at: NOW,
   },
-  // Hari-na
+  // 伊藤リハビリセンター
   {
     id: 'staff-8',
     clinic_id: 'clinic-4',
     name: '小林 梨花',
-    role: '鍼灸師',
+    role: 'あん摩マッサージ指圧師',
     is_bookable: true,
     is_active: true,
     sort_order: 0,
@@ -395,7 +395,7 @@ export const DEMO_MENUS: Menu[] = [
     created_at: NOW,
     updated_at: NOW,
   },
-  // ── Hari-na（clinic-4）──────────────────────────────
+  // ── 伊藤リハビリセンター（clinic-4）──────────────────────────────
   {
     id: 'menu-c4-1',
     clinic_id: 'clinic-4',
