@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Plus, Pencil, BookOpen } from 'lucide-react'
@@ -24,9 +25,14 @@ export default function MenusPage() {
   function openEdit(m: Menu) { setEditTarget(m); setFormOpen(true) }
   function openAdd() { setEditTarget(null); setFormOpen(true) }
 
-  function handleSubmit(data: MenuFormData) {
-    if (editTarget) menusStore.update(editTarget.id, data)
-    else menusStore.create(data)
+  async function handleSubmit(data: MenuFormData) {
+    try {
+      if (editTarget) await menusStore.update(editTarget.id, data)
+      else await menusStore.create(data)
+      toast.success('保存しました')
+    } catch {
+      toast.error('保存に失敗しました')
+    }
   }
 
   return (

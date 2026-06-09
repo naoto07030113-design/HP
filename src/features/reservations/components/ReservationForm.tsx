@@ -11,7 +11,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Textarea } from '@/components/ui/textarea'
 import { format, parseISO, addMinutes } from 'date-fns'
 import { usePatientStore, patientStore } from '@/lib/patient-store'
-import { Search, UserCheck } from 'lucide-react'
+import { useClinicStore } from '@/lib/clinic-store'
+import { toast } from 'sonner'
+import { Search, UserCheck, AlertTriangle } from 'lucide-react'
 
 interface Props {
   open: boolean
@@ -40,6 +42,8 @@ export function ReservationForm({
   defaultDate, defaultStartTime, defaultStaffId, defaultClinicId, onSubmit,
 }: Props) {
   const allPatients = usePatientStore()
+  const { reservations } = useClinicStore()
+  const [conflictWarning, setConflictWarning] = useState<string | null>(null)
   const [clinicId, setClinicId] = useState(defaultClinicId ?? clinics[0]?.id ?? '')
   const [staffId, setStaffId] = useState(defaultStaffId ?? '')
   const [menuId, setMenuId] = useState('')
@@ -105,6 +109,7 @@ export function ReservationForm({
     }
     setPatientSearch('')
     setShowPatientSearch(false)
+    setConflictWarning(null)
   }, [open, initial])
 
   function calcEndTime(start: string, durationMin: number): string {
@@ -131,9 +136,47 @@ export function ReservationForm({
   const filteredStaff = staff.filter((s) => s.clinic_id === clinicId && s.is_active)
   const filteredMenus = menus.filter((m) => m.clinic_id === clinicId && m.is_active)
 
+  function findConflicts(newStart: string, newEnd: string, forStaffId: string): Reservation[] {
+    if (!forStaffId) return []
+    const ns = new Date(newStart).getTime()
+    const ne = new Date(newEnd).getTime()
+    return reservations.filter((r) => {
+      if (r.staff_id !== forStaffId) return false
+      if (initial && r.id === initial.id) return false
+      if (r.status === 'cancelled' || r.status === 'no_show') return false
+      const rs = new Date(r.start_at).getTime()
+      const re = new Date(r.end_at).getTime()
+      return ns < re && ne > rs
+    })
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!patientName.trim() || !clinicId) return
+
+    const newStart = buildISO(startDate, startTime)
+    const newEnd = buildISO(startDate, endTime)
+
+    if (new Date(newEnd) <= new Date(newStart)) {
+      toast.error('終了時間は開始時間より後に設定してください')
+      return
+    }
+
+    if (staffId) {
+      const conflicts = findConflicts(newStart, newEnd, staffId)
+      if (conflicts.length > 0) {
+        const c = conflicts[0]
+        const staffName = staff.find((s) => s.id === staffId)?.name ?? 'スタッフ'
+        const conflictTime = `${format(parseISO(c.start_at), 'HH:mm')}〜${format(parseISO(c.end_at), 'HH:mm')}`
+        setConflictWarning(`${staffName}は${conflictTime}にすでに予約があります（${c.patient_name}）。このまま保存しますか？`)
+        return
+      }
+    }
+
+    submitData(newStart, newEnd)
+  }
+
+  function submitData(newStart: string, newEnd: string) {
     onSubmit({
       clinic_id: clinicId,
       staff_id: staffId || null,
@@ -142,11 +185,12 @@ export function ReservationForm({
       patient_name: patientName,
       patient_phone: patientPhone || null,
       referral_name: referralName || null,
-      start_at: buildISO(startDate, startTime),
-      end_at: buildISO(startDate, endTime),
+      start_at: newStart,
+      end_at: newEnd,
       status,
       memo: memo || null,
     })
+    setConflictWarning(null)
     onOpenChange(false)
   }
 
@@ -289,6 +333,34 @@ export function ReservationForm({
             <Label htmlFor="res-memo">メモ</Label>
             <Textarea id="res-memo" value={memo} onChange={(e) => setMemo(e.target.value)} placeholder="症状・注意事項など" rows={2} />
           </div>
+
+          {conflictWarning && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 flex gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1 space-y-2">
+                <p className="text-sm text-amber-800">{conflictWarning}</p>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs border-amber-300 text-amber-700 hover:bg-amber-100"
+                    onClick={() => setConflictWarning(null)}
+                  >
+                    修正する
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-7 text-xs bg-amber-600 hover:bg-amber-700 text-white"
+                    onClick={() => submitData(buildISO(startDate, startTime), buildISO(startDate, endTime))}
+                  >
+                    このまま保存
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>キャンセル</Button>

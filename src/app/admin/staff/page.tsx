@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Plus, Pencil, Users } from 'lucide-react'
@@ -25,9 +26,14 @@ export default function StaffPage() {
   function openEdit(s: Staff) { setEditTarget(s); setFormOpen(true) }
   function openAdd() { setEditTarget(null); setFormOpen(true) }
 
-  function handleSubmit(data: StaffFormData) {
-    if (editTarget) staffStore.update(editTarget.id, data)
-    else staffStore.create(data)
+  async function handleSubmit(data: StaffFormData) {
+    try {
+      if (editTarget) await staffStore.update(editTarget.id, data)
+      else await staffStore.create(data)
+      toast.success('保存しました')
+    } catch {
+      toast.error('保存に失敗しました')
+    }
   }
 
   return (
@@ -105,7 +111,17 @@ export default function StaffPage() {
       <ConfirmDialog
         open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}
         title="スタッフを削除しますか？" confirmLabel="削除" variant="destructive"
-        onConfirm={() => { if (deleteId) staffStore.delete(deleteId); setDeleteId(null) }}
+        onConfirm={async () => {
+          if (deleteId) {
+            try {
+              await staffStore.delete(deleteId)
+              toast.success('削除しました')
+            } catch {
+              toast.error('削除に失敗しました')
+            }
+          }
+          setDeleteId(null)
+        }}
       />
     </div>
   )

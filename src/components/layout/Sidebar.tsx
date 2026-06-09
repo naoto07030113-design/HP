@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import {
-  Calendar, ClipboardList, Building2, Users, BookOpen,
+  Calendar, ClipboardList, ClipboardCheck, Building2, Users, BookOpen,
   Clock, Download, Megaphone, ExternalLink, UserRound, FileText,
   Receipt, BarChart2, MessageSquare, Settings, LogOut,
 } from 'lucide-react'
@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   {
     section: 'メイン',
     items: [
+      { href: '/admin/today',         label: '当日受付',        icon: ClipboardCheck },
       { href: '/admin/calendar',      label: '予約カレンダー',  icon: Calendar },
       { href: '/admin/reservations',  label: '予約一覧',        icon: ClipboardList },
       { href: '/admin/patients',      label: '患者管理',        icon: UserRound },

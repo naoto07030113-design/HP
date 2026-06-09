@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import { format } from 'date-fns'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -12,6 +13,7 @@ import { useClinicStore } from '@/lib/clinic-store'
 import { PatientForm } from '@/features/patients/components/PatientForm'
 import { ActiveBadge } from '@/components/common/StatusBadge'
 import { EmptyState } from '@/components/common/EmptyState'
+import { TableSkeleton } from '@/components/common/PageSkeleton'
 import { GENDER_LABELS, INSURANCE_LABELS, calcAge } from '@/types/patient'
 import type { Patient, PatientFormData } from '@/types/patient'
 import { cn } from '@/lib/utils'
@@ -19,6 +21,7 @@ import { cn } from '@/lib/utils'
 export default function PatientsPage() {
   const patients = usePatientStore()
   const store = useClinicStore()
+  const { loading } = store
   const [search, setSearch] = useState('')
   const [filterClinic, setFilterClinic] = useState('all')
   const [formOpen, setFormOpen] = useState(false)
@@ -48,9 +51,23 @@ export default function PatientsPage() {
   function openEdit(p: Patient) { setEditTarget(p); setFormOpen(true) }
   function openAdd() { setEditTarget(null); setFormOpen(true) }
 
-  function handleSubmit(data: PatientFormData) {
-    if (editTarget) patientStore.update(editTarget.id, data)
-    else patientStore.create(data)
+  async function handleSubmit(data: PatientFormData) {
+    try {
+      if (editTarget) await patientStore.update(editTarget.id, data)
+      else await patientStore.create(data)
+      toast.success('保存しました')
+    } catch {
+      toast.error('保存に失敗しました')
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="p-4 lg:p-6 space-y-5">
+        <div className="h-8 w-48 bg-gray-200 rounded animate-pulse" />
+        <TableSkeleton rows={6} />
+      </div>
+    )
   }
 
   return (

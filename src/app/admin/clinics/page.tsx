@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Plus, Pencil, Building2 } from 'lucide-react'
 import { useClinicStore, clinicsStore } from '@/lib/clinic-store'
@@ -19,9 +20,14 @@ export default function ClinicsPage() {
   function openEdit(c: Clinic) { setEditTarget(c); setFormOpen(true) }
   function openAdd() { setEditTarget(null); setFormOpen(true) }
 
-  function handleSubmit(data: ClinicFormData) {
-    if (editTarget) clinicsStore.update(editTarget.id, data)
-    else clinicsStore.create(data)
+  async function handleSubmit(data: ClinicFormData) {
+    try {
+      if (editTarget) await clinicsStore.update(editTarget.id, data)
+      else await clinicsStore.create(data)
+      toast.success('保存しました')
+    } catch {
+      toast.error('保存に失敗しました')
+    }
   }
 
   return (
@@ -77,7 +83,17 @@ export default function ClinicsPage() {
         open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}
         title="院を削除しますか？" description="関連するスタッフ・予約も削除されます"
         confirmLabel="削除" variant="destructive"
-        onConfirm={() => { if (deleteId) clinicsStore.delete(deleteId); setDeleteId(null) }}
+        onConfirm={async () => {
+          if (deleteId) {
+            try {
+              await clinicsStore.delete(deleteId)
+              toast.success('削除しました')
+            } catch {
+              toast.error('削除に失敗しました')
+            }
+          }
+          setDeleteId(null)
+        }}
       />
     </div>
   )

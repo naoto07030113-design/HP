@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { format, startOfMonth, endOfMonth } from 'date-fns'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -68,13 +69,23 @@ export default function AccountingPage() {
     setFormOpen(true)
   }
 
-  function handleSave(data: InvoiceFormData) {
-    if (editTarget) accountingStore.update(editTarget.id, data)
-    else accountingStore.create(data)
+  async function handleSave(data: InvoiceFormData) {
+    try {
+      if (editTarget) await accountingStore.update(editTarget.id, data)
+      else await accountingStore.create(data)
+      toast.success('保存しました')
+    } catch {
+      toast.error('保存に失敗しました')
+    }
   }
 
-  function handlePaid(inv: Invoice) {
-    accountingStore.update(inv.id, { status: 'paid' })
+  async function handlePaid(inv: Invoice) {
+    try {
+      await accountingStore.update(inv.id, { status: 'paid' })
+      toast.success('支払済に更新しました')
+    } catch {
+      toast.error('更新に失敗しました')
+    }
   }
 
   return (
@@ -309,8 +320,15 @@ export default function AccountingPage() {
         title="会計データを削除しますか？"
         confirmLabel="削除"
         variant="destructive"
-        onConfirm={() => {
-          if (deleteId) accountingStore.delete(deleteId)
+        onConfirm={async () => {
+          if (deleteId) {
+            try {
+              await accountingStore.delete(deleteId)
+              toast.success('削除しました')
+            } catch {
+              toast.error('削除に失敗しました')
+            }
+          }
           setDeleteId(null)
         }}
       />

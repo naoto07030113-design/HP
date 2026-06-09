@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { format, parseISO } from 'date-fns'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -11,12 +12,14 @@ import { ReservationForm } from '@/features/reservations/components/ReservationF
 import { InvoiceForm } from '@/features/accounting/components/InvoiceForm'
 import { accountingStore } from '@/lib/accounting-store'
 import { StatusBadge } from '@/components/common/StatusBadge'
+import { TableSkeleton } from '@/components/common/PageSkeleton'
 import { RESERVATION_STATUS_LABELS } from '@/types/clinic'
 import type { Reservation } from '@/types/clinic'
 import type { InvoiceFormData } from '@/types/accounting'
 
 export default function ReservationsPage() {
   const store = useClinicStore()
+  const { loading } = store
   const [formOpen, setFormOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<Reservation | null>(null)
   const [invoiceOpen, setInvoiceOpen] = useState(false)
@@ -51,14 +54,33 @@ export default function ReservationsPage() {
     setInvoiceOpen(true)
   }
 
-  function handleSubmit(data: Parameters<typeof reservationsStore.create>[0]) {
-    if (editTarget) reservationsStore.update(editTarget.id, data)
-    else reservationsStore.create(data)
+  async function handleSubmit(data: Parameters<typeof reservationsStore.create>[0]) {
+    try {
+      if (editTarget) await reservationsStore.update(editTarget.id, data)
+      else await reservationsStore.create(data)
+      toast.success('保存しました')
+    } catch {
+      toast.error('保存に失敗しました')
+    }
     setEditTarget(null)
   }
 
-  function handleInvoiceSave(data: InvoiceFormData) {
-    accountingStore.create(data)
+  async function handleInvoiceSave(data: InvoiceFormData) {
+    try {
+      await accountingStore.create(data)
+      toast.success('会計を作成しました')
+    } catch {
+      toast.error('会計の作成に失敗しました')
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="p-4 lg:p-6 space-y-5">
+        <div className="h-8 w-40 bg-gray-200 rounded animate-pulse" />
+        <TableSkeleton rows={8} />
+      </div>
+    )
   }
 
   return (
