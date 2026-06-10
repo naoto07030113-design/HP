@@ -103,6 +103,7 @@ export default function StaffPage() {
       )}
 
       <StaffForm
+        key={editTarget?.id ?? 'new'}
         open={formOpen} onOpenChange={setFormOpen}
         initial={editTarget} clinics={store.clinics}
         defaultClinicId={filterClinic !== 'all' ? filterClinic : undefined}
