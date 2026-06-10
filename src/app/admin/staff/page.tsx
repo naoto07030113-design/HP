@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Plus, Pencil, Users } from 'lucide-react'
+import { Plus, Pencil, Trash2, Users } from 'lucide-react'
 import { useClinicStore, staffStore } from '@/lib/clinic-store'
 import { StaffForm } from '@/features/staff/components/StaffForm'
 import { ActiveBadge } from '@/components/common/StatusBadge'
@@ -92,6 +92,13 @@ export default function StaffPage() {
                     <td className="px-4 py-3">
                       <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => openEdit(s)}>
                         <Pencil className="w-3.5 h-3.5 mr-1" />編集
+                      </Button>
+                      <Button
+                        variant="ghost" size="sm"
+                        className="h-7 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => setDeleteId(s.id)}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
                       </Button>
                     </td>
                   </tr>
