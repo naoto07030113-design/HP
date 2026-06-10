@@ -137,3 +137,14 @@ export const STAFF_ROLES = [
   '灸師',
   'あん摩師',
 ] as const
+
+export interface ClosedDay {
+  id: string
+  clinic_id: string
+  closed_date: string  // 'YYYY-MM-DD'
+  reason: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type ClosedDayFormData = Omit<ClosedDay, 'id' | 'created_at' | 'updated_at'>

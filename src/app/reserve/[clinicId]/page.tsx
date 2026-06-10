@@ -120,6 +120,11 @@ export default function ReserveClinicPage() {
     [calendarBaseDate, calendarOffset],
   )
 
+  const closedDatesSet = useMemo(() => {
+    const days = store.closedDays.filter((d) => d.clinic_id === clinicId)
+    return new Set(days.map((d) => d.closed_date))
+  }, [store.closedDays, clinicId])
+
   // 利用可能時間帯
   const availableSlots = useMemo(() => {
     if (!clinic || !selectedMenu || !selectedDate) return []
@@ -352,20 +357,24 @@ export default function ReserveClinicPage() {
                 {calendarDays.map((day) => {
                   const dow = day.getDay() // 0=日, 6=土
                   const isPast = day < new Date(new Date().setHours(0, 0, 0, 0))
+                  const dateStr = format(day, 'yyyy-MM-dd')
+                  const isClosed = closedDatesSet.has(dateStr)
+                  const disabled = isPast || isClosed
                   return (
                     <button
                       key={day.toISOString()}
-                      disabled={isPast}
+                      disabled={disabled}
                       onClick={() => { setSelectedDate(day); goNext() }}
                       className={cn(
                         'rounded-lg py-2.5 text-sm font-medium transition-all',
-                        isPast
+                        disabled
                           ? 'text-gray-300 cursor-not-allowed'
                           : 'hover:bg-green-100',
-                        isSameDay(day, new Date()) && !isPast && 'border border-green-500',
+                        isClosed && 'bg-red-50 text-red-300',
+                        isSameDay(day, new Date()) && !disabled && 'border border-green-500',
                         selectedDate && isSameDay(day, selectedDate) && 'bg-green-700 text-white hover:bg-green-800',
-                        !isPast && dow === 0 && 'text-red-500',
-                        !isPast && dow === 6 && 'text-blue-500',
+                        !disabled && dow === 0 && 'text-red-500',
+                        !disabled && dow === 6 && 'text-blue-500',
                         selectedDate && isSameDay(day, selectedDate) && 'text-white',
                       )}
                     >

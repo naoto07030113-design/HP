@@ -1,15 +1,14 @@
 'use client'
 
-import { useState } from 'react'
 import Link from 'next/link'
-import { MapPin, Phone, Clock, ChevronRight } from 'lucide-react'
+import { MapPin, Phone, ChevronRight } from 'lucide-react'
 import { useClinicStore } from '@/lib/clinic-store'
 import { useAnnouncementsStore, announcementsStore } from '@/lib/announcement-store'
 import { AnnouncementBanners } from '@/components/common/AnnouncementBanner'
 
 export default function ReservePage() {
   const store = useClinicStore()
-  const announcements = useAnnouncementsStore()
+  useAnnouncementsStore()
   const activeClinics = store.clinics.filter((c) => c.is_active)
   const companyAnnouncements = announcementsStore.getActive('company')
 
@@ -81,6 +80,15 @@ export default function ReservePage() {
               )
             })}
           </div>
+        </div>
+
+        <div className="text-center pt-2 border-t border-green-100">
+          <Link
+            href="/reserve/cancel"
+            className="text-sm text-muted-foreground hover:text-green-700 underline transition-colors"
+          >
+            予約のキャンセルはこちら
+          </Link>
         </div>
       </div>
     </div>
