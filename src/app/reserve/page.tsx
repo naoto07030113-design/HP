@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { MapPin, Phone, ChevronRight } from 'lucide-react'
+import { MapPin, Phone, Clock, ChevronRight } from 'lucide-react'
 import { useClinicStore } from '@/lib/clinic-store'
 import { useAnnouncementsStore, announcementsStore } from '@/lib/announcement-store'
 import { AnnouncementBanners } from '@/components/common/AnnouncementBanner'
@@ -13,23 +13,38 @@ export default function ReservePage() {
   const companyAnnouncements = announcementsStore.getActive('company')
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-50 to-white">
-      {/* ヘッダー */}
-      <header className="bg-green-900 text-white px-4 py-4">
-        <div className="max-w-lg mx-auto">
-          <h1 className="text-xl font-bold tracking-tight">オンライン予約</h1>
-          <p className="text-green-200 text-sm mt-0.5">24時間いつでもご予約いただけます</p>
+    <div className="min-h-screen bg-stone-50">
+      {/* ヒーローヘッダー */}
+      <div className="bg-gradient-to-br from-emerald-950 via-emerald-900 to-emerald-800 text-white">
+        <div className="max-w-lg mx-auto px-5 pt-10 pb-8">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center">
+              <span className="text-white font-black text-xs tracking-tight">IMC</span>
+            </div>
+            <span className="text-emerald-200 text-sm font-medium tracking-wide">統合メディカルケア</span>
+          </div>
+          <h1 className="text-3xl font-black tracking-tight leading-tight mb-2">
+            オンライン予約
+          </h1>
+          <p className="text-emerald-200 text-sm">
+            24時間いつでも、かんたんにご予約いただけます
+          </p>
         </div>
-      </header>
+      </div>
 
-      <div className="max-w-lg mx-auto px-4 py-6 space-y-5">
-        {/* 全社お知らせ */}
+      <div className="max-w-lg mx-auto px-4 -mt-3 pb-10 space-y-5">
+        {/* お知らせ */}
         {companyAnnouncements.length > 0 && (
-          <AnnouncementBanners announcements={companyAnnouncements} />
+          <div className="pt-5">
+            <AnnouncementBanners announcements={companyAnnouncements} />
+          </div>
         )}
 
-        <div>
-          <h2 className="text-lg font-bold text-green-900 mb-3">院を選んでください</h2>
+        {/* 院選択 */}
+        <div className="pt-4">
+          <p className="text-xs font-semibold text-stone-400 uppercase tracking-widest mb-3 px-1">
+            院を選択
+          </p>
           <div className="space-y-3">
             {activeClinics.map((clinic) => {
               const clinicAnnouncements = announcementsStore.getActive('clinic', clinic.id)
@@ -38,56 +53,57 @@ export default function ReservePage() {
                 <Link
                   key={clinic.id}
                   href={`/reserve/${clinic.id}`}
-                  className="block bg-white rounded-2xl border border-green-100 shadow-sm hover:shadow-md transition-all hover:border-green-300 active:scale-[0.99] p-4"
+                  className="group block bg-white rounded-2xl shadow-sm border border-stone-100 hover:shadow-md hover:border-emerald-200 active:scale-[0.99] transition-all duration-200 overflow-hidden"
                 >
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-green-800 flex items-center justify-center flex-shrink-0">
-                        <span className="text-white font-bold text-xs tracking-tight">IMC</span>
+                  <div className="h-1 bg-gradient-to-r from-emerald-600 to-emerald-400" />
+                  <div className="p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-emerald-950 text-base leading-snug">{clinic.name}</p>
+                        <div className="mt-2.5 space-y-1.5">
+                          <div className="flex items-center gap-2 text-xs text-stone-500">
+                            <Clock className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                            <span>{clinic.open_time} 〜 {clinic.close_time}</span>
+                          </div>
+                          {clinic.address && (
+                            <div className="flex items-start gap-2 text-xs text-stone-500">
+                              <MapPin className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                              <span className="line-clamp-1">{clinic.address}</span>
+                            </div>
+                          )}
+                          {clinic.phone && (
+                            <div className="flex items-center gap-2 text-xs text-stone-500">
+                              <Phone className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                              <span>{clinic.phone}</span>
+                            </div>
+                          )}
+                        </div>
+                        {clinicAnnouncements.length > 0 && (
+                          <div className="mt-3 pt-3 border-t border-stone-100">
+                            <p className="text-xs text-amber-600 font-medium line-clamp-1">
+                              {clinicAnnouncements[0].title}
+                            </p>
+                          </div>
+                        )}
                       </div>
-                      <div>
-                        <p className="font-bold text-green-900">{clinic.name}</p>
-                        <p className="text-xs text-green-600 mt-0.5">
-                          {clinic.open_time} - {clinic.close_time}
-                        </p>
+                      <div className="w-9 h-9 rounded-full bg-emerald-50 group-hover:bg-emerald-100 flex items-center justify-center flex-shrink-0 transition-colors">
+                        <ChevronRight className="w-4 h-4 text-emerald-600" />
                       </div>
                     </div>
-                    <ChevronRight className="w-5 h-5 text-green-400" />
                   </div>
-                  <div className="space-y-1 text-sm text-muted-foreground">
-                    {clinic.address && (
-                      <div className="flex items-center gap-1.5">
-                        <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
-                        <span className="line-clamp-1">{clinic.address}</span>
-                      </div>
-                    )}
-                    {clinic.phone && (
-                      <div className="flex items-center gap-1.5">
-                        <Phone className="w-3.5 h-3.5 flex-shrink-0" />
-                        <span>{clinic.phone}</span>
-                      </div>
-                    )}
-                  </div>
-                  {/* 院別お知らせプレビュー */}
-                  {clinicAnnouncements.length > 0 && (
-                    <div className="mt-3 pt-3 border-t border-green-50">
-                      <p className="text-xs text-amber-700 font-medium line-clamp-1">
-                        {clinicAnnouncements[0].title}
-                      </p>
-                    </div>
-                  )}
                 </Link>
               )
             })}
           </div>
         </div>
 
-        <div className="text-center pt-2 border-t border-green-100">
+        {/* フッターリンク */}
+        <div className="text-center pt-4">
           <Link
             href="/reserve/cancel"
-            className="text-sm text-muted-foreground hover:text-green-700 underline transition-colors"
+            className="text-xs text-stone-400 hover:text-emerald-700 transition-colors underline underline-offset-2"
           >
-            予約のキャンセルはこちら
+            予約の確認・変更・キャンセルはこちら
           </Link>
         </div>
       </div>

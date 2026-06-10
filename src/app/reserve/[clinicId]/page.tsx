@@ -226,53 +226,74 @@ export default function ReserveClinicPage() {
 
   const currentStepIdx = STEPS.indexOf(step)
   const progress = Math.round((currentStepIdx / (STEPS.length - 2)) * 100)
+  const visibleSteps = STEPS.filter((s) => s !== 'complete')
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-stone-50">
       {/* ヘッダー */}
-      <header className="bg-green-900 text-white sticky top-0 z-10">
-        <div className="max-w-lg mx-auto px-4 py-3 flex items-center gap-3">
-          <button onClick={goBack} className="p-1 rounded hover:bg-green-800 transition-colors">
-            <ArrowLeft className="w-5 h-5" />
+      <header className="bg-gradient-to-r from-emerald-950 to-emerald-900 text-white sticky top-0 z-10 shadow-md">
+        <div className="max-w-lg mx-auto px-4 py-3.5 flex items-center gap-3">
+          <button onClick={goBack} className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors flex-shrink-0">
+            <ArrowLeft className="w-4 h-4" />
           </button>
-          <div className="flex-1">
-            <p className="text-sm font-semibold">{clinic.name}</p>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold truncate">{clinic.name}</p>
             {step !== 'complete' && (
-              <p className="text-xs text-green-300">{STEP_LABELS[step]}</p>
+              <p className="text-[11px] text-emerald-300 mt-0.5">{STEP_LABELS[step]}</p>
             )}
           </div>
         </div>
-        {/* プログレスバー */}
         {step !== 'complete' && (
-          <div className="h-1 bg-green-800">
-            <div
-              className="h-full bg-gold-400 transition-all duration-300"
-              style={{ width: `${progress}%` }}
-            />
+          <div className="h-0.5 bg-emerald-800/60">
+            <div className="h-full bg-amber-400 transition-all duration-500" style={{ width: `${progress}%` }} />
           </div>
         )}
       </header>
 
-      <div className="max-w-lg mx-auto px-4 py-5 space-y-4">
+      <div className="max-w-lg mx-auto px-4 py-5 space-y-5">
         {/* お知らせ */}
         {step === 'visit_type' && clinicAnnouncements.length > 0 && (
           <AnnouncementBanners announcements={clinicAnnouncements} />
         )}
 
+        {/* ステップドット */}
+        {step !== 'complete' && (
+          <div className="flex items-center justify-center gap-1.5 py-1">
+            {visibleSteps.map((s, i) => (
+              <div
+                key={s}
+                className={cn(
+                  'rounded-full transition-all duration-300',
+                  s === step
+                    ? 'w-5 h-2 bg-emerald-700'
+                    : i < currentStepIdx
+                    ? 'w-2 h-2 bg-emerald-400'
+                    : 'w-2 h-2 bg-stone-200',
+                )}
+              />
+            ))}
+          </div>
+        )}
+
         {/* Step: 初診・再来 */}
         {step === 'visit_type' && (
           <div className="space-y-4">
-            <h2 className="text-lg font-bold text-green-900">初診・再来を選んでください</h2>
-            <div className="grid grid-cols-2 gap-3">
-              {(['first', 'return'] as const).map((vt) => (
+            <div className="text-center">
+              <h2 className="text-xl font-black text-emerald-950">はじめてのご来院ですか？</h2>
+              <p className="text-sm text-stone-500 mt-1">該当するものを選んでください</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              {([
+                { type: 'first', title: 'はじめて', sub: '初診' },
+                { type: 'return', title: '2回目以降', sub: '再来' },
+              ] as const).map(({ type, title, sub }) => (
                 <button
-                  key={vt}
-                  onClick={() => { setVisitType(vt); goNext() }}
-                  className="bg-white rounded-2xl border-2 border-green-100 p-6 text-center hover:border-green-500 hover:bg-green-50 transition-all active:scale-[0.98]"
+                  key={type}
+                  onClick={() => { setVisitType(type); goNext() }}
+                  className="group bg-white rounded-2xl border-2 border-stone-100 p-7 text-center hover:border-emerald-400 hover:shadow-md active:scale-[0.97] transition-all duration-200"
                 >
-                  <div className="font-bold text-green-900 text-base">
-                    {vt === 'first' ? '初診（はじめて）' : '再来（2回目以降）'}
-                  </div>
+                  <p className="text-xs font-bold text-stone-400 tracking-widest uppercase mb-1">{sub}</p>
+                  <p className="text-lg font-black text-emerald-950">{title}</p>
                 </button>
               ))}
             </div>
@@ -282,26 +303,32 @@ export default function ReserveClinicPage() {
         {/* Step: メニュー */}
         {step === 'menu' && (
           <div className="space-y-4">
-            <h2 className="text-lg font-bold text-green-900">メニューを選んでください</h2>
-            <div className="space-y-2">
+            <div>
+              <h2 className="text-xl font-black text-emerald-950">メニューを選んでください</h2>
+            </div>
+            <div className="space-y-2.5">
               {availableMenus.map((m) => (
                 <button
                   key={m.id}
                   onClick={() => { setSelectedMenu(m); goNext() }}
-                  className="w-full bg-white rounded-xl border border-green-100 p-4 text-left hover:border-green-400 hover:bg-green-50 transition-all active:scale-[0.99]"
+                  className="w-full bg-white rounded-2xl border border-stone-100 p-4 text-left hover:border-emerald-300 hover:shadow-sm active:scale-[0.99] transition-all duration-150"
                 >
-                  <div className="flex items-center justify-between">
-                    <p className="font-semibold text-green-900">{m.name}</p>
-                    <ChevronRight className="w-4 h-4 text-green-400" />
-                  </div>
-                  <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
-                    <span>{m.duration_min}分</span>
-                    <span className="font-medium text-green-800">¥{m.price.toLocaleString()}</span>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-emerald-950">{m.name}</p>
+                      <p className="text-sm text-stone-500 mt-0.5">{m.duration_min}分</p>
+                    </div>
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      <span className="text-lg font-black text-emerald-800">¥{m.price.toLocaleString()}</span>
+                      <div className="w-7 h-7 rounded-full bg-emerald-50 flex items-center justify-center">
+                        <ChevronRight className="w-4 h-4 text-emerald-500" />
+                      </div>
+                    </div>
                   </div>
                 </button>
               ))}
               {availableMenus.length === 0 && (
-                <p className="text-center text-muted-foreground py-8">予約可能なメニューがありません</p>
+                <p className="text-center text-stone-400 py-10">予約可能なメニューがありません</p>
               )}
             </div>
           </div>
@@ -310,29 +337,38 @@ export default function ReserveClinicPage() {
         {/* Step: スタッフ */}
         {step === 'staff' && (
           <div className="space-y-4">
-            <h2 className="text-lg font-bold text-green-900">担当者を選んでください</h2>
-            <div className="space-y-2">
+            <h2 className="text-xl font-black text-emerald-950">担当者を選んでください</h2>
+            <div className="space-y-2.5">
               <button
                 onClick={() => { setSelectedStaff(null); goNext() }}
-                className="w-full bg-white rounded-xl border border-green-100 p-4 text-left hover:border-green-400 hover:bg-green-50 transition-all"
+                className="w-full bg-white rounded-2xl border border-stone-100 p-4 text-left hover:border-emerald-300 hover:shadow-sm active:scale-[0.99] transition-all duration-150"
               >
-                <div className="flex items-center justify-between">
-                  <p className="font-semibold text-green-900">指名なし（おまかせ）</p>
-                  <ChevronRight className="w-4 h-4 text-green-400" />
+                <div className="flex items-center gap-4">
+                  <div className="w-11 h-11 rounded-full bg-stone-100 flex items-center justify-center flex-shrink-0">
+                    <span className="text-stone-500 text-xs font-bold">任意</span>
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-bold text-emerald-950">指名なし（おまかせ）</p>
+                    <p className="text-xs text-stone-400 mt-0.5">空いている担当者が対応します</p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-stone-300 flex-shrink-0" />
                 </div>
               </button>
               {availableStaff.map((s) => (
                 <button
                   key={s.id}
                   onClick={() => { setSelectedStaff(s); goNext() }}
-                  className="w-full bg-white rounded-xl border border-green-100 p-4 text-left hover:border-green-400 hover:bg-green-50 transition-all"
+                  className="w-full bg-white rounded-2xl border border-stone-100 p-4 text-left hover:border-emerald-300 hover:shadow-sm active:scale-[0.99] transition-all duration-150"
                 >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-semibold text-green-900">{s.name}</p>
-                      {s.role && <p className="text-sm text-muted-foreground">{s.role}</p>}
+                  <div className="flex items-center gap-4">
+                    <div className="w-11 h-11 rounded-full bg-emerald-800 flex items-center justify-center flex-shrink-0">
+                      <span className="text-white text-sm font-bold">{s.name.charAt(0)}</span>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-green-400" />
+                    <div className="flex-1">
+                      <p className="font-bold text-emerald-950">{s.name}</p>
+                      {s.role && <p className="text-xs text-stone-400 mt-0.5">{s.role}</p>}
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-stone-300 flex-shrink-0" />
                   </div>
                 </button>
               ))}
@@ -343,54 +379,54 @@ export default function ReserveClinicPage() {
         {/* Step: 日付 */}
         {step === 'date' && (
           <div className="space-y-4">
-            <h2 className="text-lg font-bold text-green-900">日付を選んでください</h2>
-            <div className="bg-white rounded-xl border border-border p-4">
-              <div className="flex items-center justify-between mb-3">
+            <h2 className="text-xl font-black text-emerald-950">日付を選んでください</h2>
+            <div className="bg-white rounded-2xl border border-stone-100 p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
                 <button onClick={() => setCalendarOffset((o) => Math.max(0, o - 1))}
-                  className="p-1 rounded hover:bg-green-50 disabled:opacity-30" disabled={calendarOffset === 0}>
-                  <ChevronLeft className="w-5 h-5 text-green-700" />
+                  className="w-8 h-8 rounded-full bg-stone-100 hover:bg-emerald-100 flex items-center justify-center transition-colors disabled:opacity-30" disabled={calendarOffset === 0}>
+                  <ChevronLeft className="w-4 h-4 text-emerald-800" />
                 </button>
-                <span className="text-sm font-medium text-green-900">
+                <span className="text-sm font-bold text-emerald-950">
                   {format(calendarDays[0], 'M月', { locale: ja })}
                   {format(calendarDays[0], 'M') !== format(calendarDays[13], 'M') && (
                     <>〜{format(calendarDays[13], 'M月', { locale: ja })}</>
                   )}
                   {' '}{format(calendarDays[0], 'yyyy')}
                 </span>
-                <button onClick={() => setCalendarOffset((o) => o + 1)} className="p-1 rounded hover:bg-green-50">
-                  <ChevronRight className="w-5 h-5 text-green-700" />
+                <button onClick={() => setCalendarOffset((o) => o + 1)}
+                  className="w-8 h-8 rounded-full bg-stone-100 hover:bg-emerald-100 flex items-center justify-center transition-colors">
+                  <ChevronRight className="w-4 h-4 text-emerald-800" />
                 </button>
               </div>
-              <div className="grid grid-cols-7 gap-1 text-center">
+              <div className="grid grid-cols-7 gap-1 text-center mb-1">
                 {['日', '月', '火', '水', '木', '金', '土'].map((d, i) => (
-                  <div key={d} className={cn('text-xs font-medium py-1', i === 0 && 'text-red-500', i === 6 && 'text-blue-500')}>
+                  <div key={d} className={cn('text-xs font-semibold py-1 text-stone-400', i === 0 && 'text-red-400', i === 6 && 'text-blue-400')}>
                     {d}
                   </div>
                 ))}
               </div>
               <div className="grid grid-cols-7 gap-1">
                 {calendarDays.map((day) => {
-                  const dow = day.getDay() // 0=日, 6=土
+                  const dow = day.getDay()
                   const isPast = day < new Date(new Date().setHours(0, 0, 0, 0))
                   const dateStr = format(day, 'yyyy-MM-dd')
                   const isClosed = closedDatesSet.has(dateStr)
                   const disabled = isPast || isClosed
+                  const isSelected = selectedDate && isSameDay(day, selectedDate)
+                  const isToday = isSameDay(day, new Date())
                   return (
                     <button
                       key={day.toISOString()}
                       disabled={disabled}
                       onClick={() => { setSelectedDate(day); goNext() }}
                       className={cn(
-                        'rounded-lg py-2.5 text-sm font-medium transition-all',
-                        disabled
-                          ? 'text-gray-300 cursor-not-allowed'
-                          : 'hover:bg-green-100',
-                        isClosed && 'bg-red-50 text-red-300',
-                        isSameDay(day, new Date()) && !disabled && 'border border-green-500',
-                        selectedDate && isSameDay(day, selectedDate) && 'bg-green-700 text-white hover:bg-green-800',
-                        !disabled && dow === 0 && 'text-red-500',
-                        !disabled && dow === 6 && 'text-blue-500',
-                        selectedDate && isSameDay(day, selectedDate) && 'text-white',
+                        'rounded-xl py-2.5 text-sm font-semibold transition-all',
+                        disabled ? 'text-stone-200 cursor-not-allowed' : 'hover:bg-emerald-50',
+                        isClosed && 'bg-red-50 text-red-200',
+                        isToday && !disabled && !isSelected && 'ring-1 ring-emerald-400 text-emerald-700',
+                        isSelected && 'bg-emerald-800 text-white hover:bg-emerald-700',
+                        !disabled && !isSelected && dow === 0 && 'text-red-400',
+                        !disabled && !isSelected && dow === 6 && 'text-blue-400',
                       )}
                     >
                       {format(day, 'd')}
@@ -405,21 +441,22 @@ export default function ReserveClinicPage() {
         {/* Step: 時間 */}
         {step === 'time' && selectedDate && selectedMenu && (
           <div className="space-y-4">
-            <h2 className="text-lg font-bold text-green-900">
-              {format(selectedDate, 'M月d日（E）', { locale: ja })} の時間を選んでください
-            </h2>
+            <div>
+              <h2 className="text-xl font-black text-emerald-950">時間を選んでください</h2>
+              <p className="text-sm text-stone-500 mt-1">{format(selectedDate, 'M月d日（E）', { locale: ja })}</p>
+            </div>
             <div className="grid grid-cols-3 gap-2">
               {availableSlots.map((t) => (
                 <button
                   key={t}
                   onClick={() => { setSelectedTime(t); goNext() }}
-                  className="bg-white border border-green-200 rounded-xl py-3 text-center font-semibold text-green-900 hover:border-green-500 hover:bg-green-50 transition-all"
+                  className="bg-white border border-stone-100 rounded-2xl py-3.5 text-center font-bold text-emerald-900 hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-sm active:scale-[0.97] transition-all"
                 >
                   {t}
                 </button>
               ))}
               {availableSlots.length === 0 && (
-                <div className="col-span-3 py-8 text-center text-muted-foreground">
+                <div className="col-span-3 py-10 text-center text-stone-400 text-sm">
                   この日は空き枠がありません
                 </div>
               )}
@@ -431,34 +468,34 @@ export default function ReserveClinicPage() {
         {step === 'info' && (
           <div className="space-y-4">
             <div>
-              <h2 className="text-lg font-bold text-green-900">
-                {visitType === 'first' ? '問診票の入力' : '患者情報を入力してください'}
+              <h2 className="text-xl font-black text-emerald-950">
+                {visitType === 'first' ? '問診票の入力' : '患者情報の入力'}
               </h2>
               {visitType === 'first' && (
-                <p className="text-sm text-muted-foreground mt-0.5">
-                  初診の方は問診票の入力をお願いします。院内でのご記入も可能です。
+                <p className="text-sm text-stone-500 mt-1">
+                  院内でのご記入も可能です
                 </p>
               )}
             </div>
-            <div className="bg-white rounded-xl border border-border p-4 space-y-4">
+            <div className="bg-white rounded-2xl border border-stone-100 p-5 space-y-4 shadow-sm">
               {/* 基本情報 - 共通 */}
               <div className="space-y-1.5">
-                <Label htmlFor="name" className="text-sm font-semibold">お名前 <span className="text-red-500">*</span></Label>
+                <Label htmlFor="name" className="text-sm font-semibold text-stone-700">お名前 <span className="text-red-400">*</span></Label>
                 <Input id="name" value={patientName} onChange={(e) => setPatientName(e.target.value)}
-                  placeholder="山田 太郎" className="h-10" />
+                  placeholder="山田 太郎" className="h-11 rounded-xl border-stone-200 focus:border-emerald-400" />
               </div>
 
               {visitType === 'first' && (
                 <>
                   <div className="space-y-1.5">
-                    <Label htmlFor="name-kana" className="text-sm font-semibold">フリガナ</Label>
+                    <Label htmlFor="name-kana" className="text-sm font-semibold text-stone-700">フリガナ</Label>
                     <Input id="name-kana" value={patientNameKana}
                       onChange={(e) => setPatientNameKana(e.target.value)}
-                      placeholder="ヤマダ タロウ" className="h-10" />
+                      placeholder="ヤマダ タロウ" className="h-11 rounded-xl border-stone-200 focus:border-emerald-400" />
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label className="text-sm font-semibold">性別</Label>
+                    <Label className="text-sm font-semibold text-stone-700">性別</Label>
                     <div className="grid grid-cols-4 gap-2">
                       {([['male', '男性'], ['female', '女性'], ['other', 'その他'], ['unknown', '回答しない']] as const).map(([v, label]) => (
                         <button
@@ -466,10 +503,10 @@ export default function ReserveClinicPage() {
                           type="button"
                           onClick={() => setPatientGender(v)}
                           className={cn(
-                            'rounded-lg border py-2 text-sm font-medium transition-all',
+                            'rounded-xl border py-2 text-xs font-semibold transition-all',
                             patientGender === v
-                              ? 'border-green-600 bg-green-700 text-white'
-                              : 'border-border bg-white hover:border-green-300 hover:bg-green-50',
+                              ? 'border-emerald-700 bg-emerald-800 text-white'
+                              : 'border-stone-200 bg-white text-stone-600 hover:border-emerald-300',
                           )}
                         >
                           {label}
@@ -479,74 +516,74 @@ export default function ReserveClinicPage() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label htmlFor="birth-date" className="text-sm font-semibold">生年月日</Label>
+                    <Label htmlFor="birth-date" className="text-sm font-semibold text-stone-700">生年月日</Label>
                     <Input id="birth-date" type="date" value={patientBirthDate}
-                      onChange={(e) => setPatientBirthDate(e.target.value)} className="h-10" />
+                      onChange={(e) => setPatientBirthDate(e.target.value)} className="h-11 rounded-xl border-stone-200" />
                   </div>
                 </>
               )}
 
               <div className="space-y-1.5">
-                <Label htmlFor="phone" className="text-sm font-semibold">電話番号</Label>
+                <Label htmlFor="phone" className="text-sm font-semibold text-stone-700">電話番号</Label>
                 <Input id="phone" value={patientPhone} onChange={(e) => setPatientPhone(e.target.value)}
-                  placeholder="090-0000-0000" type="tel" className="h-10" />
+                  placeholder="090-0000-0000" type="tel" className="h-11 rounded-xl border-stone-200 focus:border-emerald-400" />
               </div>
 
               {visitType === 'first' && (
                 <>
                   <div className="space-y-1.5">
-                    <Label htmlFor="email" className="text-sm font-semibold">メールアドレス</Label>
+                    <Label htmlFor="email" className="text-sm font-semibold text-stone-700">メールアドレス</Label>
                     <Input id="email" type="email" value={patientEmail}
                       onChange={(e) => setPatientEmail(e.target.value)}
-                      placeholder="example@mail.com" className="h-10" />
+                      placeholder="example@mail.com" className="h-11 rounded-xl border-stone-200 focus:border-emerald-400" />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-3">
                     <div className="space-y-1.5">
-                      <Label htmlFor="postal-code" className="text-sm font-semibold">郵便番号</Label>
+                      <Label htmlFor="postal-code" className="text-sm font-semibold text-stone-700">郵便番号</Label>
                       <Input id="postal-code" value={patientPostalCode}
                         onChange={(e) => setPatientPostalCode(e.target.value)}
-                        placeholder="000-0000" className="h-10" />
+                        placeholder="000-0000" className="h-11 rounded-xl border-stone-200" />
                     </div>
-                    <div className="space-y-1.5 col-span-2">
-                      <Label htmlFor="address" className="text-sm font-semibold">住所</Label>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="address" className="text-sm font-semibold text-stone-700">住所</Label>
                       <Input id="address" value={patientAddress}
                         onChange={(e) => setPatientAddress(e.target.value)}
-                        placeholder="都道府県・市区町村・番地" className="h-10" />
+                        placeholder="都道府県・市区町村・番地" className="h-11 rounded-xl border-stone-200" />
                     </div>
                   </div>
 
-                  <div className="pt-2 border-t border-green-50">
-                    <p className="text-xs font-semibold text-green-700 mb-3">問診内容</p>
+                  <div className="pt-3 border-t border-stone-100">
+                    <p className="text-xs font-bold text-emerald-700 tracking-wider uppercase mb-3">問診内容</p>
                     <div className="space-y-4">
                       <div className="space-y-1.5">
-                        <Label htmlFor="chief-complaint" className="text-sm font-semibold">
-                          主な症状・お悩み <span className="text-red-500">*</span>
+                        <Label htmlFor="chief-complaint" className="text-sm font-semibold text-stone-700">
+                          主な症状・お悩み <span className="text-red-400">*</span>
                         </Label>
                         <Textarea id="chief-complaint" value={chiefComplaint}
                           onChange={(e) => setChiefComplaint(e.target.value)}
-                          placeholder="腰痛・肩こり・頭痛など" rows={2} />
+                          placeholder="腰痛・肩こり・頭痛など" rows={2} className="rounded-xl border-stone-200" />
                       </div>
                       <div className="space-y-1.5">
-                        <Label htmlFor="medical-history" className="text-sm font-semibold">既往歴</Label>
+                        <Label htmlFor="medical-history" className="text-sm font-semibold text-stone-700">既往歴</Label>
                         <Textarea id="medical-history" value={medicalHistory}
                           onChange={(e) => setMedicalHistory(e.target.value)}
-                          placeholder="過去の病気・手術歴など（ない場合は空欄）" rows={2} />
+                          placeholder="過去の病気・手術歴など（ない場合は空欄）" rows={2} className="rounded-xl border-stone-200" />
                       </div>
                       <div className="space-y-1.5">
-                        <Label htmlFor="medications" className="text-sm font-semibold">現在服用中のお薬</Label>
+                        <Label htmlFor="medications" className="text-sm font-semibold text-stone-700">現在服用中のお薬</Label>
                         <Input id="medications" value={currentMedications}
                           onChange={(e) => setCurrentMedications(e.target.value)}
-                          placeholder="薬品名（ない場合は空欄）" className="h-10" />
+                          placeholder="薬品名（ない場合は空欄）" className="h-11 rounded-xl border-stone-200" />
                       </div>
                       <div className="space-y-1.5">
-                        <Label htmlFor="allergies" className="text-sm font-semibold">アレルギー</Label>
+                        <Label htmlFor="allergies" className="text-sm font-semibold text-stone-700">アレルギー</Label>
                         <Input id="allergies" value={allergies}
                           onChange={(e) => setAllergies(e.target.value)}
-                          placeholder="食品・薬品・金属など（ない場合は空欄）" className="h-10" />
+                          placeholder="食品・薬品・金属など（ない場合は空欄）" className="h-11 rounded-xl border-stone-200" />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-sm font-semibold">来院のきっかけ</Label>
+                        <Label className="text-sm font-semibold text-stone-700">来院のきっかけ</Label>
                         <div className="grid grid-cols-3 gap-2">
                           {['紹介', 'インターネット', 'SNS', 'チラシ', '通りがかり', 'その他'].map((src) => (
                             <button
@@ -558,10 +595,10 @@ export default function ReserveClinicPage() {
                                 if (next !== '紹介') setReferralName('')
                               }}
                               className={cn(
-                                'rounded-lg border py-2 text-xs font-medium transition-all',
+                                'rounded-xl border py-2 text-xs font-semibold transition-all',
                                 referralSource === src
-                                  ? 'border-green-600 bg-green-700 text-white'
-                                  : 'border-border bg-white hover:border-green-300',
+                                  ? 'border-emerald-700 bg-emerald-800 text-white'
+                                  : 'border-stone-200 bg-white text-stone-600 hover:border-emerald-300',
                               )}
                             >
                               {src}
@@ -570,13 +607,13 @@ export default function ReserveClinicPage() {
                         </div>
                         {referralSource === '紹介' && (
                           <div className="space-y-1.5 pt-1">
-                            <Label htmlFor="referral-name" className="text-sm font-semibold">紹介者のお名前</Label>
+                            <Label htmlFor="referral-name" className="text-sm font-semibold text-stone-700">紹介者のお名前</Label>
                             <Input
                               id="referral-name"
                               value={referralName}
                               onChange={(e) => setReferralName(e.target.value)}
                               placeholder="山田 太郎"
-                              className="h-10"
+                              className="h-11 rounded-xl border-stone-200"
                             />
                           </div>
                         )}
@@ -589,12 +626,12 @@ export default function ReserveClinicPage() {
               {visitType === 'return' && (
                 <>
                   <div className="space-y-1.5">
-                    <Label htmlFor="memo" className="text-sm font-semibold">今回の症状・ご要望（任意）</Label>
+                    <Label htmlFor="memo" className="text-sm font-semibold text-stone-700">今回の症状・ご要望（任意）</Label>
                     <Textarea id="memo" value={memo} onChange={(e) => setMemo(e.target.value)}
-                      placeholder="腰痛・肩こり など" rows={3} />
+                      placeholder="腰痛・肩こり など" rows={3} className="rounded-xl border-stone-200" />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-sm font-semibold">ご紹介の方はいますか？（任意）</Label>
+                    <Label className="text-sm font-semibold text-stone-700">ご紹介の方はいますか？（任意）</Label>
                     <div className="flex items-center gap-3">
                       <button
                         type="button"
@@ -604,10 +641,10 @@ export default function ReserveClinicPage() {
                           if (next !== '紹介') setReferralName('')
                         }}
                         className={cn(
-                          'rounded-lg border px-4 py-2 text-sm font-medium transition-all',
+                          'rounded-xl border px-4 py-2 text-sm font-semibold transition-all',
                           referralSource === '紹介'
-                            ? 'border-green-600 bg-green-700 text-white'
-                            : 'border-border bg-white hover:border-green-300',
+                            ? 'border-emerald-700 bg-emerald-800 text-white'
+                            : 'border-stone-200 bg-white text-stone-600 hover:border-emerald-300',
                         )}
                       >
                         紹介あり
@@ -617,7 +654,7 @@ export default function ReserveClinicPage() {
                           value={referralName}
                           onChange={(e) => setReferralName(e.target.value)}
                           placeholder="紹介者のお名前"
-                          className="h-9 flex-1"
+                          className="h-10 flex-1 rounded-xl border-stone-200"
                         />
                       )}
                     </div>
@@ -625,33 +662,40 @@ export default function ReserveClinicPage() {
                 </>
               )}
             </div>
-            <Button
-              className="w-full h-12 text-base"
+            <button
+              className={cn(
+                'w-full h-12 rounded-2xl text-base font-bold transition-all',
+                (!patientName.trim() || (visitType === 'first' && !chiefComplaint.trim()))
+                  ? 'bg-stone-200 text-stone-400 cursor-not-allowed'
+                  : 'bg-emerald-800 text-white hover:bg-emerald-700 active:scale-[0.99]',
+              )}
               disabled={!patientName.trim() || (visitType === 'first' && !chiefComplaint.trim())}
               onClick={goNext}
             >
               次へ進む
-            </Button>
+            </button>
           </div>
         )}
 
         {/* Step: 確認 */}
         {step === 'confirm' && selectedMenu && selectedDate && selectedTime && (
           <div className="space-y-4">
-            <h2 className="text-lg font-bold text-green-900">予約内容をご確認ください</h2>
-            <div className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
-              <div className="bg-green-800 text-white px-5 py-4">
-                <p className="text-lg font-bold">{clinic.name}</p>
+            <h2 className="text-xl font-black text-emerald-950">予約内容をご確認ください</h2>
+            <div className="bg-white rounded-2xl border border-stone-100 shadow-sm overflow-hidden">
+              <div className="h-1 bg-gradient-to-r from-emerald-600 to-emerald-400" />
+              <div className="px-5 py-4 border-b border-stone-100">
+                <p className="font-bold text-emerald-950">{clinic.name}</p>
               </div>
               <div className="p-5 space-y-3 text-sm">
-                <Row label="日時" value={`${format(selectedDate, 'yyyy年M月d日（E）', { locale: ja })} ${selectedTime} - ${
+                <Row label="日時" value={`${format(selectedDate, 'M月d日（E）', { locale: ja })} ${selectedTime} - ${
                   (() => {
                     const [h, m] = selectedTime.split(':').map(Number)
                     const end = new Date(2000, 0, 1, h, m + selectedMenu.duration_min)
                     return format(end, 'HH:mm')
                   })()
                 }`} />
-                <Row label="メニュー" value={`${selectedMenu.name}（${selectedMenu.duration_min}分・¥${selectedMenu.price.toLocaleString()}）`} />
+                <Row label="メニュー" value={`${selectedMenu.name}（${selectedMenu.duration_min}分）`} />
+                <Row label="料金" value={`¥${selectedMenu.price.toLocaleString()}`} />
                 <Row label="担当" value={selectedStaff?.name ?? 'おまかせ'} />
                 <Row label="お名前" value={patientName} />
                 {patientPhone && <Row label="電話番号" value={patientPhone} />}
@@ -662,8 +706,8 @@ export default function ReserveClinicPage() {
               </div>
             </div>
             {visitType === 'first' && (
-              <div className="bg-white rounded-xl border border-border p-4 space-y-2 text-sm">
-                <p className="font-semibold text-green-800 mb-1">問診情報</p>
+              <div className="bg-white rounded-2xl border border-stone-100 p-5 space-y-2.5 text-sm shadow-sm">
+                <p className="text-xs font-bold text-emerald-700 tracking-wider uppercase mb-3">問診情報</p>
                 {patientNameKana && <Row label="フリガナ" value={patientNameKana} />}
                 {patientGender !== 'unknown' && <Row label="性別" value={{ male: '男性', female: '女性', other: 'その他', unknown: '' }[patientGender]} />}
                 {patientBirthDate && <Row label="生年月日" value={patientBirthDate} />}
@@ -677,9 +721,18 @@ export default function ReserveClinicPage() {
                 )}
               </div>
             )}
-            <Button className="w-full h-12 text-base font-bold" onClick={handleConfirm} disabled={submitting}>
+            <button
+              className={cn(
+                'w-full h-12 rounded-2xl text-base font-bold transition-all',
+                submitting
+                  ? 'bg-stone-200 text-stone-400 cursor-not-allowed'
+                  : 'bg-emerald-800 text-white hover:bg-emerald-700 active:scale-[0.99]',
+              )}
+              onClick={handleConfirm}
+              disabled={submitting}
+            >
               {submitting ? '送信中...' : '予約を確定する'}
-            </Button>
+            </button>
           </div>
         )}
 
@@ -687,23 +740,26 @@ export default function ReserveClinicPage() {
         {step === 'complete' && (
           <div className="py-8 space-y-5">
             <div className="text-center space-y-3">
-              <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto">
-                <Check className="w-10 h-10 text-green-700" />
+              <div className="w-20 h-20 rounded-full bg-emerald-100 flex items-center justify-center mx-auto shadow-sm">
+                <Check className="w-10 h-10 text-emerald-700" strokeWidth={3} />
               </div>
-              <h2 className="text-2xl font-bold text-green-900">予約が完了しました</h2>
-              <p className="text-muted-foreground text-sm">ご予約ありがとうございます</p>
+              <h2 className="text-2xl font-black text-emerald-950">予約が完了しました</h2>
+              <p className="text-stone-500 text-sm">ご予約ありがとうございます</p>
             </div>
 
             {/* 予約サマリー */}
             {selectedDate && selectedMenu && selectedTime && (
-              <div className="bg-green-50 rounded-xl border border-green-200 p-4 space-y-2">
-                <p className="text-xs font-semibold text-green-700 uppercase tracking-wide">予約内容</p>
-                <p className="font-bold text-green-900">{clinic.name}</p>
-                <div className="text-sm text-muted-foreground space-y-1">
-                  <p>{format(selectedDate, 'M月d日（E）', { locale: ja })}　{selectedTime}〜</p>
-                  <p>{selectedMenu.name}</p>
-                  {selectedStaff && <p>担当: {selectedStaff.name}</p>}
-                  {patientName && <p>お名前: {patientName}</p>}
+              <div className="bg-white rounded-2xl border border-stone-100 shadow-sm overflow-hidden">
+                <div className="h-1 bg-gradient-to-r from-emerald-600 to-emerald-400" />
+                <div className="p-5 space-y-2.5">
+                  <p className="text-xs font-bold text-emerald-700 tracking-wider uppercase mb-3">予約内容</p>
+                  <p className="font-bold text-emerald-950">{clinic.name}</p>
+                  <div className="text-sm text-stone-600 space-y-1.5">
+                    <p className="font-semibold text-emerald-900">{format(selectedDate, 'M月d日（E）', { locale: ja })}　{selectedTime}〜</p>
+                    <p>{selectedMenu.name}（{selectedMenu.duration_min}分）</p>
+                    {selectedStaff && <p>担当: {selectedStaff.name}</p>}
+                    {patientName && <p>お名前: {patientName}</p>}
+                  </div>
                 </div>
               </div>
             )}
@@ -723,21 +779,24 @@ export default function ReserveClinicPage() {
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-[#06C755] text-white font-bold text-sm hover:opacity-90 transition-opacity"
+                className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl bg-[#06C755] text-white font-bold text-sm hover:opacity-90 active:scale-[0.99] transition-all"
               >
                 LINEで予約内容を保存する
               </a>
             )}
 
             {clinic.phone && (
-              <p className="text-xs text-center text-muted-foreground">
-                ご不明な点は <span className="font-medium text-green-800">{clinic.phone}</span> までお電話ください
+              <p className="text-xs text-center text-stone-400">
+                ご不明な点は <span className="font-semibold text-emerald-800">{clinic.phone}</span> までお電話ください
               </p>
             )}
 
-            <Button variant="outline" onClick={() => router.push('/reserve')} className="w-full">
+            <button
+              onClick={() => router.push('/reserve')}
+              className="w-full h-11 rounded-2xl border-2 border-stone-200 text-stone-600 font-semibold text-sm hover:border-emerald-300 hover:text-emerald-800 transition-all"
+            >
               TOPに戻る
-            </Button>
+            </button>
           </div>
         )}
       </div>
@@ -748,8 +807,8 @@ export default function ReserveClinicPage() {
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between gap-4">
-      <span className="text-muted-foreground flex-shrink-0">{label}</span>
-      <span className="text-right font-medium text-green-900">{value}</span>
+      <span className="text-stone-400 flex-shrink-0">{label}</span>
+      <span className="text-right font-semibold text-emerald-950">{value}</span>
     </div>
   )
 }

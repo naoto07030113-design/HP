@@ -4,7 +4,6 @@ import { useState, useMemo } from 'react'
 import { format, parseISO, addDays, startOfWeek, isSameDay } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import Link from 'next/link'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ArrowLeft, Phone, CalendarCheck, X, Pencil, ChevronLeft, ChevronRight } from 'lucide-react'
 import { getSupabaseClient } from '@/lib/supabase'
@@ -175,25 +174,26 @@ export default function CancelPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-50 to-white">
-      <header className="bg-green-900 text-white px-4 py-4">
-        <div className="max-w-lg mx-auto flex items-center gap-3">
-          <Link href="/reserve" className="text-green-200 hover:text-white transition-colors">
-            <ArrowLeft className="w-5 h-5" />
+    <div className="min-h-screen bg-stone-50">
+      {/* ヘッダー */}
+      <header className="bg-gradient-to-r from-emerald-950 to-emerald-900 text-white sticky top-0 z-10 shadow-md">
+        <div className="max-w-lg mx-auto px-4 py-3.5 flex items-center gap-3">
+          <Link href="/reserve" className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors flex-shrink-0">
+            <ArrowLeft className="w-4 h-4" />
           </Link>
           <div>
-            <h1 className="text-xl font-bold tracking-tight">予約の確認・変更・キャンセル</h1>
-            <p className="text-green-200 text-sm mt-0.5">電話番号で予約を検索できます</p>
+            <h1 className="text-sm font-bold">予約の確認・変更・キャンセル</h1>
+            <p className="text-[11px] text-emerald-300 mt-0.5">電話番号で予約を検索できます</p>
           </div>
         </div>
       </header>
 
-      <div className="max-w-lg mx-auto px-4 py-6 space-y-5">
+      <div className="max-w-lg mx-auto px-4 py-6 space-y-4">
         {/* 検索フォーム */}
-        <div className="bg-white rounded-xl border border-border shadow-sm p-4 space-y-3">
-          <div className="flex items-center gap-2 font-semibold text-green-900">
-            <Phone className="w-4 h-4" />
-            <span>電話番号で予約を検索</span>
+        <div className="bg-white rounded-2xl border border-stone-100 shadow-sm p-5 space-y-3">
+          <div className="flex items-center gap-2 text-emerald-950 font-bold">
+            <Phone className="w-4 h-4 text-emerald-600" />
+            <span className="text-sm">電話番号で予約を検索</span>
           </div>
           <div className="flex gap-2">
             <Input
@@ -201,94 +201,103 @@ export default function CancelPage() {
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="例: 090-1234-5678"
-              className="flex-1"
+              className="flex-1 h-11 rounded-xl border-stone-200 focus:border-emerald-400"
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
             />
-            <Button onClick={handleSearch} disabled={loading || !phone.trim()}>
+            <button
+              onClick={handleSearch}
+              disabled={loading || !phone.trim()}
+              className={cn(
+                'px-5 h-11 rounded-xl font-bold text-sm transition-all',
+                loading || !phone.trim()
+                  ? 'bg-stone-100 text-stone-400 cursor-not-allowed'
+                  : 'bg-emerald-800 text-white hover:bg-emerald-700 active:scale-[0.98]',
+              )}
+            >
               {loading ? '検索中...' : '検索'}
-            </Button>
+            </button>
           </div>
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && <p className="text-sm text-red-500">{error}</p>}
         </div>
 
         {/* 検索結果 */}
         {searched && (
           <div className="space-y-3">
             {reservations.length === 0 ? (
-              <div className="bg-white rounded-xl border border-border shadow-sm p-6 text-center">
-                <CalendarCheck className="w-8 h-8 mx-auto mb-2 text-green-300" />
-                <p className="text-sm text-muted-foreground">予約が見つかりませんでした</p>
-                <p className="text-xs text-muted-foreground mt-1">
+              <div className="bg-white rounded-2xl border border-stone-100 shadow-sm p-8 text-center">
+                <div className="w-14 h-14 rounded-full bg-stone-100 flex items-center justify-center mx-auto mb-3">
+                  <CalendarCheck className="w-7 h-7 text-stone-300" />
+                </div>
+                <p className="text-sm font-semibold text-stone-500">予約が見つかりませんでした</p>
+                <p className="text-xs text-stone-400 mt-1">
                   電話番号を確認するか、院に直接お問い合わせください
                 </p>
               </div>
             ) : (
               <>
-                <p className="text-sm text-muted-foreground">{reservations.length}件の予約が見つかりました</p>
+                <p className="text-xs text-stone-400 px-1">{reservations.length}件の予約が見つかりました</p>
                 {reservations.map((r) => {
                   const isChanging = changeTarget?.id === r.id
                   return (
                     <div key={r.id} className={cn(
-                      'bg-white rounded-xl border shadow-sm overflow-hidden',
-                      isChanging ? 'border-green-400' : 'border-border',
+                      'bg-white rounded-2xl border shadow-sm overflow-hidden transition-all',
+                      isChanging ? 'border-emerald-300' : 'border-stone-100',
                     )}>
+                      <div className="h-1 bg-gradient-to-r from-emerald-600 to-emerald-400" />
                       {/* 予約カード */}
                       <div className="p-4">
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <p className="font-bold text-green-900">
+                            <p className="font-bold text-emerald-950">
                               {format(parseISO(r.start_at), 'M月d日（E） HH:mm', { locale: ja })}
                             </p>
-                            <p className="text-sm text-muted-foreground mt-0.5">{r.patient_name}</p>
+                            <p className="text-sm text-stone-500 mt-0.5">{r.patient_name}</p>
                           </div>
                           <div className="flex gap-2 flex-shrink-0">
                             {!isChanging && (
-                              <Button
-                                variant="outline" size="sm"
-                                className="h-8 text-xs border-green-300 text-green-700 hover:bg-green-50"
+                              <button
+                                className="h-8 px-3 rounded-xl border border-emerald-200 text-emerald-700 text-xs font-semibold hover:bg-emerald-50 transition-colors flex items-center gap-1"
                                 onClick={() => openChange(r)}
                               >
-                                <Pencil className="w-3 h-3 mr-1" />
+                                <Pencil className="w-3 h-3" />
                                 変更
-                              </Button>
+                              </button>
                             )}
                             {isChanging && (
-                              <Button
-                                variant="ghost" size="sm"
-                                className="h-8 text-xs text-muted-foreground"
+                              <button
+                                className="h-8 px-3 rounded-xl border border-stone-200 text-stone-500 text-xs font-semibold hover:bg-stone-50 transition-colors"
                                 onClick={() => setChangeTarget(null)}
                               >
                                 閉じる
-                              </Button>
+                              </button>
                             )}
-                            <Button
-                              variant="outline" size="sm"
-                              className="h-8 text-xs text-destructive border-destructive hover:bg-destructive/10"
+                            <button
+                              className="h-8 px-3 rounded-xl border border-red-200 text-red-500 text-xs font-semibold hover:bg-red-50 transition-colors flex items-center gap-1"
                               onClick={() => setCancelId(r.id)}
                             >
-                              <X className="w-3 h-3 mr-1" />
+                              <X className="w-3 h-3" />
                               キャンセル
-                            </Button>
+                            </button>
                           </div>
                         </div>
                       </div>
 
                       {/* 日時変更パネル */}
                       {isChanging && changeClinic && (
-                        <div className="border-t border-green-100 p-4 bg-green-50/40 space-y-4">
-                          <p className="text-sm font-semibold text-green-900">新しい日時を選んでください</p>
+                        <div className="border-t border-stone-100 p-4 bg-stone-50/60 space-y-4">
+                          <p className="text-sm font-bold text-emerald-950">新しい日時を選んでください</p>
 
                           {/* カレンダー */}
-                          <div className="bg-white rounded-xl border border-border p-3">
-                            <div className="flex items-center justify-between mb-3">
+                          <div className="bg-white rounded-2xl border border-stone-100 p-4">
+                            <div className="flex items-center justify-between mb-4">
                               <button
                                 onClick={() => { setCalendarOffset((o) => Math.max(0, o - 1)); setChangeDate(null); setChangeTime(null) }}
                                 disabled={calendarOffset === 0}
-                                className="p-1 rounded hover:bg-green-50 disabled:opacity-30"
+                                className="w-7 h-7 rounded-full bg-stone-100 hover:bg-emerald-100 flex items-center justify-center transition-colors disabled:opacity-30"
                               >
-                                <ChevronLeft className="w-4 h-4 text-green-700" />
+                                <ChevronLeft className="w-3.5 h-3.5 text-emerald-800" />
                               </button>
-                              <span className="text-sm font-medium text-green-900">
+                              <span className="text-sm font-bold text-emerald-950">
                                 {format(calendarDays[0], 'M月', { locale: ja })}
                                 {format(calendarDays[0], 'M') !== format(calendarDays[13], 'M') && (
                                   <>〜{format(calendarDays[13], 'M月', { locale: ja })}</>
@@ -296,14 +305,14 @@ export default function CancelPage() {
                               </span>
                               <button
                                 onClick={() => { setCalendarOffset((o) => o + 1); setChangeDate(null); setChangeTime(null) }}
-                                className="p-1 rounded hover:bg-green-50"
+                                className="w-7 h-7 rounded-full bg-stone-100 hover:bg-emerald-100 flex items-center justify-center transition-colors"
                               >
-                                <ChevronRight className="w-4 h-4 text-green-700" />
+                                <ChevronRight className="w-3.5 h-3.5 text-emerald-800" />
                               </button>
                             </div>
                             <div className="grid grid-cols-7 gap-1 text-center mb-1">
                               {['日', '月', '火', '水', '木', '金', '土'].map((d, i) => (
-                                <div key={d} className={cn('text-xs font-medium py-1', i === 0 && 'text-red-500', i === 6 && 'text-blue-500')}>
+                                <div key={d} className={cn('text-xs font-semibold py-1 text-stone-400', i === 0 && 'text-red-400', i === 6 && 'text-blue-400')}>
                                   {d}
                                 </div>
                               ))}
@@ -316,19 +325,20 @@ export default function CancelPage() {
                                 const isClosed = closedDatesSet.has(dateStr)
                                 const disabled = isPast || isClosed
                                 const isSelected = changeDate && isSameDay(day, changeDate)
+                                const isToday = isSameDay(day, new Date())
                                 return (
                                   <button
                                     key={day.toISOString()}
                                     disabled={disabled}
                                     onClick={() => { setChangeDate(day); setChangeTime(null) }}
                                     className={cn(
-                                      'rounded-lg py-2 text-sm font-medium transition-all',
-                                      disabled ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-green-100',
-                                      isClosed && 'bg-red-50',
-                                      isSameDay(day, new Date()) && !disabled && 'border border-green-500',
-                                      isSelected && 'bg-green-700 text-white hover:bg-green-800',
-                                      !disabled && !isSelected && dow === 0 && 'text-red-500',
-                                      !disabled && !isSelected && dow === 6 && 'text-blue-500',
+                                      'rounded-xl py-2 text-xs font-semibold transition-all',
+                                      disabled ? 'text-stone-200 cursor-not-allowed' : 'hover:bg-emerald-50',
+                                      isClosed && 'bg-red-50 text-red-200',
+                                      isToday && !disabled && !isSelected && 'ring-1 ring-emerald-400 text-emerald-700',
+                                      isSelected && 'bg-emerald-800 text-white hover:bg-emerald-700',
+                                      !disabled && !isSelected && dow === 0 && 'text-red-400',
+                                      !disabled && !isSelected && dow === 6 && 'text-blue-400',
                                     )}
                                   >
                                     {format(day, 'd')}
@@ -341,11 +351,11 @@ export default function CancelPage() {
                           {/* 時間スロット */}
                           {changeDate && (
                             <div>
-                              <p className="text-xs text-muted-foreground mb-2">
-                                {format(changeDate, 'M月d日（E）', { locale: ja })} の時間
+                              <p className="text-xs font-semibold text-stone-500 mb-2">
+                                {format(changeDate, 'M月d日（E）', { locale: ja })} の空き時間
                               </p>
                               {availableSlots.length === 0 ? (
-                                <p className="text-sm text-muted-foreground text-center py-3">この日は空き枠がありません</p>
+                                <p className="text-sm text-stone-400 text-center py-3">この日は空き枠がありません</p>
                               ) : (
                                 <div className="grid grid-cols-4 gap-1.5">
                                   {availableSlots.map((t) => (
@@ -353,10 +363,10 @@ export default function CancelPage() {
                                       key={t}
                                       onClick={() => setChangeTime(t)}
                                       className={cn(
-                                        'py-2 rounded-lg text-sm font-medium border transition-all',
+                                        'py-2.5 rounded-xl text-xs font-bold border transition-all',
                                         changeTime === t
-                                          ? 'bg-green-700 text-white border-green-700'
-                                          : 'bg-white border-green-200 text-green-900 hover:border-green-500 hover:bg-green-50',
+                                          ? 'bg-emerald-800 text-white border-emerald-800'
+                                          : 'bg-white border-stone-200 text-emerald-900 hover:border-emerald-300 hover:bg-emerald-50',
                                       )}
                                     >
                                       {t}
@@ -369,12 +379,12 @@ export default function CancelPage() {
 
                           {/* 変更ボタン */}
                           {changeDate && changeTime && (
-                            <Button
-                              className="w-full"
+                            <button
+                              className="w-full h-11 rounded-2xl bg-emerald-800 text-white font-bold text-sm hover:bg-emerald-700 active:scale-[0.99] transition-all"
                               onClick={() => setConfirmChangeOpen(true)}
                             >
                               {format(changeDate, 'M月d日（E）', { locale: ja })} {changeTime} に変更する
-                            </Button>
+                            </button>
                           )}
                         </div>
                       )}
@@ -386,7 +396,7 @@ export default function CancelPage() {
           </div>
         )}
 
-        <p className="text-xs text-muted-foreground text-center pt-2">
+        <p className="text-xs text-stone-400 text-center pt-2">
           ご不明な点は院に直接お電話ください
         </p>
       </div>
