@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import {
   LayoutDashboard, Users, Clock, Calculator, FileText,
-  Upload, ShieldCheck,
+  Upload, ShieldCheck, Download,
 } from 'lucide-react'
 
 const TABS = [
@@ -14,6 +14,7 @@ const TABS = [
   { href: '/admin/payroll/attendance', label: '勤怠管理',        icon: Clock },
   { href: '/admin/payroll/calculate',  label: '給与計算',        icon: Calculator },
   { href: '/admin/payroll/slips',      label: '給与明細',        icon: FileText },
+  { href: '/admin/payroll/export',     label: '税理士・印刷出力', icon: Download },
   { href: '/admin/payroll/submissions',label: 'PDF申請書取込',   icon: Upload },
   { href: '/admin/payroll/compliance', label: '法令・コンプラ',  icon: ShieldCheck },
 ]

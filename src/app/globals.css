@@ -121,3 +121,105 @@
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: hsl(150 20% 82%); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: hsl(150 25% 68%); }
+
+/* ============================================================
+   給与明細書 印刷スタイル
+   ============================================================ */
+@media print {
+  /* 印刷時は画面UIを全非表示 */
+  .print\:hidden { display: none !important; }
+  .hidden.print\:block { display: block !important; }
+
+  body {
+    background: white !important;
+    font-size: 11pt;
+    color: #000 !important;
+  }
+
+  /* 各明細書の改ページ */
+  .print-page-break {
+    page-break-before: always;
+    break-before: page;
+  }
+
+  /* 給与明細書全体 */
+  .payslip-wrapper {
+    width: 100%;
+    max-width: 100%;
+    padding: 0;
+    margin: 0;
+    font-family: 'MS Gothic', 'Hiragino Kaku Gothic ProN', sans-serif;
+    font-size: 10pt;
+    color: #000;
+  }
+
+  .payslip-wrapper table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  .payslip-wrapper td,
+  .payslip-wrapper th {
+    border: 1px solid #000 !important;
+    padding: 2pt 4pt;
+    vertical-align: middle;
+  }
+
+  /* セクションヘッダー（勤怠・支給・控除） */
+  .payslip-section-header {
+    background: #e0e0e0 !important;
+    text-align: center;
+    font-weight: bold;
+    font-size: 9pt;
+    padding: 2pt !important;
+    border: 1px solid #000 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* 差引支給額のヘッダーセル */
+  .payslip-wrapper td.bg-gray-800 {
+    background: #333 !important;
+    color: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* 背景色強制印刷 */
+  .payslip-wrapper .bg-gray-100,
+  .payslip-wrapper .bg-gray-50 {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* 改行なし */
+  .payslip-wrapper td {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+/* 画面でも給与明細書のテーブルヘッダーを見やすく */
+.payslip-section-header {
+  background-color: #e5e7eb;
+  text-align: center;
+  font-weight: 600;
+  font-size: 11px;
+  padding: 3px 4px;
+  border: 1px solid #9ca3af;
+}
+
+.payslip-wrapper table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.payslip-wrapper td,
+.payslip-wrapper th {
+  border: 1px solid #9ca3af;
+  padding: 2px 6px;
+  vertical-align: middle;
+  font-size: 12px;
+}
