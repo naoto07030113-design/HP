@@ -7,13 +7,14 @@ import { useCurrentUser, ROLE_LABELS } from '@/lib/auth-store'
 import { getSupabaseClient } from '@/lib/supabase'
 import {
   LayoutDashboard, Users, Clock, Calculator, FileText,
-  Upload, ShieldCheck, Download, LogOut, ChevronDown,
+  Upload, ShieldCheck, Download, LogOut, ChevronDown, FileSignature,
 } from 'lucide-react'
 import { useState } from 'react'
 
 const TABS = [
   { href: '/admin/payroll',             label: 'ダッシュボード',   icon: LayoutDashboard, exact: true },
   { href: '/admin/payroll/employees',   label: '従業員管理',       icon: Users },
+  { href: '/admin/payroll/contracts',   label: '労務・契約',       icon: FileSignature },
   { href: '/admin/payroll/attendance',  label: '勤怠管理',         icon: Clock },
   { href: '/admin/payroll/calculate',   label: '給与計算',         icon: Calculator },
   { href: '/admin/payroll/slips',       label: '給与明細',         icon: FileText },
