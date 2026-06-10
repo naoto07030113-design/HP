@@ -100,7 +100,7 @@ export default function AttendancePage() {
   }
 
   return (
-    <div className="max-w-7xl">
+    <div>
       {/* 年月ナビ */}
       <div className="flex items-center gap-3 mb-5">
         <button onClick={prevMonth} className="p-1.5 rounded hover:bg-green-100 transition-colors">

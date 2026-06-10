@@ -97,7 +97,7 @@ export default function PayrollDashboardPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-6xl">
+    <div className="space-y-6">
       {/* 当月ヘッダー */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">

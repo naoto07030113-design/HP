@@ -15,9 +15,13 @@ const IMPACT_MAP: Record<ImpactLevel, { label: string; cls: string }> = {
   low:      { label: '低',   cls: 'bg-blue-100 text-blue-700 border-blue-200' },
 }
 
-const CATEGORY_MAP: Record<string, string> = {
-  '最低賃金': '💰', '社会保険': '🏥', '税制': '📊',
-  '労働法': '⚖️', '育休': '👶', 'その他': '📋',
+const CATEGORY_COLORS: Record<string, string> = {
+  '最低賃金': 'bg-yellow-100 text-yellow-800',
+  '社会保険': 'bg-blue-100 text-blue-800',
+  '税制':     'bg-purple-100 text-purple-800',
+  '労働法':   'bg-orange-100 text-orange-800',
+  '育休':     'bg-pink-100 text-pink-800',
+  'その他':   'bg-gray-100 text-gray-600',
 }
 
 interface ScanHistory {
@@ -151,7 +155,7 @@ export default function CompliancePage() {
   const lastScan        = scanHistory[0]
 
   return (
-    <div className="max-w-4xl space-y-5">
+    <div className="space-y-5">
 
       {/* AIスキャンバー */}
       <div className="bg-gradient-to-r from-green-800 to-green-700 rounded-xl p-4 flex items-center justify-between gap-4">
@@ -294,7 +298,7 @@ export default function CompliancePage() {
         <div className="space-y-3">
           {filtered.map(item => {
             const impact  = IMPACT_MAP[item.impact_level]
-            const catIcon = CATEGORY_MAP[item.category] ?? '📋'
+            const catCls  = CATEGORY_COLORS[item.category] ?? 'bg-gray-100 text-gray-600'
             return (
               <div
                 key={item.id}
@@ -303,7 +307,7 @@ export default function CompliancePage() {
                 }`}
               >
                 <div className="flex items-start gap-3">
-                  <div className="text-xl mt-0.5 flex-shrink-0">{catIcon}</div>
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded flex-shrink-0 mt-0.5 ${catCls}`}>{item.category}</span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                       <div>
@@ -311,9 +315,6 @@ export default function CompliancePage() {
                           <h3 className="font-semibold text-gray-900 text-sm">{item.law_name}</h3>
                           <span className={`px-2 py-0.5 rounded border text-xs font-medium ${impact.cls}`}>
                             {impact.label}
-                          </span>
-                          <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded">
-                            {item.category}
                           </span>
                           {item.ai_detected && (
                             <span className="flex items-center gap-0.5 text-[10px] text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-100">

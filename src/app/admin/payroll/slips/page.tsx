@@ -139,7 +139,7 @@ export default function PayrollSlipsPage() {
   }
 
   return (
-    <div className="max-w-7xl flex gap-4">
+    <div className="flex gap-4 h-full">
       {/* 一覧 */}
       <div className="flex-1 min-w-0">
         {/* 年月ナビ */}

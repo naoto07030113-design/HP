@@ -122,7 +122,7 @@ export default function PayrollExportPage() {
   return (
     <>
       {/* ===== 画面表示 ===== */}
-      <div className="max-w-5xl space-y-5 print:hidden">
+      <div className="space-y-5 print:hidden">
         {/* 年月ナビ */}
         <div className="flex items-center gap-3">
           <button onClick={() => { if (month === 1) { setYear(y => y-1); setMonth(12) } else setMonth(m => m-1) }} className="p-1.5 rounded hover:bg-green-100">

@@ -33,7 +33,7 @@ export default function PayrollEmployeesPage() {
   const selected = employees.find((e) => e.id === selectedId)
 
   return (
-    <div className="flex gap-4 max-w-7xl h-full">
+    <div className="flex gap-4 h-full">
       {/* 一覧 */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between mb-4">

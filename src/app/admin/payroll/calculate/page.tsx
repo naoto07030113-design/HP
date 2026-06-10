@@ -114,7 +114,7 @@ export default function PayrollCalculatePage() {
   const selected = employees.find(e => e.id === selectedId)
 
   return (
-    <div className="max-w-7xl">
+    <div>
       {/* ヘッダー */}
       <div className="flex items-center gap-3 mb-5">
         <button onClick={() => { if (month === 1) { setYear(y => y - 1); setMonth(12) } else setMonth(m => m - 1) }} className="p-1.5 rounded hover:bg-green-100">
