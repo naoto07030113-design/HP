@@ -3,14 +3,18 @@ import { createServiceClient } from '@/lib/supabase'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const supabase = createServiceClient()
+  const pending  = new URL(req.url).searchParams.get('pending')
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('payroll_compliance')
     .select('*')
     .order('effective_date', { ascending: false })
 
+  if (pending === 'true') query = query.eq('is_applied', false)
+
+  const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data)
 }
