@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { format, parseISO, addDays, startOfWeek, isSameDay } from 'date-fns'
+import { format, parseISO, isSameDay } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import Link from 'next/link'
 import { Input } from '@/components/ui/input'
@@ -46,11 +46,18 @@ export default function CancelPage() {
   const [confirmChangeOpen, setConfirmChangeOpen] = useState(false)
   const [changing, setChanging] = useState(false)
 
-  const calendarBase = useMemo(() => startOfWeek(new Date(), { weekStartsOn: 0 }), [])
-  const calendarDays = useMemo(
-    () => Array.from({ length: 14 }, (_, i) => addDays(calendarBase, i + calendarOffset * 14)),
-    [calendarBase, calendarOffset],
-  )
+  const calendarData = useMemo(() => {
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = now.getMonth() + calendarOffset
+    const firstOfMonth = new Date(year, month, 1)
+    const startDow = firstOfMonth.getDay()
+    const daysInMonth = new Date(year, month + 1, 0).getDate()
+    const cells: (Date | null)[] = []
+    for (let i = 0; i < startDow; i++) cells.push(null)
+    for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, month, d))
+    return { cells, firstOfMonth }
+  }, [calendarOffset])
 
   const changeClinic = changeTarget
     ? store.clinics.find((c) => c.id === changeTarget.clinic_id)
@@ -298,10 +305,7 @@ export default function CancelPage() {
                                 <ChevronLeft className="w-3.5 h-3.5 text-emerald-800" />
                               </button>
                               <span className="text-sm font-bold text-emerald-950">
-                                {format(calendarDays[0], 'M月', { locale: ja })}
-                                {format(calendarDays[0], 'M') !== format(calendarDays[13], 'M') && (
-                                  <>〜{format(calendarDays[13], 'M月', { locale: ja })}</>
-                                )}
+                                {format(calendarData.firstOfMonth, 'yyyy年M月', { locale: ja })}
                               </span>
                               <button
                                 onClick={() => { setCalendarOffset((o) => o + 1); setChangeDate(null); setChangeTime(null) }}
@@ -318,7 +322,8 @@ export default function CancelPage() {
                               ))}
                             </div>
                             <div className="grid grid-cols-7 gap-1">
-                              {calendarDays.map((day) => {
+                              {calendarData.cells.map((day, idx) => {
+                                if (!day) return <div key={`empty-${idx}`} />
                                 const dow = day.getDay()
                                 const isPast = day < new Date(new Date().setHours(0, 0, 0, 0))
                                 const dateStr = format(day, 'yyyy-MM-dd')

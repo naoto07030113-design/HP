@@ -2,9 +2,8 @@
 
 import { useState, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { format, addDays, isSameDay, parseISO, startOfWeek } from 'date-fns'
+import { format, isSameDay, parseISO } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -78,7 +77,7 @@ export default function ReserveClinicPage() {
   const params = useParams()
   const clinicId = String(params.clinicId)
   const store = useClinicStore()
-  const announcements = useAnnouncementsStore()
+  useAnnouncementsStore()
   const router = useRouter()
 
   const clinic = store.clinics.find((c) => c.id === clinicId)
@@ -113,12 +112,19 @@ export default function ReserveClinicPage() {
   )
   const availableStaff = store.staff.filter((s) => s.clinic_id === clinicId && s.is_active && s.is_bookable)
 
-  // カレンダー: 今週の日曜から2週間分（週の境界に合わせる）
-  const calendarBaseDate = useMemo(() => startOfWeek(new Date(), { weekStartsOn: 0 }), [])
-  const calendarDays = useMemo(() =>
-    Array.from({ length: 14 }, (_, i) => addDays(calendarBaseDate, i + calendarOffset * 14)),
-    [calendarBaseDate, calendarOffset],
-  )
+  // カレンダー: 月表示
+  const calendarData = useMemo(() => {
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = now.getMonth() + calendarOffset
+    const firstOfMonth = new Date(year, month, 1)
+    const startDow = firstOfMonth.getDay()
+    const daysInMonth = new Date(year, month + 1, 0).getDate()
+    const cells: (Date | null)[] = []
+    for (let i = 0; i < startDow; i++) cells.push(null)
+    for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, month, d))
+    return { cells, firstOfMonth }
+  }, [calendarOffset])
 
   const closedDatesSet = useMemo(() => {
     const days = store.closedDays.filter((d) => d.clinic_id === clinicId)
@@ -387,11 +393,7 @@ export default function ReserveClinicPage() {
                   <ChevronLeft className="w-4 h-4 text-emerald-800" />
                 </button>
                 <span className="text-sm font-bold text-emerald-950">
-                  {format(calendarDays[0], 'M月', { locale: ja })}
-                  {format(calendarDays[0], 'M') !== format(calendarDays[13], 'M') && (
-                    <>〜{format(calendarDays[13], 'M月', { locale: ja })}</>
-                  )}
-                  {' '}{format(calendarDays[0], 'yyyy')}
+                  {format(calendarData.firstOfMonth, 'yyyy年M月', { locale: ja })}
                 </span>
                 <button onClick={() => setCalendarOffset((o) => o + 1)}
                   className="w-8 h-8 rounded-full bg-stone-100 hover:bg-emerald-100 flex items-center justify-center transition-colors">
@@ -406,7 +408,8 @@ export default function ReserveClinicPage() {
                 ))}
               </div>
               <div className="grid grid-cols-7 gap-1">
-                {calendarDays.map((day) => {
+                {calendarData.cells.map((day, idx) => {
+                  if (!day) return <div key={`empty-${idx}`} />
                   const dow = day.getDay()
                   const isPast = day < new Date(new Date().setHours(0, 0, 0, 0))
                   const dateStr = format(day, 'yyyy-MM-dd')
