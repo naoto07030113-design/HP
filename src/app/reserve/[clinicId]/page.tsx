@@ -201,6 +201,21 @@ export default function ReserveClinicPage() {
         status: 'confirmed',
       })
     }
+
+    // スタッフへのLINE通知（fire and forget）
+    fetch('/api/line/notify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        clinicId,
+        clinicName: clinic?.name ?? '',
+        patientName,
+        startAt: new Date(`${format(selectedDate!, 'yyyy-MM-dd')}T${selectedTime}:00`).toISOString(),
+        menuName: selectedMenu?.name ?? null,
+        staffName: selectedStaff?.name ?? null,
+      }),
+    }).catch(() => {})
+
     setSubmitting(false)
     setStep('complete')
   }
@@ -670,19 +685,56 @@ export default function ReserveClinicPage() {
 
         {/* Step: 完了 */}
         {step === 'complete' && (
-          <div className="text-center py-8 space-y-5">
-            <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto">
-              <Check className="w-10 h-10 text-green-700" />
+          <div className="py-8 space-y-5">
+            <div className="text-center space-y-3">
+              <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto">
+                <Check className="w-10 h-10 text-green-700" />
+              </div>
+              <h2 className="text-2xl font-bold text-green-900">予約が完了しました</h2>
+              <p className="text-muted-foreground text-sm">ご予約ありがとうございます</p>
             </div>
-            <div>
-              <h2 className="text-2xl font-bold text-green-900 mb-2">予約が完了しました</h2>
-              <p className="text-muted-foreground">ご予約ありがとうございます。</p>
-              {clinic.phone && (
-                <p className="text-sm text-muted-foreground mt-2">
-                  ご不明な点は <span className="font-medium text-green-800">{clinic.phone}</span> までお電話ください
-                </p>
-              )}
-            </div>
+
+            {/* 予約サマリー */}
+            {selectedDate && selectedMenu && selectedTime && (
+              <div className="bg-green-50 rounded-xl border border-green-200 p-4 space-y-2">
+                <p className="text-xs font-semibold text-green-700 uppercase tracking-wide">予約内容</p>
+                <p className="font-bold text-green-900">{clinic.name}</p>
+                <div className="text-sm text-muted-foreground space-y-1">
+                  <p>{format(selectedDate, 'M月d日（E）', { locale: ja })}　{selectedTime}〜</p>
+                  <p>{selectedMenu.name}</p>
+                  {selectedStaff && <p>担当: {selectedStaff.name}</p>}
+                  {patientName && <p>お名前: {patientName}</p>}
+                </div>
+              </div>
+            )}
+
+            {/* LINEで保存ボタン */}
+            {selectedDate && selectedMenu && selectedTime && (
+              <a
+                href={`https://line.me/R/msg/text/?${encodeURIComponent(
+                  [
+                    '【予約確認】',
+                    clinic.name,
+                    `${format(selectedDate, 'M月d日（E）', { locale: ja })} ${selectedTime}〜`,
+                    selectedMenu.name,
+                    selectedStaff ? `担当: ${selectedStaff.name}` : null,
+                    patientName ? `お名前: ${patientName}` : null,
+                  ].filter(Boolean).join('\n'),
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-[#06C755] text-white font-bold text-sm hover:opacity-90 transition-opacity"
+              >
+                LINEで予約内容を保存する
+              </a>
+            )}
+
+            {clinic.phone && (
+              <p className="text-xs text-center text-muted-foreground">
+                ご不明な点は <span className="font-medium text-green-800">{clinic.phone}</span> までお電話ください
+              </p>
+            )}
+
             <Button variant="outline" onClick={() => router.push('/reserve')} className="w-full">
               TOPに戻る
             </Button>
