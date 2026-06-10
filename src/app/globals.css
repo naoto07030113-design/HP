@@ -50,6 +50,14 @@
   .page-title {
     @apply text-xl font-bold text-green-900 tracking-tight;
   }
+  /* 給与システム共通インプット */
+  .input {
+    @apply w-full border border-green-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-400 bg-white;
+  }
+  /* 勤怠入力フィールド */
+  .att-input {
+    @apply w-20 border border-gray-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-green-400;
+  }
 }
 
 /* Calendar slot base */

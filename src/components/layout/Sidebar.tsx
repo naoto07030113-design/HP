@@ -7,7 +7,7 @@ import {
   Calendar, ClipboardList, ClipboardCheck, Building2, Users, BookOpen,
   Clock, Download, Megaphone, ExternalLink, UserRound, FileText,
   Receipt, BarChart2, MessageSquare, Settings, LogOut, ShieldCheck,
-  LayoutList, Bell, LayoutDashboard, FileBarChart, BrainCircuit,
+  LayoutList, Bell, LayoutDashboard, FileBarChart, BrainCircuit, Banknote,
 } from 'lucide-react'
 import { getSupabaseClient } from '@/lib/supabase'
 import { useCurrentUser, PERMISSIONS, ROLE_LABELS } from '@/lib/auth-store'
@@ -104,6 +104,13 @@ const NAV_ITEMS: NavGroup[] = [
         href: '/admin/settings', label: 'システム設定', icon: Settings,
         show: (u) => u ? PERMISSIONS.canAccessSettings(u.role) : false,
       },
+    ],
+  },
+  {
+    section: '給与・人事労務',
+    show: (u) => u ? PERMISSIONS.canManageStaff(u.role) : false,
+    items: [
+      { href: '/admin/payroll', label: '給与管理', icon: Banknote },
     ],
   },
   {
