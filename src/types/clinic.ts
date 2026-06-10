@@ -133,9 +133,7 @@ export const VISIT_TYPE_LABELS = {
 
 export const STAFF_ROLES = [
   '柔道整復師',
-  '鍼灸師',
-  'あん摩マッサージ指圧師',
-  'リハビリトレーナー',
-  '受付',
-  'その他',
+  '鍼師',
+  '灸師',
+  'あん摩師',
 ] as const

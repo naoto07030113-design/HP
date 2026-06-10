@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { cn } from '@/lib/utils'
 
 interface Props {
   open: boolean
@@ -19,24 +20,44 @@ interface Props {
   onSubmit: (data: StaffFormData) => void
 }
 
+function parseRoles(role: string | null | undefined): string[] {
+  if (!role) return []
+  return role.split('・').filter(Boolean)
+}
+
+function joinRoles(roles: string[]): string | null {
+  return roles.length > 0 ? roles.join('・') : null
+}
+
 export function StaffForm({ open, onOpenChange, initial, clinics, defaultClinicId, onSubmit }: Props) {
-  const [form, setForm] = useState<StaffFormData>(() =>
-    initial
-      ? { clinic_id: initial.clinic_id, name: initial.name, role: initial.role ?? '',
-          is_bookable: initial.is_bookable, is_active: initial.is_active, sort_order: initial.sort_order }
-      : { clinic_id: defaultClinicId ?? clinics[0]?.id ?? '', name: '', role: '',
-          is_bookable: true, is_active: true, sort_order: 0 },
+  const [clinicId, setClinicId] = useState(
+    initial?.clinic_id ?? defaultClinicId ?? clinics[0]?.id ?? '',
   )
+  const [name, setName] = useState(initial?.name ?? '')
+  const [selectedRoles, setSelectedRoles] = useState<string[]>(parseRoles(initial?.role))
+  const [isBookable, setIsBookable] = useState(initial?.is_bookable ?? true)
+  const [isActive, setIsActive] = useState(initial?.is_active ?? true)
+  const [sortOrder] = useState(initial?.sort_order ?? 0)
+
+  function toggleRole(role: string) {
+    setSelectedRoles((prev) =>
+      prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role],
+    )
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.name.trim() || !form.clinic_id) return
-    onSubmit({ ...form, role: form.role || null })
+    if (!name.trim() || !clinicId) return
+    onSubmit({
+      clinic_id: clinicId,
+      name: name.trim(),
+      role: joinRoles(selectedRoles),
+      is_bookable: isBookable,
+      is_active: isActive,
+      sort_order: sortOrder,
+    })
     onOpenChange(false)
   }
-
-  const set = <K extends keyof StaffFormData>(k: K, v: StaffFormData[K]) =>
-    setForm((f) => ({ ...f, [k]: v }))
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -47,36 +68,60 @@ export function StaffForm({ open, onOpenChange, initial, clinics, defaultClinicI
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
             <Label>所属院 *</Label>
-            <Select value={form.clinic_id} onValueChange={(v) => set('clinic_id', v)}>
+            <Select value={clinicId} onValueChange={setClinicId}>
               <SelectTrigger><SelectValue placeholder="院を選択" /></SelectTrigger>
               <SelectContent>
                 {clinics.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
+
           <div className="space-y-1.5">
             <Label htmlFor="staff-name">スタッフ名 *</Label>
-            <Input id="staff-name" value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="田中 誠" required />
+            <Input
+              id="staff-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="田中 誠"
+              required
+            />
           </div>
+
           <div className="space-y-1.5">
-            <Label>職種</Label>
-            <Select value={form.role ?? ''} onValueChange={(v) => set('role', v as StaffFormData['role'])}>
-              <SelectTrigger><SelectValue placeholder="職種を選択" /></SelectTrigger>
-              <SelectContent>
-                {STAFF_ROLES.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <Label>職種（複数選択可）</Label>
+            <div className="flex flex-wrap gap-2">
+              {STAFF_ROLES.map((role) => (
+                <button
+                  key={role}
+                  type="button"
+                  onClick={() => toggleRole(role)}
+                  className={cn(
+                    'px-3 py-1.5 rounded-lg border text-sm font-medium transition-all',
+                    selectedRoles.includes(role)
+                      ? 'bg-green-700 border-green-700 text-white'
+                      : 'bg-white border-border text-green-900 hover:border-green-400 hover:bg-green-50',
+                  )}
+                >
+                  {role}
+                </button>
+              ))}
+            </div>
+            {selectedRoles.length > 0 && (
+              <p className="text-xs text-muted-foreground">選択中: {selectedRoles.join('・')}</p>
+            )}
           </div>
+
           <div className="space-y-3">
             <div className="flex items-center gap-3">
-              <Switch id="bookable" checked={form.is_bookable} onCheckedChange={(v) => set('is_bookable', v)} />
+              <Switch id="bookable" checked={isBookable} onCheckedChange={setIsBookable} />
               <Label htmlFor="bookable" className="cursor-pointer">予約受付する</Label>
             </div>
             <div className="flex items-center gap-3">
-              <Switch id="active" checked={form.is_active} onCheckedChange={(v) => set('is_active', v)} />
+              <Switch id="active" checked={isActive} onCheckedChange={setIsActive} />
               <Label htmlFor="active" className="cursor-pointer">表示する</Label>
             </div>
           </div>
+
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>キャンセル</Button>
             <Button type="submit">{initial ? '更新' : '追加'}</Button>
