@@ -200,12 +200,17 @@ export default function ReserveClinicPage() {
         return
       }
     } else {
-      await reservationsStore.create({
-        ...reservationData,
-        patient_id: null,
-        referral_name: referralSource === '紹介' ? referralName || null : null,
-        status: 'confirmed',
-      })
+      try {
+        await reservationsStore.create({
+          ...reservationData,
+          patient_id: null,
+          referral_name: referralSource === '紹介' ? referralName || null : null,
+          status: 'confirmed',
+        })
+      } catch {
+        setSubmitting(false)
+        return
+      }
     }
 
     // スタッフへのLINE通知（fire and forget）
