@@ -80,12 +80,12 @@ export default function PatientDetailPage() {
 
   function handleSubmit(data: PatientFormData) {
     if (!patient) return
-    patientStore.update(patient.id, data)
+    patientStore.update(patient.id, data).catch(() => {})
   }
 
   function handleDelete() {
     if (!patient) return
-    patientStore.delete(patient.id)
+    patientStore.delete(patient.id).catch(() => {})
     router.push('/admin/patients')
   }
 

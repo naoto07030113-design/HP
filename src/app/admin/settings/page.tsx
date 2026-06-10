@@ -32,7 +32,7 @@ export default function SettingsPage() {
   const [resetOpen, setResetOpen] = useState(false)
 
   function setS<K extends keyof typeof settings>(k: K, v: typeof settings[K]) {
-    settingsStore.update({ [k]: v })
+    settingsStore.update({ [k]: v }).catch(() => {})
   }
 
   function handleSave() {

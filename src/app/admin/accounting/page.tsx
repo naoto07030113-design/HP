@@ -6,7 +6,6 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Switch } from '@/components/ui/switch'
 import {
   Receipt, Plus, Search, TrendingUp, Calendar, AlertCircle,
   Pencil, Trash2, Printer, Eye,
@@ -112,7 +111,7 @@ export default function AccountingPage() {
             <span className="text-xs text-muted-foreground font-medium">本日の売上</span>
           </div>
           <p className="text-2xl font-bold text-green-900">¥{todaySales.toLocaleString()}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">{format(new Date(), 'M月d日')}</p>
+          <p className="text-xs text-muted-foreground mt-0.5" suppressHydrationWarning>{format(new Date(), 'M月d日')}</p>
         </div>
         <div className="bg-white rounded-xl border shadow-sm p-4">
           <div className="flex items-center gap-2 mb-2">
@@ -122,7 +121,7 @@ export default function AccountingPage() {
             <span className="text-xs text-muted-foreground font-medium">今月の売上</span>
           </div>
           <p className="text-2xl font-bold text-green-900">¥{monthSales.toLocaleString()}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">{format(new Date(), 'M月')}</p>
+          <p className="text-xs text-muted-foreground mt-0.5" suppressHydrationWarning>{format(new Date(), 'M月')}</p>
         </div>
         <div className="bg-white rounded-xl border shadow-sm p-4">
           <div className="flex items-center gap-2 mb-2">

@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { format } from 'date-fns'
+import { toast } from 'sonner'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -50,8 +51,13 @@ export default function RecordsPage() {
     (s) => filterClinic === 'all' || s.clinic_id === filterClinic,
   )
 
-  function handleSubmit(data: MedicalRecordFormData) {
-    medicalRecordStore.create(data)
+  async function handleSubmit(data: MedicalRecordFormData) {
+    try {
+      await medicalRecordStore.create(data)
+      toast.success('カルテを保存しました')
+    } catch {
+      toast.error('保存に失敗しました')
+    }
   }
 
   return (

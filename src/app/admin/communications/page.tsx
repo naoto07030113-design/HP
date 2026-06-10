@@ -37,7 +37,7 @@ export default function CommunicationsPage() {
   const [activeTab, setActiveTab] = useState<'settings' | 'history'>('settings')
 
   function setS<K extends keyof typeof settings>(k: K, v: typeof settings[K]) {
-    settingsStore.update({ [k]: v })
+    settingsStore.update({ [k]: v }).catch(() => {})
   }
 
   function handleSave() {
