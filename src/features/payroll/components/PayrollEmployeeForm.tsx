@@ -46,6 +46,7 @@ export default function PayrollEmployeeForm({ initial, onSaved, onClose }: Props
     bank_account_type: initial?.bank_account_type ?? '普通',
     bank_account_number: initial?.bank_account_number ?? '',
     bank_account_holder: initial?.bank_account_holder ?? '',
+    email: (initial as (PayrollEmployee & { email?: string }) | undefined)?.email ?? '',
     notes: initial?.notes ?? '',
     is_active: initial?.is_active ?? true,
   })
@@ -95,6 +96,7 @@ export default function PayrollEmployeeForm({ initial, onSaved, onClose }: Props
         bank_account_number: form.bank_account_number || null,
         bank_account_holder: form.bank_account_holder || null,
         notes: form.notes || null,
+        email: form.email || null,
       }
 
       const url = isEdit
@@ -207,6 +209,15 @@ export default function PayrollEmployeeForm({ initial, onSaved, onClose }: Props
               value={form.resignation_date}
               onChange={e => set('resignation_date', e.target.value)}
               className="input"
+            />
+          </Field>
+          <Field label="メールアドレス（給与明細電子送付先）">
+            <input
+              type="email"
+              value={form.email}
+              onChange={e => set('email', e.target.value)}
+              className="input"
+              placeholder="例: taro@example.com"
             />
           </Field>
         </Section>

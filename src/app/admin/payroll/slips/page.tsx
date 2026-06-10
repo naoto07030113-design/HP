@@ -1,33 +1,51 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { ChevronLeft, ChevronRight, CheckCircle2, DollarSign, FileText, Printer } from 'lucide-react'
+import {
+  ChevronLeft, ChevronRight, CheckCircle2, DollarSign, FileText,
+  Printer, Mail, Eye, Clock, AlertCircle,
+} from 'lucide-react'
 import type { PayrollCalculation } from '@/types/payroll'
 import { formatCurrency } from '@/lib/payroll-calculator'
 import { toast } from 'sonner'
 
 type CalcWithEmployee = PayrollCalculation & {
   employee: {
+    id: string
     staff: { name: string; clinic: { name: string } }
     contract_type: string
+    email?: string | null
   }
+}
+
+interface TokenStatus {
+  employee_id: string
+  sent_at: string | null
+  viewed_at: string | null
 }
 
 export default function PayrollSlipsPage() {
   const now = new Date()
-  const [year, setYear] = useState(now.getFullYear())
-  const [month, setMonth] = useState(now.getMonth() + 1)
-  const [calcs, setCalcs] = useState<CalcWithEmployee[]>([])
-  const [loading, setLoading] = useState(true)
+  const [year, setYear]     = useState(now.getFullYear())
+  const [month, setMonth]   = useState(now.getMonth() + 1)
+  const [calcs, setCalcs]   = useState<CalcWithEmployee[]>([])
+  const [tokens, setTokens] = useState<TokenStatus[]>([])
+  const [loading, setLoading]   = useState(true)
   const [selected, setSelected] = useState<CalcWithEmployee | null>(null)
   const [updating, setUpdating] = useState(false)
+  const [sending, setSending]   = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/payroll/slips?year=${year}&month=${month}`)
-      const data = await res.json()
-      setCalcs(Array.isArray(data) ? data : [])
+      const [slipRes, tokenRes] = await Promise.all([
+        fetch(`/api/payroll/slips?year=${year}&month=${month}`),
+        fetch(`/api/payroll/send-slips?year=${year}&month=${month}`),
+      ])
+      const slipData  = await slipRes.json()
+      const tokenData = await tokenRes.json()
+      setCalcs(Array.isArray(slipData) ? slipData : [])
+      setTokens(Array.isArray(tokenData) ? tokenData : [])
     } finally {
       setLoading(false)
     }
@@ -53,16 +71,48 @@ export default function PayrollSlipsPage() {
     }
   }
 
-  const draftIds = calcs.filter(c => c.status === 'draft').map(c => c.id)
+  async function sendSlips(employeeIds?: string[]) {
+    setSending(true)
+    try {
+      const res = await fetch('/api/payroll/send-slips', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ year, month, employee_ids: employeeIds }),
+      })
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.error ?? '送信失敗')
+
+      const msgs: string[] = []
+      if (result.sent > 0)    msgs.push(`${result.sent}件 送信成功`)
+      if (result.skipped > 0) msgs.push(`${result.skipped}件 メール未登録でスキップ`)
+      if (result.errors?.length) msgs.push(`${result.errors.length}件 失敗`)
+
+      if (result.errors?.length) {
+        toast.warning(msgs.join(' / '))
+      } else {
+        toast.success(msgs.join(' / ') || '送付完了')
+      }
+      load()
+    } catch (e) {
+      toast.error((e as Error).message)
+    } finally {
+      setSending(false)
+    }
+  }
+
+  const draftIds     = calcs.filter(c => c.status === 'draft').map(c => c.id)
   const confirmedIds = calcs.filter(c => c.status === 'confirmed').map(c => c.id)
-  const totalGross = calcs.reduce((s, c) => s + c.gross_pay, 0)
-  const totalNet = calcs.reduce((s, c) => s + c.net_pay, 0)
+  const sendableCalcs = calcs.filter(c => c.status !== 'draft' && c.employee?.email)
+  const totalGross   = calcs.reduce((s, c) => s + c.gross_pay, 0)
+  const totalNet     = calcs.reduce((s, c) => s + c.net_pay, 0)
+
+  const tokenMap = Object.fromEntries(tokens.map(t => [t.employee_id, t]))
 
   function statusBadge(status: string) {
     const map = {
-      draft: 'bg-gray-100 text-gray-500',
+      draft:     'bg-gray-100 text-gray-500',
       confirmed: 'bg-blue-100 text-blue-600',
-      paid: 'bg-green-100 text-green-700',
+      paid:      'bg-green-100 text-green-700',
     }
     const labels = { draft: '下書き', confirmed: '確定', paid: '振込済' }
     return (
@@ -70,6 +120,22 @@ export default function PayrollSlipsPage() {
         {labels[status as keyof typeof labels] ?? status}
       </span>
     )
+  }
+
+  function SendBadge({ employeeId }: { employeeId: string }) {
+    const t = tokenMap[employeeId]
+    if (!t) return null
+    if (t.viewed_at) return (
+      <span className="flex items-center gap-1 text-[10px] text-emerald-600 font-medium">
+        <Eye className="w-3 h-3" />閲覧済
+      </span>
+    )
+    if (t.sent_at) return (
+      <span className="flex items-center gap-1 text-[10px] text-blue-500 font-medium">
+        <Clock className="w-3 h-3" />送付済
+      </span>
+    )
+    return null
   }
 
   return (
@@ -104,7 +170,7 @@ export default function PayrollSlipsPage() {
         </div>
 
         {/* 一括操作 */}
-        <div className="flex items-center gap-2 mb-3">
+        <div className="flex flex-wrap items-center gap-2 mb-3">
           {draftIds.length > 0 && (
             <button
               onClick={() => bulkUpdateStatus(draftIds, 'confirmed')}
@@ -124,6 +190,22 @@ export default function PayrollSlipsPage() {
               <DollarSign className="w-3.5 h-3.5" />
               確定を振込済に ({confirmedIds.length}件)
             </button>
+          )}
+          {sendableCalcs.length > 0 && (
+            <button
+              onClick={() => sendSlips()}
+              disabled={sending}
+              className="flex items-center gap-1.5 text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors ml-auto"
+            >
+              <Mail className="w-3.5 h-3.5" />
+              {sending ? '送付中...' : `電子送付 (${sendableCalcs.length}名)`}
+            </button>
+          )}
+          {calcs.length > 0 && sendableCalcs.length === 0 && calcs.some(c => c.status !== 'draft') && (
+            <span className="flex items-center gap-1 text-xs text-amber-600 ml-auto">
+              <AlertCircle className="w-3.5 h-3.5" />
+              メール未登録のため電子送付不可
+            </span>
           )}
         </div>
 
@@ -153,15 +235,19 @@ export default function PayrollSlipsPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-medium text-sm text-gray-900">
                           {c.employee?.staff?.name ?? '不明'}
                         </span>
                         {statusBadge(c.status)}
                         <span className="text-xs text-gray-400">{c.employee?.contract_type}</span>
+                        <SendBadge employeeId={c.employee?.id} />
                       </div>
                       <p className="text-xs text-gray-400 mt-0.5">
                         {c.employee?.staff?.clinic?.name ?? '院不明'}
+                        {c.employee?.email && (
+                          <span className="ml-2 text-gray-300">{c.employee.email}</span>
+                        )}
                       </p>
                     </div>
                   </div>
@@ -185,14 +271,31 @@ export default function PayrollSlipsPage() {
       {/* 明細詳細 */}
       {selected && (
         <div className="w-80 flex-shrink-0">
-          <PayslipDetail calc={selected} onClose={() => setSelected(null)} />
+          <PayslipDetail
+            calc={selected}
+            tokenStatus={tokenMap[selected.employee?.id] ?? null}
+            onClose={() => setSelected(null)}
+            onSend={() => sendSlips([selected.employee?.id])}
+            sending={sending}
+          />
         </div>
       )}
     </div>
   )
 }
 
-function PayslipDetail({ calc, onClose }: { calc: CalcWithEmployee; onClose: () => void }) {
+function PayslipDetail({
+  calc, tokenStatus, onClose, onSend, sending,
+}: {
+  calc: CalcWithEmployee
+  tokenStatus: TokenStatus | null
+  onClose: () => void
+  onSend: () => void
+  sending: boolean
+}) {
+  const hasEmail = !!calc.employee?.email
+  const canSend  = hasEmail && calc.status !== 'draft'
+
   return (
     <div className="bg-white rounded-xl border border-green-100 overflow-hidden sticky top-0">
       <div className="bg-green-700 text-white px-4 py-3 flex items-center justify-between">
@@ -204,12 +307,55 @@ function PayslipDetail({ calc, onClose }: { calc: CalcWithEmployee; onClose: () 
           <button
             onClick={() => window.print()}
             className="p-1.5 rounded hover:bg-green-600 transition-colors"
-            title="印刷"
           >
             <Printer className="w-4 h-4" />
           </button>
           <button onClick={onClose} className="text-green-200 hover:text-white text-lg leading-none">×</button>
         </div>
+      </div>
+
+      {/* 電子送付ボタン */}
+      <div className="px-4 py-3 border-b border-green-50 bg-green-50/50">
+        <button
+          onClick={onSend}
+          disabled={!canSend || sending}
+          className={`w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+            canSend
+              ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+              : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+          }`}
+        >
+          <Mail className="w-4 h-4" />
+          {sending ? '送付中...' : '電子送付（メール送信）'}
+        </button>
+        {!hasEmail && (
+          <p className="text-xs text-amber-600 mt-1.5 flex items-center gap-1">
+            <AlertCircle className="w-3 h-3" />
+            従業員マスタにメールを登録してください
+          </p>
+        )}
+        {calc.status === 'draft' && hasEmail && (
+          <p className="text-xs text-amber-600 mt-1.5 flex items-center gap-1">
+            <AlertCircle className="w-3 h-3" />
+            確定後に送付できます
+          </p>
+        )}
+        {tokenStatus && (
+          <div className="mt-2 text-xs text-gray-500 space-y-0.5">
+            {tokenStatus.sent_at && (
+              <p className="flex items-center gap-1">
+                <Mail className="w-3 h-3 text-blue-400" />
+                送付: {new Date(tokenStatus.sent_at).toLocaleString('ja-JP')}
+              </p>
+            )}
+            {tokenStatus.viewed_at && (
+              <p className="flex items-center gap-1">
+                <Eye className="w-3 h-3 text-emerald-500" />
+                閲覧: {new Date(tokenStatus.viewed_at).toLocaleString('ja-JP')}
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="p-4 space-y-4">
