@@ -44,6 +44,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   if (isLoginPage) return <>{children}</>
 
+  const isPayroll = pathname.startsWith('/admin/payroll')
+  if (isPayroll) {
+    return (
+      <StoreHydrationProvider>
+        {children}
+      </StoreHydrationProvider>
+    )
+  }
+
   return (
     <StoreHydrationProvider>
       <AppShell>{children}</AppShell>

@@ -8,7 +8,6 @@ import {
   Clock, Download, Megaphone, ExternalLink, UserRound, FileText,
   Receipt, BarChart2, MessageSquare, Settings, LogOut, ShieldCheck,
   LayoutList, Bell, LayoutDashboard, FileBarChart, BrainCircuit, Banknote,
-  Calculator, Upload, ShieldAlert,
 } from 'lucide-react'
 import { getSupabaseClient } from '@/lib/supabase'
 import { useCurrentUser, PERMISSIONS, ROLE_LABELS } from '@/lib/auth-store'
@@ -111,21 +110,14 @@ const NAV_ITEMS: NavGroup[] = [
     section: '給与・人事労務',
     show: (u) => u ? PERMISSIONS.canManageStaff(u.role) : false,
     items: [
-      { href: '/admin/payroll',              label: 'ダッシュボード',   icon: LayoutDashboard },
-      { href: '/admin/payroll/employees',    label: '従業員管理',       icon: Users },
-      { href: '/admin/payroll/attendance',   label: '勤怠管理',         icon: Clock },
-      { href: '/admin/payroll/calculate',    label: '給与計算',         icon: Calculator },
-      { href: '/admin/payroll/slips',        label: '給与明細',         icon: Banknote },
-      { href: '/admin/payroll/export',       label: '税理士・出力',     icon: Download },
-      { href: '/admin/payroll/submissions',  label: 'PDF申請書取込',    icon: Upload },
-      { href: '/admin/payroll/compliance',   label: '法令・コンプラ',   icon: ShieldAlert },
+      { href: '/admin/payroll', label: '給与・人事労務システム', icon: Banknote },
     ],
   },
   {
     section: 'データ',
     show: (u) => u ? PERMISSIONS.canAccessExports(u.role) : false,
     items: [
-      { href: '/admin/exports', label: 'CSV出力', icon: FileText },
+      { href: '/admin/exports', label: 'CSV出力', icon: Download },
     ],
   },
 ]
@@ -172,10 +164,7 @@ export function Sidebar({ onClose }: Props) {
                 {group.section}
               </p>
               {visibleItems.map(({ href, label, icon: Icon }) => {
-                const exactMatch = href === '/admin/payroll'
-              const active = exactMatch
-                ? pathname === href
-                : (pathname === href || (href !== '/' && pathname.startsWith(href)))
+                const active = pathname === href || (href !== '/' && pathname.startsWith(href))
                 return (
                   <Link
                     key={href}
