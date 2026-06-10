@@ -6,12 +6,13 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Plus, Search, Receipt } from 'lucide-react'
+import { Plus, Search, Receipt, Trash2 } from 'lucide-react'
 import { useClinicStore, reservationsStore } from '@/lib/clinic-store'
 import { ReservationForm } from '@/features/reservations/components/ReservationForm'
 import { InvoiceForm } from '@/features/accounting/components/InvoiceForm'
 import { accountingStore } from '@/lib/accounting-store'
 import { StatusBadge } from '@/components/common/StatusBadge'
+import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { TableSkeleton } from '@/components/common/PageSkeleton'
 import { RESERVATION_STATUS_LABELS } from '@/types/clinic'
 import type { Reservation } from '@/types/clinic'
@@ -24,6 +25,7 @@ export default function ReservationsPage() {
   const [editTarget, setEditTarget] = useState<Reservation | null>(null)
   const [invoiceOpen, setInvoiceOpen] = useState(false)
   const [invoiceRes, setInvoiceRes] = useState<Reservation | null>(null)
+  const [deleteId, setDeleteId] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [filterClinic, setFilterClinic] = useState('all')
   const [filterStatus, setFilterStatus] = useState('all')
@@ -185,6 +187,13 @@ export default function ReservationsPage() {
                         <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => openEdit(r)}>
                           編集
                         </Button>
+                        <Button
+                          variant="ghost" size="sm"
+                          className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => setDeleteId(r.id)}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
                       </div>
                     </td>
                   </tr>
@@ -206,6 +215,22 @@ export default function ReservationsPage() {
         staff={store.staff} menus={store.menus}
         defaultClinicId={store.clinics[0]?.id}
         onSubmit={handleSubmit}
+      />
+
+      <ConfirmDialog
+        open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}
+        title="予約を削除しますか？" confirmLabel="削除" variant="destructive"
+        onConfirm={async () => {
+          if (deleteId) {
+            try {
+              await reservationsStore.delete(deleteId)
+              toast.success('削除しました')
+            } catch {
+              toast.error('削除に失敗しました')
+            }
+          }
+          setDeleteId(null)
+        }}
       />
 
       {invoiceRes && (

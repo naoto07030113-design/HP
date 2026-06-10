@@ -6,12 +6,14 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Plus, Search, FileText, ChevronRight } from 'lucide-react'
+import { Plus, Search, Trash2, FileText, ChevronRight } from 'lucide-react'
 import { useMedicalRecordStore, medicalRecordStore } from '@/lib/medical-record-store'
 import { useClinicStore } from '@/lib/clinic-store'
 import { usePatientStore } from '@/lib/patient-store'
 import { RecordForm } from '@/features/records/components/RecordForm'
+import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { EmptyState } from '@/components/common/EmptyState'
+import { toast } from 'sonner'
 import type { MedicalRecordFormData } from '@/types/medical-record'
 import { cn } from '@/lib/utils'
 
@@ -26,6 +28,7 @@ export default function RecordsPage() {
   const [filterFrom, setFilterFrom] = useState('')
   const [filterTo, setFilterTo] = useState('')
   const [formOpen, setFormOpen] = useState(false)
+  const [deleteId, setDeleteId] = useState<string | null>(null)
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
@@ -190,9 +193,18 @@ export default function RecordsPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <Link href={`/admin/records/${r.id}`} className="text-xs text-green-700 hover:underline">
-                          詳細
-                        </Link>
+                        <div className="flex items-center gap-1">
+                          <Link href={`/admin/records/${r.id}`} className="text-xs text-green-700 hover:underline">
+                            詳細
+                          </Link>
+                          <Button
+                            variant="ghost" size="sm"
+                            className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => setDeleteId(r.id)}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   )
@@ -235,6 +247,22 @@ export default function RecordsPage() {
         onOpenChange={setFormOpen}
         defaultClinicId={filterClinic !== 'all' ? filterClinic : store.clinics[0]?.id}
         onSubmit={handleSubmit}
+      />
+
+      <ConfirmDialog
+        open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}
+        title="カルテを削除しますか？" confirmLabel="削除" variant="destructive"
+        onConfirm={async () => {
+          if (deleteId) {
+            try {
+              await medicalRecordStore.delete(deleteId)
+              toast.success('削除しました')
+            } catch {
+              toast.error('削除に失敗しました')
+            }
+          }
+          setDeleteId(null)
+        }}
       />
     </div>
   )
