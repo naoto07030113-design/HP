@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { Plus, Search, ChevronRight, Building2, AlertTriangle } from 'lucide-react'
 import type { PayrollEmployee } from '@/types/payroll'
 import PayrollEmployeeForm from '@/features/payroll/components/PayrollEmployeeForm'
+import { toast } from 'sonner'
 
 export default function PayrollEmployeesPage() {
   const [employees, setEmployees] = useState<PayrollEmployee[]>([])
@@ -86,7 +87,11 @@ export default function PayrollEmployeesPage() {
         <div className="w-[520px] flex-shrink-0">
           <PayrollEmployeeForm
             initial={selected}
-            onSaved={() => { load(); setShowForm(false) }}
+            onSaved={() => {
+              toast.success(selected ? '従業員情報を更新しました' : '従業員を登録しました')
+              load()
+              setShowForm(false)
+            }}
             onClose={() => setShowForm(false)}
           />
         </div>

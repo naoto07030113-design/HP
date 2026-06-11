@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import { ChevronRight, CheckCircle2, Clock } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
@@ -49,10 +50,15 @@ export default async function MyPage({ params }: { params: Promise<{ token: stri
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-green-800 text-white px-4 py-5">
+      <header className="bg-green-800 text-white px-4 pt-5 pb-6">
         <div className="max-w-lg mx-auto">
-          <p className="text-green-300 text-xs">{clinicName || '有限会社イトーメディカルケア'}</p>
-          <h1 className="font-bold text-xl mt-1">{staffName} さんのマイページ</h1>
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-6 h-6 rounded bg-white/20 flex items-center justify-center">
+              <span className="text-white font-bold text-[9px] tracking-tight">IMC</span>
+            </div>
+            <p className="text-green-300 text-xs">{clinicName || '有限会社イトーメディカルケア'}</p>
+          </div>
+          <h1 className="font-bold text-xl">{staffName} さんのマイページ</h1>
         </div>
       </header>
 
@@ -88,18 +94,19 @@ export default async function MyPage({ params }: { params: Promise<{ token: stri
                   <Link
                     key={pt.token}
                     href={`/payslip/${pt.token}`}
-                    className="flex items-center justify-between bg-white rounded-xl border border-gray-200 px-4 py-3 hover:border-green-400 transition-colors"
+                    className="flex items-center gap-3 bg-white rounded-xl border border-gray-200 px-4 py-3 hover:border-green-400 transition-colors"
                   >
-                    <div>
+                    <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900">{calc.year}年{calc.month}月分</p>
                       <p className="text-xs text-gray-400 mt-0.5">
                         {pt.viewed_at ? `閲覧済 ${new Date(pt.viewed_at).toLocaleDateString('ja-JP')}` : '未閲覧'}
                       </p>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right flex-shrink-0">
                       <p className="font-bold text-green-900 tabular-nums">¥{calc.net_pay.toLocaleString('ja-JP')}</p>
                       <p className="text-xs text-gray-400 tabular-nums">支給 ¥{calc.gross_pay.toLocaleString('ja-JP')}</p>
                     </div>
+                    <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
                   </Link>
                 )
               })}
@@ -117,21 +124,30 @@ export default async function MyPage({ params }: { params: Promise<{ token: stri
                 <Link
                   key={c.id}
                   href={`/sign/${c.sign_token}`}
-                  className="flex items-center justify-between bg-white rounded-xl border border-gray-200 px-4 py-3 hover:border-green-400 transition-colors"
+                  className="flex items-center gap-3 bg-white rounded-xl border border-gray-200 px-4 py-3 hover:border-green-400 transition-colors"
                 >
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900">{c.title}</p>
                     {c.valid_from && (
                       <p className="text-xs text-gray-400 mt-0.5">
                         {c.valid_from} 〜 {c.valid_until ?? ''}
                       </p>
                     )}
+                    {c.signed_at && (
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        署名日: {new Date(c.signed_at).toLocaleDateString('ja-JP')}
+                      </p>
+                    )}
                   </div>
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded ${
-                    c.status === 'signed' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
-                  }`}>
-                    {c.status === 'signed' ? '署名済' : '未署名'}
-                  </span>
+                  {c.status === 'signed' ? (
+                    <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                  ) : (
+                    <span className="flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-100 px-2 py-0.5 rounded flex-shrink-0">
+                      <Clock className="w-3 h-3" />
+                      要署名
+                    </span>
+                  )}
+                  <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
                 </Link>
               ))}
             </div>

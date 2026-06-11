@@ -9,7 +9,7 @@ import {
   LayoutDashboard, Users, Clock, Calculator, FileText,
   Upload, ShieldCheck, Download, LogOut, ChevronDown, FileSignature,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 const TABS = [
   { href: '/admin/payroll',             label: 'ダッシュボード',   icon: LayoutDashboard, exact: true },
@@ -28,6 +28,14 @@ export default function PayrollLayout({ children }: { children: React.ReactNode 
   const router      = useRouter()
   const currentUser = useCurrentUser()
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [pendingCompliance, setPendingCompliance] = useState(0)
+
+  useEffect(() => {
+    fetch('/api/payroll/compliance?pending=true')
+      .then(r => r.json())
+      .then(d => setPendingCompliance(Array.isArray(d) ? d.length : 0))
+      .catch(() => {})
+  }, [])
 
   async function handleSignOut() {
     await getSupabaseClient().auth.signOut()
@@ -99,7 +107,7 @@ export default function PayrollLayout({ children }: { children: React.ReactNode 
       {/* タブナビゲーション */}
       <div className="flex-shrink-0 bg-white border-b border-gray-200 px-6">
         <nav className="flex gap-0 overflow-x-auto">
-          {TABS.map(({ href, label, icon: Icon, exact }) => {
+          {TABS.map(({ href, label, icon: Icon, exact, badge }) => {
             const active = exact ? pathname === href : pathname.startsWith(href)
             return (
               <Link
@@ -114,6 +122,11 @@ export default function PayrollLayout({ children }: { children: React.ReactNode 
               >
                 <Icon className="w-4 h-4" />
                 {label}
+                {badge && pendingCompliance > 0 && (
+                  <span className="ml-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 leading-none">
+                    {pendingCompliance > 9 ? '9+' : pendingCompliance}
+                  </span>
+                )}
               </Link>
             )
           })}

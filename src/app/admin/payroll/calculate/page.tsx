@@ -117,11 +117,19 @@ export default function PayrollCalculatePage() {
     <div>
       {/* ヘッダー */}
       <div className="flex items-center gap-3 mb-5">
-        <button onClick={() => { if (month === 1) { setYear(y => y - 1); setMonth(12) } else setMonth(m => m - 1) }} className="p-1.5 rounded hover:bg-green-100">
+        <button
+          onClick={() => { if (month === 1) { setYear(y => y - 1); setMonth(12) } else setMonth(m => m - 1) }}
+          aria-label="前の月"
+          className="p-1.5 rounded hover:bg-green-100"
+        >
           <ChevronLeft className="w-4 h-4" />
         </button>
         <span className="font-semibold text-green-900 text-lg w-28 text-center">{year}年{month}月</span>
-        <button onClick={() => { if (month === 12) { setYear(y => y + 1); setMonth(1) } else setMonth(m => m + 1) }} className="p-1.5 rounded hover:bg-green-100">
+        <button
+          onClick={() => { if (month === 12) { setYear(y => y + 1); setMonth(1) } else setMonth(m => m + 1) }}
+          aria-label="次の月"
+          className="p-1.5 rounded hover:bg-green-100"
+        >
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>

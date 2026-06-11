@@ -144,11 +144,19 @@ export default function PayrollSlipsPage() {
       <div className="flex-1 min-w-0">
         {/* 年月ナビ */}
         <div className="flex items-center gap-3 mb-4">
-          <button onClick={() => { if (month === 1) { setYear(y => y - 1); setMonth(12) } else setMonth(m => m - 1) }} className="p-1.5 rounded hover:bg-green-100">
+          <button
+            onClick={() => { if (month === 1) { setYear(y => y - 1); setMonth(12) } else setMonth(m => m - 1) }}
+            aria-label="前の月"
+            className="p-1.5 rounded hover:bg-green-100"
+          >
             <ChevronLeft className="w-4 h-4" />
           </button>
           <span className="font-semibold text-green-900 text-lg w-28 text-center">{year}年{month}月</span>
-          <button onClick={() => { if (month === 12) { setYear(y => y + 1); setMonth(1) } else setMonth(m => m + 1) }} className="p-1.5 rounded hover:bg-green-100">
+          <button
+            onClick={() => { if (month === 12) { setYear(y => y + 1); setMonth(1) } else setMonth(m => m + 1) }}
+            aria-label="次の月"
+            className="p-1.5 rounded hover:bg-green-100"
+          >
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
@@ -414,8 +422,8 @@ function SlipRow({ label, amount, deduction }: { label: string; amount: number; 
   return (
     <div className="flex justify-between text-xs">
       <span className="text-gray-500">{label}</span>
-      <span className={`tabular-nums font-medium ${deduction ? 'text-red-500' : amount < 0 ? 'text-red-500' : 'text-gray-800'}`}>
-        {formatCurrency(Math.abs(amount))}
+      <span className={`tabular-nums font-medium ${deduction || amount < 0 ? 'text-red-500' : 'text-gray-800'}`}>
+        {deduction ? '-' : amount < 0 ? '-' : ''}{formatCurrency(Math.abs(amount))}
       </span>
     </div>
   )

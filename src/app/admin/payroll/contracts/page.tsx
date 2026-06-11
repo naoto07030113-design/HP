@@ -103,6 +103,12 @@ export default function ContractsPage() {
   const [sending, setSending]           = useState(false)
   const [sendMsg, setSendMsg]           = useState('')
 
+  useEffect(() => {
+    if (!sendMsg) return
+    const t = setTimeout(() => setSendMsg(''), 5000)
+    return () => clearTimeout(t)
+  }, [sendMsg])
+
   const load = useCallback(async () => {
     setLoading(true)
     try {
@@ -315,7 +321,7 @@ function ContractCard({
               {statusLabel[contract.status]}
             </span>
           </div>
-          <p className="text-[11px] text-gray-500 truncate mb-0.5">{contract.title}</p>
+          <p className="text-xs text-gray-500 truncate mb-0.5">{contract.title}</p>
           <p className="text-[10px] text-gray-400">{getClinicName(contract.employee)}</p>
           {contract.sent_at && (
             <p className="text-[10px] text-gray-400 mt-0.5">

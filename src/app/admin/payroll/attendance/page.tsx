@@ -103,13 +103,13 @@ export default function AttendancePage() {
     <div>
       {/* 年月ナビ */}
       <div className="flex items-center gap-3 mb-5">
-        <button onClick={prevMonth} className="p-1.5 rounded hover:bg-green-100 transition-colors">
+        <button onClick={prevMonth} aria-label="前の月" className="p-1.5 rounded hover:bg-green-100 transition-colors">
           <ChevronLeft className="w-4 h-4" />
         </button>
         <span className="font-semibold text-green-900 text-lg w-28 text-center">
           {year}年{month}月
         </span>
-        <button onClick={nextMonth} className="p-1.5 rounded hover:bg-green-100 transition-colors">
+        <button onClick={nextMonth} aria-label="次の月" className="p-1.5 rounded hover:bg-green-100 transition-colors">
           <ChevronRight className="w-4 h-4" />
         </button>
         <span className="text-sm text-gray-400">勤怠実績</span>
