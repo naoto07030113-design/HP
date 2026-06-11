@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { format, addDays, isSameDay, parseISO, startOfWeek } from 'date-fns'
+import { format, isSameDay, parseISO } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { ChevronLeft, ChevronRight, Check, ArrowLeft } from 'lucide-react'
 import { useClinicStore, reservationsStore } from '@/lib/clinic-store'
 import { useAnnouncementsStore, announcementsStore } from '@/lib/announcement-store'
+import { useClosedDaysStore, closedDaysStore } from '@/lib/closed-days-store'
 import { AnnouncementBanners } from '@/components/common/AnnouncementBanner'
 import { cn } from '@/lib/utils'
 import type { Staff, Menu } from '@/types/clinic'
@@ -79,6 +80,7 @@ export default function ReserveClinicPage() {
   const clinicId = String(params.clinicId)
   const store = useClinicStore()
   const announcements = useAnnouncementsStore()
+  useClosedDaysStore()
   const router = useRouter()
 
   const clinic = store.clinics.find((c) => c.id === clinicId)
@@ -112,22 +114,39 @@ export default function ReserveClinicPage() {
   )
   const availableStaff = store.staff.filter((s) => s.clinic_id === clinicId && s.is_active && s.is_bookable)
 
-  // カレンダー: 今週の日曜から2週間分（週の境界に合わせる）
-  const calendarBaseDate = useMemo(() => startOfWeek(new Date(), { weekStartsOn: 0 }), [])
-  const calendarDays = useMemo(() =>
-    Array.from({ length: 14 }, (_, i) => addDays(calendarBaseDate, i + calendarOffset * 14)),
-    [calendarBaseDate, calendarOffset],
-  )
+  // カレンダー: 月ごとに切り替え（全日表示）
+  const calendarData = useMemo(() => {
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = now.getMonth() + calendarOffset
+    const firstOfMonth = new Date(year, month, 1)
+    const startDow = firstOfMonth.getDay()
+    const daysInMonth = new Date(year, month + 1, 0).getDate()
+    const cells: (Date | null)[] = []
+    for (let i = 0; i < startDow; i++) cells.push(null)
+    for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, month, d))
+    return { cells, firstOfMonth }
+  }, [calendarOffset])
 
-  // 利用可能時間帯
+  // 利用可能時間帯（休診時間帯を除外）
   const availableSlots = useMemo(() => {
     if (!clinic || !selectedMenu || !selectedDate) return []
     const date = format(selectedDate, 'yyyy-MM-dd')
     const slots = generateTimeSlots(clinic.open_time, clinic.close_time, selectedMenu.duration_min)
-    return slots.filter((t) =>
-      isSlotAvailable(date, t, selectedStaff?.id ?? null, selectedMenu.duration_min, store.reservations),
-    )
-  }, [clinic, selectedMenu, selectedStaff, selectedDate, store.reservations])
+    const closure = closedDaysStore.getClosureForDate(selectedDate, clinicId)
+    return slots.filter((t) => {
+      if (!isSlotAvailable(date, t, selectedStaff?.id ?? null, selectedMenu.duration_min, store.reservations)) {
+        return false
+      }
+      if (closure && !closure.allDay && closure.closedFrom && closure.closedTo) {
+        const slotMin = timeToMinutes(t)
+        const fromMin = timeToMinutes(closure.closedFrom)
+        const toMin = timeToMinutes(closure.closedTo)
+        if (slotMin >= fromMin && slotMin < toMin) return false
+      }
+      return true
+    })
+  }, [clinic, clinicId, selectedMenu, selectedStaff, selectedDate, store.reservations])
 
   function goNext() {
     const idx = STEPS.indexOf(step)
@@ -329,17 +348,13 @@ export default function ReserveClinicPage() {
                   <ChevronLeft className="w-5 h-5 text-green-700" />
                 </button>
                 <span className="text-sm font-medium text-green-900">
-                  {format(calendarDays[0], 'M月', { locale: ja })}
-                  {format(calendarDays[0], 'M') !== format(calendarDays[13], 'M') && (
-                    <>〜{format(calendarDays[13], 'M月', { locale: ja })}</>
-                  )}
-                  {' '}{format(calendarDays[0], 'yyyy')}
+                  {format(calendarData.firstOfMonth, 'yyyy年M月', { locale: ja })}
                 </span>
                 <button onClick={() => setCalendarOffset((o) => o + 1)} className="p-1 rounded hover:bg-green-50">
                   <ChevronRight className="w-5 h-5 text-green-700" />
                 </button>
               </div>
-              <div className="grid grid-cols-7 gap-1 text-center">
+              <div className="grid grid-cols-7 gap-1 text-center mb-1">
                 {['日', '月', '火', '水', '木', '金', '土'].map((d, i) => (
                   <div key={d} className={cn('text-xs font-medium py-1', i === 0 && 'text-red-500', i === 6 && 'text-blue-500')}>
                     {d}
@@ -347,30 +362,50 @@ export default function ReserveClinicPage() {
                 ))}
               </div>
               <div className="grid grid-cols-7 gap-1">
-                {calendarDays.map((day) => {
-                  const dow = day.getDay() // 0=日, 6=土
+                {calendarData.cells.map((day, idx) => {
+                  if (!day) return <div key={`empty-${idx}`} />
+                  const dow = day.getDay()
                   const isPast = day < new Date(new Date().setHours(0, 0, 0, 0))
+                  const closure = closedDaysStore.getClosureForDate(day, clinicId)
+                  const isAllDayClosed = closure?.allDay === true
+                  const isPartialClosed = !!closure && !closure.allDay
+                  const isDisabled = isPast || isAllDayClosed
                   return (
                     <button
                       key={day.toISOString()}
-                      disabled={isPast}
+                      disabled={isDisabled}
                       onClick={() => { setSelectedDate(day); goNext() }}
                       className={cn(
-                        'rounded-lg py-2.5 text-sm font-medium transition-all',
-                        isPast
-                          ? 'text-gray-300 cursor-not-allowed'
+                        'relative rounded-lg py-2.5 text-sm font-medium transition-all',
+                        isDisabled
+                          ? isAllDayClosed
+                            ? 'bg-red-50 text-red-300 cursor-not-allowed'
+                            : 'text-gray-300 cursor-not-allowed'
                           : 'hover:bg-green-100',
-                        isSameDay(day, new Date()) && !isPast && 'border border-green-500',
+                        isSameDay(day, new Date()) && !isDisabled && 'border border-green-500',
                         selectedDate && isSameDay(day, selectedDate) && 'bg-green-700 text-white hover:bg-green-800',
-                        !isPast && dow === 0 && 'text-red-500',
-                        !isPast && dow === 6 && 'text-blue-500',
+                        !isDisabled && dow === 0 && 'text-red-500',
+                        !isDisabled && dow === 6 && 'text-blue-500',
                         selectedDate && isSameDay(day, selectedDate) && 'text-white',
                       )}
                     >
                       {format(day, 'd')}
+                      {isPartialClosed && !isDisabled && (
+                        <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-amber-400" />
+                      )}
                     </button>
                   )
                 })}
+              </div>
+              <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <span className="w-3 h-3 rounded bg-red-50 border border-red-200 inline-block" />
+                  終日休診
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
+                  部分休診あり
+                </span>
               </div>
             </div>
           </div>

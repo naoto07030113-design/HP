@@ -7,7 +7,7 @@ import {
   Calendar, ClipboardList, ClipboardCheck, Building2, Users, BookOpen,
   Clock, Download, Megaphone, ExternalLink, UserRound, FileText,
   Receipt, BarChart2, MessageSquare, Settings, LogOut, ShieldCheck,
-  LayoutList, Bell, LayoutDashboard, FileBarChart, BrainCircuit,
+  LayoutList, Bell, LayoutDashboard, FileBarChart, BrainCircuit, CalendarOff,
 } from 'lucide-react'
 import { getSupabaseClient } from '@/lib/supabase'
 import { useCurrentUser, PERMISSIONS, ROLE_LABELS } from '@/lib/auth-store'
@@ -96,6 +96,7 @@ const NAV_ITEMS: NavGroup[] = [
         show: (u) => u ? PERMISSIONS.canManageMenus(u.role) : false,
       },
       { href: '/admin/shifts',         label: 'シフト管理',      icon: Clock },
+      { href: '/admin/schedule',       label: '休診日管理',      icon: CalendarOff },
       {
         href: '/admin/announcements', label: 'お知らせ管理', icon: Megaphone,
         show: (u) => u ? PERMISSIONS.canManageAnnouncements(u.role) : false,
