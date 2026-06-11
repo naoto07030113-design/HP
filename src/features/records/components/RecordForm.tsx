@@ -355,10 +355,10 @@ export function RecordForm({
                 </div>
                 <div className="space-y-1.5">
                   <Label>担当スタッフ</Label>
-                  <Select value={form.staff_id ?? ''} onValueChange={(v) => setF('staff_id', v || null)}>
+                  <Select value={form.staff_id ?? '__none__'} onValueChange={(v) => setF('staff_id', v === '__none__' ? null : v)}>
                     <SelectTrigger><SelectValue placeholder="未指定" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">未指定</SelectItem>
+                      <SelectItem value="__none__">未指定</SelectItem>
                       {filteredStaff.map((s) => (
                         <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                       ))}

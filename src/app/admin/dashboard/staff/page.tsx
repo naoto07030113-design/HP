@@ -150,10 +150,10 @@ export default function StaffDashboardPage() {
               {store.clinics.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
             </SelectContent>
           </Select>
-          <Select value={selectedStaff} onValueChange={setSelectedStaff}>
+          <Select value={selectedStaff || '__all__'} onValueChange={(v) => setSelectedStaff(v === '__all__' ? '' : v)}>
             <SelectTrigger className="h-8 w-48 text-sm"><SelectValue placeholder="スタッフを選択（任意）" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="">全スタッフ一覧</SelectItem>
+              <SelectItem value="__all__">全スタッフ一覧</SelectItem>
               {store.staff
                 .filter((s) => s.is_active && (clinicFilter === 'all' || s.clinic_id === clinicFilter))
                 .map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}

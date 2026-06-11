@@ -273,10 +273,10 @@ export function ReservationForm({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label>担当スタッフ</Label>
-              <Select value={staffId} onValueChange={setStaffId}>
+              <Select value={staffId || '__none__'} onValueChange={(v) => setStaffId(v === '__none__' ? '' : v)}>
                 <SelectTrigger><SelectValue placeholder="未指定" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">未指定</SelectItem>
+                  <SelectItem value="__none__">未指定</SelectItem>
                   {filteredStaff.map((s) => (
                     <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                   ))}
@@ -285,10 +285,10 @@ export function ReservationForm({
             </div>
             <div className="space-y-1.5">
               <Label>メニュー</Label>
-              <Select value={menuId} onValueChange={handleMenuChange}>
+              <Select value={menuId || '__none__'} onValueChange={(v) => handleMenuChange(v === '__none__' ? '' : v)}>
                 <SelectTrigger><SelectValue placeholder="未指定" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">未指定</SelectItem>
+                  <SelectItem value="__none__">未指定</SelectItem>
                   {filteredMenus.map((m) => (
                     <SelectItem key={m.id} value={m.id}>{m.name}（{m.duration_min}分）</SelectItem>
                   ))}
