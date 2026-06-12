@@ -1,14 +1,16 @@
 'use client'
 
 import Link from 'next/link'
-import { MapPin, Phone, ChevronRight } from 'lucide-react'
+import { MapPin, Phone, ChevronRight, ShoppingBag } from 'lucide-react'
 import { useClinicStore } from '@/lib/clinic-store'
 import { useAnnouncementsStore, announcementsStore } from '@/lib/announcement-store'
+import { useMerchandiseStore } from '@/lib/merchandise-store'
 import { AnnouncementBanners } from '@/components/common/AnnouncementBanner'
 
 export default function ReservePage() {
   const store = useClinicStore()
   useAnnouncementsStore()
+  const merchandise = useMerchandiseStore()
   const activeClinics = store.clinics.filter((c) => c.is_active)
   const companyAnnouncements = announcementsStore.getActive('company')
 
@@ -46,51 +48,71 @@ export default function ReservePage() {
             {activeClinics.map((clinic) => {
               const clinicAnnouncements = announcementsStore.getActive('clinic', clinic.id)
                 .filter((a) => a.scope === 'clinic')
+              const hasMerchandise = merchandise.merchandise.some(
+                (m) => m.clinic_id === clinic.id && m.is_active,
+              )
               return (
-                <Link
+                <div
                   key={clinic.id}
-                  href={`/reserve/${clinic.id}`}
-                  className="group block bg-white rounded-2xl border border-green-100 shadow-sm hover:shadow-md hover:border-green-300 hover:-translate-y-0.5 transition-all duration-300 active:scale-[0.99] p-5"
+                  className="bg-white rounded-2xl border border-green-100 shadow-sm hover:shadow-md hover:border-green-300 transition-all duration-300 overflow-hidden"
                 >
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-3.5">
-                      <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-green-700 to-green-900 ring-1 ring-gold-400/30 shadow-sm flex items-center justify-center flex-shrink-0">
-                        <span className="text-gold-200 font-bold text-xs tracking-widest">IMC</span>
+                  <Link
+                    href={`/reserve/${clinic.id}`}
+                    className="group block p-5 active:scale-[0.99] transition-transform"
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-3.5">
+                        <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-green-700 to-green-900 ring-1 ring-gold-400/30 shadow-sm flex items-center justify-center flex-shrink-0">
+                          <span className="text-gold-200 font-bold text-xs tracking-widest">IMC</span>
+                        </div>
+                        <div>
+                          <p className="font-bold text-green-950 text-[15px]">{clinic.name}</p>
+                          <p className="text-xs text-green-600 mt-0.5 tracking-wide">
+                            診療時間 {clinic.open_time} - {clinic.close_time}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-bold text-green-950 text-[15px]">{clinic.name}</p>
-                        <p className="text-xs text-green-600 mt-0.5 tracking-wide">
-                          診療時間 {clinic.open_time} - {clinic.close_time}
+                      <div className="w-8 h-8 rounded-full bg-green-50 group-hover:bg-green-700 flex items-center justify-center transition-colors duration-300">
+                        <ChevronRight className="w-4 h-4 text-green-700 group-hover:text-white transition-colors duration-300" />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5 text-sm text-muted-foreground">
+                      {clinic.address && (
+                        <div className="flex items-center gap-2">
+                          <MapPin className="w-3.5 h-3.5 flex-shrink-0 text-green-500" />
+                          <span className="line-clamp-1">{clinic.address}</span>
+                        </div>
+                      )}
+                      {clinic.phone && (
+                        <div className="flex items-center gap-2">
+                          <Phone className="w-3.5 h-3.5 flex-shrink-0 text-green-500" />
+                          <span>{clinic.phone}</span>
+                        </div>
+                      )}
+                    </div>
+                    {/* 院別お知らせプレビュー */}
+                    {clinicAnnouncements.length > 0 && (
+                      <div className="mt-3.5 pt-3 border-t border-green-50">
+                        <p className="text-xs text-amber-700 font-medium line-clamp-1">
+                          {clinicAnnouncements[0].title}
                         </p>
                       </div>
-                    </div>
-                    <div className="w-8 h-8 rounded-full bg-green-50 group-hover:bg-green-700 flex items-center justify-center transition-colors duration-300">
-                      <ChevronRight className="w-4 h-4 text-green-700 group-hover:text-white transition-colors duration-300" />
-                    </div>
-                  </div>
-                  <div className="space-y-1.5 text-sm text-muted-foreground">
-                    {clinic.address && (
-                      <div className="flex items-center gap-2">
-                        <MapPin className="w-3.5 h-3.5 flex-shrink-0 text-green-500" />
-                        <span className="line-clamp-1">{clinic.address}</span>
-                      </div>
                     )}
-                    {clinic.phone && (
+                  </Link>
+                  {/* 物販予約 */}
+                  {hasMerchandise && (
+                    <Link
+                      href={`/reserve/${clinic.id}/merchandise`}
+                      className="flex items-center justify-between px-5 py-3 border-t border-green-50 bg-pink-50/40 hover:bg-pink-50 transition-colors group/merc"
+                    >
                       <div className="flex items-center gap-2">
-                        <Phone className="w-3.5 h-3.5 flex-shrink-0 text-green-500" />
-                        <span>{clinic.phone}</span>
+                        <ShoppingBag className="w-4 h-4 text-pink-600" />
+                        <span className="text-sm font-medium text-green-950">物販を予約する</span>
                       </div>
-                    )}
-                  </div>
-                  {/* 院別お知らせプレビュー */}
-                  {clinicAnnouncements.length > 0 && (
-                    <div className="mt-3.5 pt-3 border-t border-green-50">
-                      <p className="text-xs text-amber-700 font-medium line-clamp-1">
-                        {clinicAnnouncements[0].title}
-                      </p>
-                    </div>
+                      <ChevronRight className="w-4 h-4 text-pink-300 group-hover/merc:text-pink-600 transition-colors" />
+                    </Link>
                   )}
-                </Link>
+                </div>
               )
             })}
           </div>
