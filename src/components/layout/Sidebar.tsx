@@ -8,9 +8,11 @@ import {
   Clock, Download, Megaphone, ExternalLink, UserRound, FileText,
   Receipt, BarChart2, MessageSquare, Settings, LogOut, ShieldCheck,
   LayoutList, Bell, LayoutDashboard, FileBarChart, BrainCircuit, CalendarOff,
+  ShoppingBag, Home,
 } from 'lucide-react'
 import { getSupabaseClient } from '@/lib/supabase'
 import { useCurrentUser, PERMISSIONS, ROLE_LABELS } from '@/lib/auth-store'
+import { useClinicStore } from '@/lib/clinic-store'
 
 interface NavItem {
   href: string
@@ -29,6 +31,7 @@ const NAV_ITEMS: NavGroup[] = [
   {
     section: 'メイン',
     items: [
+      { href: '/admin',               label: 'ホーム',           icon: Home },
       { href: '/admin/today',         label: '当日受付',        icon: ClipboardCheck },
       { href: '/admin/calendar',      label: '予約カレンダー',  icon: Calendar },
       { href: '/admin/reservations',  label: '予約一覧',        icon: ClipboardList },
@@ -98,6 +101,10 @@ const NAV_ITEMS: NavGroup[] = [
       { href: '/admin/shifts',         label: 'シフト管理',      icon: Clock },
       { href: '/admin/schedule',       label: '休診日管理',      icon: CalendarOff },
       {
+        href: '/admin/merchandise', label: '物販管理', icon: ShoppingBag,
+        show: (u) => u ? PERMISSIONS.canManageMerchandise(u.role) : false,
+      },
+      {
         href: '/admin/announcements', label: 'お知らせ管理', icon: Megaphone,
         show: (u) => u ? PERMISSIONS.canManageAnnouncements(u.role) : false,
       },
@@ -124,6 +131,10 @@ export function Sidebar({ onClose }: Props) {
   const pathname = usePathname()
   const router = useRouter()
   const currentUser = useCurrentUser()
+  const { clinics } = useClinicStore()
+  const restrictedClinic = currentUser?.clinic_id
+    ? clinics.find((c) => c.id === currentUser.clinic_id)
+    : null
 
   async function handleSignOut() {
     onClose?.()
@@ -160,7 +171,7 @@ export function Sidebar({ onClose }: Props) {
               </p>
               <div className="space-y-0.5">
                 {visibleItems.map(({ href, label, icon: Icon }) => {
-                  const active = pathname === href || (href !== '/' && pathname.startsWith(href))
+                  const active = pathname === href || (href !== '/admin' && href !== '/' && pathname.startsWith(href))
                   return (
                     <Link
                       key={href}
@@ -195,10 +206,18 @@ export function Sidebar({ onClose }: Props) {
       {/* フッター */}
       <div className="px-4 py-4 border-t border-white/10 space-y-2.5 bg-black/10">
         {currentUser && (
-          <div className="flex items-center gap-1.5 text-xs text-green-100/60">
-            <ShieldCheck className="w-3 h-3 text-gold-400/80" />
-            <span className="truncate max-w-[120px]">{currentUser.displayName || currentUser.email}</span>
-            <span className="text-gold-300/80 font-medium">({ROLE_LABELS[currentUser.role]})</span>
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5 text-xs text-green-100/60">
+              <ShieldCheck className="w-3 h-3 text-gold-400/80 flex-shrink-0" />
+              <span className="truncate max-w-[110px]">{currentUser.displayName || currentUser.email}</span>
+              <span className="text-gold-300/80 font-medium flex-shrink-0">({ROLE_LABELS[currentUser.role]})</span>
+            </div>
+            {restrictedClinic && (
+              <div className="flex items-center gap-1.5 text-[10px] text-amber-300/70">
+                <Building2 className="w-3 h-3 flex-shrink-0" />
+                <span className="truncate">{restrictedClinic.name} のみ</span>
+              </div>
+            )}
           </div>
         )}
         <button

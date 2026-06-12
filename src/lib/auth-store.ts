@@ -10,6 +10,7 @@ export interface CurrentUser {
   id: string
   email: string | undefined
   role: UserRole
+  clinic_id?: string  // set for clinic-specific staff; absent for admin
   displayName: string
 }
 
@@ -20,6 +21,10 @@ function roleFromUser(user: User): UserRole {
   if (raw === 'staff') return 'staff'
   if (raw === 'receptionist') return 'receptionist'
   return 'admin'
+}
+
+function clinicIdFromUser(user: User): string | undefined {
+  return user.user_metadata?.clinic_id ?? user.app_metadata?.clinic_id ?? undefined
 }
 
 function nameFromUser(user: User): string {
@@ -37,6 +42,7 @@ export function useCurrentUser(): CurrentUser | null {
           id: session.user.id,
           email: session.user.email,
           role: roleFromUser(session.user),
+          clinic_id: clinicIdFromUser(session.user),
           displayName: nameFromUser(session.user),
         })
       }
@@ -47,6 +53,7 @@ export function useCurrentUser(): CurrentUser | null {
           id: session.user.id,
           email: session.user.email,
           role: roleFromUser(session.user),
+          clinic_id: clinicIdFromUser(session.user),
           displayName: nameFromUser(session.user),
         })
       } else {
@@ -74,10 +81,22 @@ export const PERMISSIONS = {
   canManageAnnouncements:  (r: UserRole) => r === 'admin',
   canDeleteRecords:        (r: UserRole) => r === 'admin',
   canViewAccounting:       (r: UserRole) => r === 'admin' || r === 'staff',
+  canManageMerchandise:    (r: UserRole) => r === 'admin' || r === 'staff',
 }
 
 export const ROLE_LABELS: Record<UserRole, string> = {
   admin: '管理者',
   staff: 'スタッフ',
   receptionist: '受付',
+}
+
+/**
+ * Returns the clinic_id restriction for the current user.
+ * Admin users return null (no restriction, can see all clinics).
+ * Clinic-specific staff return their clinic_id.
+ */
+export function useClinicFilter(): string | null {
+  const user = useCurrentUser()
+  if (!user || user.role === 'admin') return null
+  return user.clinic_id ?? null
 }

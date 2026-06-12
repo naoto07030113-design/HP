@@ -8,6 +8,7 @@ import { hydrateAnnouncementsStore } from '@/lib/announcement-store'
 import { hydrateAccountingStore } from '@/lib/accounting-store'
 import { hydrateSettingsStore } from '@/lib/settings-store'
 import { hydrateClosedDaysStore } from '@/lib/closed-days-store'
+import { hydrateMerchandiseStore } from '@/lib/merchandise-store'
 
 export function StoreHydrationProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
@@ -19,6 +20,7 @@ export function StoreHydrationProvider({ children }: { children: React.ReactNode
       hydrateAccountingStore(),
       hydrateSettingsStore(),
       hydrateClosedDaysStore(),
+      hydrateMerchandiseStore(),
     ]).catch(() => {})
   }, [])
 

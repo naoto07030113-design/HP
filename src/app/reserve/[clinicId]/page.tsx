@@ -8,8 +8,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { ChevronLeft, ChevronRight, Check, ArrowLeft } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Check, ArrowLeft, ShoppingBag } from 'lucide-react'
+import Link from 'next/link'
 import { useClinicStore, reservationsStore } from '@/lib/clinic-store'
+import { useMerchandiseStore } from '@/lib/merchandise-store'
 import { useAnnouncementsStore, announcementsStore } from '@/lib/announcement-store'
 import { useClosedDaysStore, closedDaysStore } from '@/lib/closed-days-store'
 import { AnnouncementBanners } from '@/components/common/AnnouncementBanner'
@@ -85,6 +87,8 @@ export default function ReserveClinicPage() {
 
   const clinic = store.clinics.find((c) => c.id === clinicId)
   const clinicAnnouncements = announcementsStore.getActive('clinic', clinicId)
+  const merchandiseStore = useMerchandiseStore()
+  const hasMerchandise = merchandiseStore.merchandise.some((m) => m.clinic_id === clinicId && m.is_active)
 
   const [step, setStep] = useState<Step>('visit_type')
   const [visitType, setVisitType] = useState<'first' | 'return'>('return')
@@ -273,6 +277,23 @@ export default function ReserveClinicPage() {
                 </button>
               ))}
             </div>
+            {hasMerchandise && (
+              <Link
+                href={`/reserve/${clinicId}/merchandise`}
+                className="flex items-center justify-between bg-white rounded-2xl border border-pink-100 shadow-sm p-4 hover:border-pink-300 hover:shadow-md transition-all group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-50 to-pink-100 ring-1 ring-pink-200/60 flex items-center justify-center flex-shrink-0">
+                    <ShoppingBag className="w-5 h-5 text-pink-600" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-green-950">物販を予約する</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">物販・グッズの事前予約はこちら</p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-pink-300 group-hover:text-pink-600 transition-colors" />
+              </Link>
+            )}
           </div>
         )}
 

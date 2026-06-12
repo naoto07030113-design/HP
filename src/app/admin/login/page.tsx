@@ -30,7 +30,7 @@ export default function AdminLoginPage() {
       return
     }
 
-    router.replace('/admin/calendar')
+    router.replace('/admin')
   }
 
   return (
