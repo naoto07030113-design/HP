@@ -125,6 +125,38 @@ export const RESERVATION_STATUS_LABELS: Record<ReservationStatus, string> = {
   no_show: '無断キャンセル',
 }
 
+// ── 休診日 ──────────────────────────────────────────
+
+export type ClosedDayRepeatType = 'none' | 'weekly'
+export type ClosedDayCloseType  = 'all_day' | 'morning' | 'afternoon' | 'time_range'
+
+export const DAY_OF_WEEK_LABELS = ['日', '月', '火', '水', '木', '金', '土'] as const
+
+export const CLOSE_TYPE_LABELS: Record<ClosedDayCloseType, string> = {
+  all_day:    '終日',
+  morning:    '午前休（〜12:00）',
+  afternoon:  '午後休（12:00〜）',
+  time_range: '時間指定',
+}
+
+export interface ClosedDay {
+  id: string
+  clinic_id: string | null       // null = 全院共通
+  closed_date: string | null     // 'YYYY-MM-DD'、週次定休は null
+  repeat_type: ClosedDayRepeatType
+  day_of_week: number | null     // 0=日〜6=土、weekly のみ使用
+  close_type: ClosedDayCloseType
+  close_from: string | null      // 'HH:MM'
+  close_to: string | null        // 'HH:MM'
+  reason: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type ClosedDayFormData = Omit<ClosedDay, 'id' | 'created_at' | 'updated_at'>
+
+// ──────────────────────────────────────────────────
+
 export const VISIT_TYPE_LABELS = {
   first: '初診',
   return: '再来',
@@ -137,14 +169,3 @@ export const STAFF_ROLES = [
   '灸師',
   'あん摩師',
 ] as const
-
-export interface ClosedDay {
-  id: string
-  clinic_id: string
-  closed_date: string  // 'YYYY-MM-DD'
-  reason: string | null
-  created_at: string
-  updated_at: string
-}
-
-export type ClosedDayFormData = Omit<ClosedDay, 'id' | 'created_at' | 'updated_at'>

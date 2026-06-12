@@ -32,7 +32,7 @@ export default function SettingsPage() {
   const [resetOpen, setResetOpen] = useState(false)
 
   function setS<K extends keyof typeof settings>(k: K, v: typeof settings[K]) {
-    settingsStore.update({ [k]: v })
+    settingsStore.update({ [k]: v }).catch(() => {})
   }
 
   function handleSave() {
@@ -229,7 +229,7 @@ export default function SettingsPage() {
               <li>対象ユーザーをクリックし「Edit User」を選択</li>
               <li>「User Metadata」に以下を入力して保存</li>
             </ol>
-            <div className="bg-slate-50 rounded-lg p-3 font-mono text-xs">
+            <div className="bg-green-50/60 rounded-lg p-3 font-mono text-xs">
               {'{ "role": "staff" }'}
             </div>
             <p className="text-xs text-muted-foreground">
@@ -261,7 +261,7 @@ export default function SettingsPage() {
               <br />
               環境変数 <code className="bg-slate-100 px-1 rounded text-xs">NEXT_PUBLIC_ENCRYPTION_KEY</code> に強力なランダム文字列を設定してください。
             </p>
-            <div className="bg-slate-50 rounded-lg p-3 font-mono text-xs text-muted-foreground">
+            <div className="bg-green-50/60 rounded-lg p-3 font-mono text-xs text-muted-foreground">
               openssl rand -base64 32
             </div>
           </div>

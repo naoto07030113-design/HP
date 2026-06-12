@@ -7,9 +7,12 @@ import { ja } from 'date-fns/locale'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { ChevronLeft, ChevronRight, Check, ArrowLeft } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Check, ArrowLeft, ShoppingBag } from 'lucide-react'
+import Link from 'next/link'
 import { useClinicStore, reservationsStore } from '@/lib/clinic-store'
+import { useMerchandiseStore } from '@/lib/merchandise-store'
 import { useAnnouncementsStore, announcementsStore } from '@/lib/announcement-store'
+import { useClosedDaysStore, closedDaysStore } from '@/lib/closed-days-store'
 import { AnnouncementBanners } from '@/components/common/AnnouncementBanner'
 import { cn } from '@/lib/utils'
 import type { Staff, Menu } from '@/types/clinic'
@@ -77,11 +80,14 @@ export default function ReserveClinicPage() {
   const params = useParams()
   const clinicId = String(params.clinicId)
   const store = useClinicStore()
-  useAnnouncementsStore()
+  const announcements = useAnnouncementsStore()
+  useClosedDaysStore()
   const router = useRouter()
 
   const clinic = store.clinics.find((c) => c.id === clinicId)
   const clinicAnnouncements = announcementsStore.getActive('clinic', clinicId)
+  const merchandiseStore = useMerchandiseStore()
+  const hasMerchandise = merchandiseStore.merchandise.some((m) => m.clinic_id === clinicId && m.is_active)
 
   const [step, setStep] = useState<Step>('visit_type')
   const [visitType, setVisitType] = useState<'first' | 'return'>('return')
@@ -112,7 +118,7 @@ export default function ReserveClinicPage() {
   )
   const availableStaff = store.staff.filter((s) => s.clinic_id === clinicId && s.is_active && s.is_bookable)
 
-  // カレンダー: 月表示
+  // カレンダー: 月ごとに切り替え（全日表示）
   const calendarData = useMemo(() => {
     const now = new Date()
     const year = now.getFullYear()
@@ -126,20 +132,25 @@ export default function ReserveClinicPage() {
     return { cells, firstOfMonth }
   }, [calendarOffset])
 
-  const closedDatesSet = useMemo(() => {
-    const days = store.closedDays.filter((d) => d.clinic_id === clinicId)
-    return new Set(days.map((d) => d.closed_date))
-  }, [store.closedDays, clinicId])
-
-  // 利用可能時間帯
+  // 利用可能時間帯（休診時間帯を除外）
   const availableSlots = useMemo(() => {
     if (!clinic || !selectedMenu || !selectedDate) return []
     const date = format(selectedDate, 'yyyy-MM-dd')
     const slots = generateTimeSlots(clinic.open_time, clinic.close_time, selectedMenu.duration_min)
-    return slots.filter((t) =>
-      isSlotAvailable(date, t, selectedStaff?.id ?? null, selectedMenu.duration_min, store.reservations),
-    )
-  }, [clinic, selectedMenu, selectedStaff, selectedDate, store.reservations])
+    const closure = closedDaysStore.getClosureForDate(selectedDate, clinicId)
+    return slots.filter((t) => {
+      if (!isSlotAvailable(date, t, selectedStaff?.id ?? null, selectedMenu.duration_min, store.reservations)) {
+        return false
+      }
+      if (closure && !closure.allDay && closure.closedFrom && closure.closedTo) {
+        const slotMin = timeToMinutes(t)
+        const fromMin = timeToMinutes(closure.closedFrom)
+        const toMin = timeToMinutes(closure.closedTo)
+        if (slotMin >= fromMin && slotMin < toMin) return false
+      }
+      return true
+    })
+  }, [clinic, clinicId, selectedMenu, selectedStaff, selectedDate, store.reservations])
 
   function goNext() {
     const idx = STEPS.indexOf(step)
@@ -240,23 +251,26 @@ export default function ReserveClinicPage() {
   const visibleSteps = STEPS.filter((s) => s !== 'complete')
 
   return (
-    <div className="min-h-screen bg-stone-50">
+    <div className="min-h-screen bg-gradient-to-b from-[hsl(var(--surface))] to-white">
       {/* ヘッダー */}
-      <header className="bg-gradient-to-r from-emerald-950 to-emerald-900 text-white sticky top-0 z-10 shadow-md">
+      <header className="bg-gradient-to-r from-green-950 to-green-900 text-white sticky top-0 z-10 shadow-md">
         <div className="max-w-lg mx-auto px-4 py-3.5 flex items-center gap-3">
-          <button onClick={goBack} className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors flex-shrink-0">
-            <ArrowLeft className="w-4 h-4" />
+          <button onClick={goBack} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
+            <ArrowLeft className="w-5 h-5" />
           </button>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold truncate">{clinic.name}</p>
+          <div className="flex-1">
+            <p className="text-sm font-bold tracking-wide">{clinic.name}</p>
             {step !== 'complete' && (
-              <p className="text-[11px] text-emerald-300 mt-0.5">{STEP_LABELS[step]}</p>
+              <p className="text-[11px] text-gold-300/90 tracking-wider mt-0.5">{STEP_LABELS[step]}</p>
             )}
           </div>
         </div>
         {step !== 'complete' && (
-          <div className="h-0.5 bg-emerald-800/60">
-            <div className="h-full bg-amber-400 transition-all duration-500" style={{ width: `${progress}%` }} />
+          <div className="h-[3px] bg-white/10">
+            <div
+              className="h-full bg-gradient-to-r from-gold-500 to-gold-300 transition-all duration-500 ease-out"
+              style={{ width: `${progress}%` }}
+            />
           </div>
         )}
       </header>
@@ -308,6 +322,23 @@ export default function ReserveClinicPage() {
                 </button>
               ))}
             </div>
+            {hasMerchandise && (
+              <Link
+                href={`/reserve/${clinicId}/merchandise`}
+                className="flex items-center justify-between bg-white rounded-2xl border border-pink-100 shadow-sm p-4 hover:border-pink-300 hover:shadow-md transition-all group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-50 to-pink-100 ring-1 ring-pink-200/60 flex items-center justify-center flex-shrink-0">
+                    <ShoppingBag className="w-5 h-5 text-pink-600" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-green-950">物販を予約する</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">物販・グッズの事前予約はこちら</p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-pink-300 group-hover:text-pink-600 transition-colors" />
+              </Link>
+            )}
           </div>
         )}
 
@@ -397,7 +428,7 @@ export default function ReserveClinicPage() {
                   className="w-8 h-8 rounded-full bg-stone-100 hover:bg-emerald-100 flex items-center justify-center transition-colors disabled:opacity-30" disabled={calendarOffset === 0}>
                   <ChevronLeft className="w-4 h-4 text-emerald-800" />
                 </button>
-                <span className="text-sm font-bold text-emerald-950">
+                <span className="text-sm font-medium text-green-900">
                   {format(calendarData.firstOfMonth, 'yyyy年M月', { locale: ja })}
                 </span>
                 <button onClick={() => setCalendarOffset((o) => o + 1)}
@@ -417,30 +448,46 @@ export default function ReserveClinicPage() {
                   if (!day) return <div key={`empty-${idx}`} />
                   const dow = day.getDay()
                   const isPast = day < new Date(new Date().setHours(0, 0, 0, 0))
-                  const dateStr = format(day, 'yyyy-MM-dd')
-                  const isClosed = closedDatesSet.has(dateStr)
-                  const disabled = isPast || isClosed
-                  const isSelected = selectedDate && isSameDay(day, selectedDate)
-                  const isToday = isSameDay(day, new Date())
+                  const closure = closedDaysStore.getClosureForDate(day, clinicId)
+                  const isAllDayClosed = closure?.allDay === true
+                  const isPartialClosed = !!closure && !closure.allDay
+                  const isDisabled = isPast || isAllDayClosed
                   return (
                     <button
                       key={day.toISOString()}
-                      disabled={disabled}
+                      disabled={isDisabled}
                       onClick={() => { setSelectedDate(day); goNext() }}
                       className={cn(
-                        'rounded-xl py-2.5 text-sm font-semibold transition-all',
-                        disabled ? 'text-stone-200 cursor-not-allowed' : 'hover:bg-emerald-50',
-                        isClosed && 'bg-red-50 text-red-200',
-                        isToday && !disabled && !isSelected && 'ring-1 ring-emerald-400 text-emerald-700',
-                        isSelected && 'bg-emerald-800 text-white hover:bg-emerald-700',
-                        !disabled && !isSelected && dow === 0 && 'text-red-400',
-                        !disabled && !isSelected && dow === 6 && 'text-blue-400',
+                        'relative rounded-lg py-2.5 text-sm font-medium transition-all',
+                        isDisabled
+                          ? isAllDayClosed
+                            ? 'bg-red-50 text-red-300 cursor-not-allowed'
+                            : 'text-gray-300 cursor-not-allowed'
+                          : 'hover:bg-green-100',
+                        isSameDay(day, new Date()) && !isDisabled && 'border border-green-500',
+                        selectedDate && isSameDay(day, selectedDate) && 'bg-green-700 text-white hover:bg-green-800',
+                        !isDisabled && dow === 0 && 'text-red-500',
+                        !isDisabled && dow === 6 && 'text-blue-500',
+                        selectedDate && isSameDay(day, selectedDate) && 'text-white',
                       )}
                     >
                       {format(day, 'd')}
+                      {isPartialClosed && !isDisabled && (
+                        <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-amber-400" />
+                      )}
                     </button>
                   )
                 })}
+              </div>
+              <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <span className="w-3 h-3 rounded bg-red-50 border border-red-200 inline-block" />
+                  終日休診
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
+                  部分休診あり
+                </span>
               </div>
             </div>
           </div>

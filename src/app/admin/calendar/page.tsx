@@ -63,24 +63,24 @@ export default function CalendarPage() {
   }
 
   function handleMoveReservation(id: string, staffId: string, start: string, end: string) {
-    reservationsStore.update(id, { staff_id: staffId, start_at: start, end_at: end })
+    reservationsStore.update(id, { staff_id: staffId, start_at: start, end_at: end }).catch(() => {})
   }
 
   function handleFormSubmit(data: Parameters<typeof reservationsStore.create>[0]) {
     if (editTarget) {
-      reservationsStore.update(editTarget.id, data)
+      reservationsStore.update(editTarget.id, data).catch(() => {})
     } else {
-      reservationsStore.create(data)
+      reservationsStore.create(data).catch(() => {})
     }
   }
 
   function handleStatusChange(id: string, status: Reservation['status']) {
-    reservationsStore.update(id, { status })
+    reservationsStore.update(id, { status }).catch(() => {})
     setDetailOpen(false)
   }
 
   function handleDelete(id: string) {
-    reservationsStore.delete(id)
+    reservationsStore.delete(id).catch(() => {})
     setDetailOpen(false)
   }
 

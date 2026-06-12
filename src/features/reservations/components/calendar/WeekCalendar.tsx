@@ -83,7 +83,7 @@ export function WeekCalendar({
         </thead>
         <tbody>
           {displayStaff.map((s) => (
-            <tr key={s.id} className="hover:bg-slate-50/50">
+            <tr key={s.id} className="hover:bg-green-50/40">
               <td className="px-3 py-2 border-b border-green-50 sticky left-0 bg-white z-10">
                 <div className="font-medium text-green-900 text-sm">{s.name}</div>
                 {s.role && <div className="text-xs text-muted-foreground">{s.role}</div>}

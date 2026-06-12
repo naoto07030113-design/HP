@@ -90,10 +90,14 @@ export default function AnnouncementsPage() {
     setFormOpen(true)
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (editTarget) announcementsStore.update(editTarget.id, form)
-    else announcementsStore.create(form)
+    try {
+      if (editTarget) await announcementsStore.update(editTarget.id, form)
+      else await announcementsStore.create(form)
+    } catch {
+      // silently ignore — optimistic update already applied
+    }
     setFormOpen(false)
   }
 
@@ -209,7 +213,7 @@ export default function AnnouncementsPage() {
                 <div className="flex items-center gap-1 flex-shrink-0">
                   <Switch
                     checked={a.is_active}
-                    onCheckedChange={(v) => announcementsStore.update(a.id, { is_active: v })}
+                    onCheckedChange={(v) => announcementsStore.update(a.id, { is_active: v }).catch(() => {})}
                   />
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(a)}>
                     <Pencil className="w-3.5 h-3.5" />
@@ -392,7 +396,7 @@ export default function AnnouncementsPage() {
       <ConfirmDialog
         open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}
         title="お知らせを削除しますか？" confirmLabel="削除" variant="destructive"
-        onConfirm={() => { if (deleteId) announcementsStore.delete(deleteId); setDeleteId(null) }}
+        onConfirm={() => { if (deleteId) announcementsStore.delete(deleteId).catch(() => {}); setDeleteId(null) }}
       />
     </div>
   )

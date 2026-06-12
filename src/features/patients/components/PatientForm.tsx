@@ -184,10 +184,10 @@ export function PatientForm({
                 </div>
                 <div className="space-y-1.5">
                   <Label>担当スタッフ</Label>
-                  <Select value={form.primary_staff_id ?? ''} onValueChange={(v) => set('primary_staff_id', v || null)}>
+                  <Select value={form.primary_staff_id ?? '__none__'} onValueChange={(v) => set('primary_staff_id', v === '__none__' ? null : v)}>
                     <SelectTrigger><SelectValue placeholder="未指定" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">未指定</SelectItem>
+                      <SelectItem value="__none__">未指定</SelectItem>
                       {clinicStaff.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
@@ -208,10 +208,10 @@ export function PatientForm({
                 </div>
                 <div className="space-y-1.5">
                   <Label>紹介元</Label>
-                  <Select value={form.referral_source ?? ''} onValueChange={(v) => set('referral_source', v || null)}>
+                  <Select value={form.referral_source ?? '__none__'} onValueChange={(v) => set('referral_source', v === '__none__' ? null : v)}>
                     <SelectTrigger><SelectValue placeholder="選択してください" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">未選択</SelectItem>
+                      <SelectItem value="__none__">未選択</SelectItem>
                       {REFERRAL_SOURCES.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                     </SelectContent>
                   </Select>

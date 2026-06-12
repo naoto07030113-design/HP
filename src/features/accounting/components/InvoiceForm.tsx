@@ -217,13 +217,13 @@ export function InvoiceForm({
               <div className="space-y-1">
                 <Label>担当</Label>
                 <Select
-                  value={staffId ?? ''}
-                  onValueChange={(v) => setStaffId(v || null)}
+                  value={staffId ?? '__none__'}
+                  onValueChange={(v) => setStaffId(v === '__none__' ? null : v)}
                   disabled={!clinicId}
                 >
                   <SelectTrigger className="h-9"><SelectValue placeholder="担当を選択" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">指定なし</SelectItem>
+                    <SelectItem value="__none__">指定なし</SelectItem>
                     {clinicStaff.map((s) => (
                       <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                     ))}
@@ -254,12 +254,12 @@ export function InvoiceForm({
                   <div className="space-y-1">
                     {clinicMenus.length > 0 && (
                       <Select
-                        value={item.menu_id ?? ''}
-                        onValueChange={(v) => v ? selectMenu(item.id, v) : updateItem(item.id, { menu_id: null })}
+                        value={item.menu_id ?? '__manual__'}
+                        onValueChange={(v) => v === '__manual__' ? updateItem(item.id, { menu_id: null }) : selectMenu(item.id, v)}
                       >
                         <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="メニューから選択..." /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">手動入力</SelectItem>
+                          <SelectItem value="__manual__">手動入力</SelectItem>
                           {clinicMenus.map((m) => (
                             <SelectItem key={m.id} value={m.id}>{m.name} ¥{m.price.toLocaleString()}</SelectItem>
                           ))}
@@ -387,7 +387,7 @@ export function InvoiceForm({
             </div>
 
             {/* 請求・お釣り */}
-            <div className="bg-slate-50 rounded-lg p-3 space-y-1.5 text-sm">
+            <div className="bg-green-50/60 rounded-lg p-3 space-y-1.5 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">ご請求額</span>
                 <span className="font-medium">

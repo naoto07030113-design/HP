@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { ArrowLeft, Phone, CalendarCheck, X, Pencil, ChevronLeft, ChevronRight } from 'lucide-react'
 import { getSupabaseClient } from '@/lib/supabase'
 import { useClinicStore } from '@/lib/clinic-store'
+import { useClosedDaysStore, closedDaysStore } from '@/lib/closed-days-store'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { cn } from '@/lib/utils'
 import type { Reservation } from '@/types/clinic'
@@ -29,6 +30,7 @@ function generateSlots(open: string, close: string, duration: number) {
 
 export default function CancelPage() {
   const store = useClinicStore()
+  useClosedDaysStore()
 
   const [phone, setPhone] = useState('')
   const [reservations, setReservations] = useState<Reservation[]>([])
@@ -65,14 +67,11 @@ export default function CancelPage() {
   const changeMenu = changeTarget
     ? store.menus.find((m) => m.id === changeTarget.menu_id)
     : null
-  const closedDatesSet = useMemo(() => {
-    if (!changeTarget) return new Set<string>()
-    return new Set(
-      store.closedDays
-        .filter((d) => d.clinic_id === changeTarget.clinic_id)
-        .map((d) => d.closed_date),
-    )
-  }, [store.closedDays, changeTarget])
+  function isDayClosed(day: Date): boolean {
+    if (!changeTarget) return false
+    const closure = closedDaysStore.getClosureForDate(day, changeTarget.clinic_id)
+    return closure?.allDay === true
+  }
 
   const availableSlots = useMemo(() => {
     if (!changeTarget || !changeClinic || !changeMenu || !changeDate) return []
@@ -326,8 +325,7 @@ export default function CancelPage() {
                                 if (!day) return <div key={`empty-${idx}`} />
                                 const dow = day.getDay()
                                 const isPast = day < new Date(new Date().setHours(0, 0, 0, 0))
-                                const dateStr = format(day, 'yyyy-MM-dd')
-                                const isClosed = closedDatesSet.has(dateStr)
+                                const isClosed = isDayClosed(day)
                                 const disabled = isPast || isClosed
                                 const isSelected = changeDate && isSameDay(day, changeDate)
                                 const isToday = isSameDay(day, new Date())

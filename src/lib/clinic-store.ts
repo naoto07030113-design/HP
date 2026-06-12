@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import type { Clinic, Staff, Menu, Shift, ShiftBlock, Reservation, ClosedDay } from '@/types/clinic'
+import type { Clinic, Staff, Menu, Shift, ShiftBlock, Reservation } from '@/types/clinic'
 import { getSupabaseClient } from './supabase'
 
 type StoreState = {
@@ -11,7 +11,6 @@ type StoreState = {
   shifts: Shift[]
   shiftBlocks: ShiftBlock[]
   reservations: Reservation[]
-  closedDays: ClosedDay[]
   loading: boolean
   error: string | null
 }
@@ -23,7 +22,6 @@ let _state: StoreState = {
   shifts: [],
   shiftBlocks: [],
   reservations: [],
-  closedDays: [],
   loading: true,
   error: null,
 }
@@ -53,7 +51,6 @@ async function loadFromSupabase(): Promise<void> {
     shiftsRes,
     shiftBlocksRes,
     reservationsRes,
-    closedDaysRes,
   ] = await Promise.all([
     supabase.from('clinics').select('*').order('sort_order'),
     supabase.from('staff').select('*').order('sort_order'),
@@ -61,7 +58,6 @@ async function loadFromSupabase(): Promise<void> {
     supabase.from('shifts').select('*'),
     supabase.from('shift_blocks').select('*'),
     supabase.from('reservations').select('*').order('start_at', { ascending: false }),
-    supabase.from('closed_days').select('*').order('closed_date'),
   ])
 
   const errors = [
@@ -86,7 +82,6 @@ async function loadFromSupabase(): Promise<void> {
     shifts: (shiftsRes.data ?? []) as Shift[],
     shiftBlocks: (shiftBlocksRes.data ?? []) as ShiftBlock[],
     reservations: (reservationsRes.data ?? []) as Reservation[],
-    closedDays: (closedDaysRes.data ?? []) as ClosedDay[],
     loading: false,
     error: null,
   }))
@@ -201,26 +196,6 @@ function setupRealtime() {
     })
     .subscribe()
 
-  supabase
-    .channel('clinic-store-closed-days')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'closed_days' }, (payload) => {
-      if (payload.eventType === 'INSERT') {
-        setState((s) => ({
-          ...s,
-          closedDays: [...s.closedDays, payload.new as ClosedDay].sort((a, b) =>
-            a.closed_date < b.closed_date ? -1 : 1,
-          ),
-        }))
-      } else if (payload.eventType === 'UPDATE') {
-        setState((s) => ({
-          ...s,
-          closedDays: s.closedDays.map((d) => d.id === payload.new.id ? (payload.new as ClosedDay) : d),
-        }))
-      } else if (payload.eventType === 'DELETE') {
-        setState((s) => ({ ...s, closedDays: s.closedDays.filter((d) => d.id !== payload.old.id) }))
-      }
-    })
-    .subscribe()
 }
 
 /** Called by StoreHydrationProvider on app startup. Safe to call multiple times. */
@@ -519,39 +494,6 @@ export const reservationsStore = {
   },
 }
 
-// ── Closed Days ──────────────────────────────────────────
-
-export const closedDaysStore = {
-  getByClinic: (clinicId: string) => _state.closedDays.filter((d) => d.clinic_id === clinicId),
-
-  create: async (data: Omit<ClosedDay, 'id' | 'created_at' | 'updated_at'>): Promise<ClosedDay> => {
-    const supabase = getSupabaseClient()
-    const now = new Date().toISOString()
-    const optimistic: ClosedDay = { ...data, id: `opt-${Date.now()}`, created_at: now, updated_at: now }
-    setState((s) => ({
-      ...s,
-      closedDays: [...s.closedDays, optimistic].sort((a, b) => a.closed_date < b.closed_date ? -1 : 1),
-    }))
-    const { data: created, error } = await supabase.from('closed_days').insert(data).select().single()
-    if (error) {
-      setState((s) => ({ ...s, closedDays: s.closedDays.filter((d) => d.id !== optimistic.id) }))
-      throw error
-    }
-    setState((s) => ({
-      ...s,
-      closedDays: s.closedDays.map((d) => d.id === optimistic.id ? (created as ClosedDay) : d),
-    }))
-    return created as ClosedDay
-  },
-
-  delete: async (id: string): Promise<void> => {
-    const supabase = getSupabaseClient()
-    setState((s) => ({ ...s, closedDays: s.closedDays.filter((d) => d.id !== id) }))
-    const { error } = await supabase.from('closed_days').delete().eq('id', id)
-    if (error) throw error
-  },
-}
-
 // ── React hook ──────────────────────────────────────────
 
 export function useClinicStore() {
@@ -578,7 +520,6 @@ export async function resetDemoData(): Promise<void> {
     shifts: [],
     shiftBlocks: [],
     reservations: [],
-    closedDays: [],
     loading: true,
     error: null,
   }))
