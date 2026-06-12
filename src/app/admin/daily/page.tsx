@@ -335,7 +335,7 @@ export default function DailyLedgerPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b bg-slate-50">
+                <tr className="border-b bg-green-50/60">
                   <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground whitespace-nowrap">
                     伝票番号
                   </th>

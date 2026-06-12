@@ -387,7 +387,7 @@ export function InvoiceForm({
             </div>
 
             {/* 請求・お釣り */}
-            <div className="bg-slate-50 rounded-lg p-3 space-y-1.5 text-sm">
+            <div className="bg-green-50/60 rounded-lg p-3 space-y-1.5 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">ご請求額</span>
                 <span className="font-medium">

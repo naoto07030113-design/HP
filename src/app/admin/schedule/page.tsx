@@ -236,7 +236,7 @@ export default function SchedulePage() {
             <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b bg-slate-50">
+                  <tr className="border-b bg-green-50/60">
                     <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground">曜日</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground">院</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground">休診タイプ</th>
@@ -246,7 +246,7 @@ export default function SchedulePage() {
                 </thead>
                 <tbody className="divide-y">
                   {recurringDays.map((d) => (
-                    <tr key={d.id} className="hover:bg-slate-50/50">
+                    <tr key={d.id} className="hover:bg-green-50/40">
                       <td className="px-4 py-3">
                         <span className={cn(
                           'inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold',
@@ -366,7 +366,7 @@ export default function SchedulePage() {
             <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b bg-slate-50">
+                  <tr className="border-b bg-green-50/60">
                     <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground">日付</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground">院</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground">休診タイプ</th>
@@ -378,7 +378,7 @@ export default function SchedulePage() {
                   {oneOffDays.map((d) => {
                     const isPast = d.closed_date ? d.closed_date < format(new Date(), 'yyyy-MM-dd') : false
                     return (
-                      <tr key={d.id} className={cn('hover:bg-slate-50/50', isPast && 'opacity-50')}>
+                      <tr key={d.id} className={cn('hover:bg-green-50/40', isPast && 'opacity-50')}>
                         <td className="px-4 py-3 whitespace-nowrap">
                           <span className="font-medium">{d.closed_date}</span>
                           {isPast && <span className="ml-1.5 text-xs text-muted-foreground">（過去）</span>}

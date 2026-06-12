@@ -1,36 +1,47 @@
 'use client'
 
-import { useState } from 'react'
 import Link from 'next/link'
-import { MapPin, Phone, Clock, ChevronRight } from 'lucide-react'
+import { MapPin, Phone, ChevronRight } from 'lucide-react'
 import { useClinicStore } from '@/lib/clinic-store'
 import { useAnnouncementsStore, announcementsStore } from '@/lib/announcement-store'
 import { AnnouncementBanners } from '@/components/common/AnnouncementBanner'
 
 export default function ReservePage() {
   const store = useClinicStore()
-  const announcements = useAnnouncementsStore()
+  useAnnouncementsStore()
   const activeClinics = store.clinics.filter((c) => c.is_active)
   const companyAnnouncements = announcementsStore.getActive('company')
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-50 to-white">
+    <div className="min-h-screen bg-gradient-to-b from-[hsl(var(--surface))] to-white">
       {/* ヘッダー */}
-      <header className="bg-green-900 text-white px-4 py-4">
-        <div className="max-w-lg mx-auto">
-          <h1 className="text-xl font-bold tracking-tight">オンライン予約</h1>
-          <p className="text-green-200 text-sm mt-0.5">24時間いつでもご予約いただけます</p>
+      <header className="relative bg-gradient-to-br from-green-950 via-green-900 to-[#16382a] text-white px-4 pt-8 pb-9 overflow-hidden">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background:
+              'radial-gradient(500px circle at 90% 0%, rgba(207,166,79,0.1), transparent 55%)',
+          }}
+        />
+        <div className="relative max-w-lg mx-auto">
+          <p className="text-[10px] text-gold-300/80 tracking-[0.3em] mb-2">ITO MEDICAL CARE</p>
+          <h1 className="text-2xl font-bold tracking-tight">オンライン予約</h1>
+          <p className="text-green-200/80 text-sm mt-1.5">24時間いつでもご予約いただけます</p>
         </div>
+        {/* ゴールドの罫線 */}
+        <div className="absolute bottom-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-gold-400/60 to-transparent" />
       </header>
 
-      <div className="max-w-lg mx-auto px-4 py-6 space-y-5">
+      <div className="max-w-lg mx-auto px-4 py-7 space-y-6 animate-fade-up">
         {/* 全社お知らせ */}
         {companyAnnouncements.length > 0 && (
           <AnnouncementBanners announcements={companyAnnouncements} />
         )}
 
         <div>
-          <h2 className="text-lg font-bold text-green-900 mb-3">院を選んでください</h2>
+          <h2 className="text-lg font-bold text-green-950 mb-1">院を選んでください</h2>
+          <p className="text-xs text-muted-foreground mb-4">ご希望の院を選択すると予約画面に進みます</p>
           <div className="space-y-3">
             {activeClinics.map((clinic) => {
               const clinicAnnouncements = announcementsStore.getActive('clinic', clinic.id)
@@ -39,39 +50,41 @@ export default function ReservePage() {
                 <Link
                   key={clinic.id}
                   href={`/reserve/${clinic.id}`}
-                  className="block bg-white rounded-2xl border border-green-100 shadow-sm hover:shadow-md transition-all hover:border-green-300 active:scale-[0.99] p-4"
+                  className="group block bg-white rounded-2xl border border-green-100 shadow-sm hover:shadow-md hover:border-green-300 hover:-translate-y-0.5 transition-all duration-300 active:scale-[0.99] p-5"
                 >
                   <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-green-800 flex items-center justify-center flex-shrink-0">
-                        <span className="text-white font-bold text-xs tracking-tight">IMC</span>
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-green-700 to-green-900 ring-1 ring-gold-400/30 shadow-sm flex items-center justify-center flex-shrink-0">
+                        <span className="text-gold-200 font-bold text-xs tracking-widest">IMC</span>
                       </div>
                       <div>
-                        <p className="font-bold text-green-900">{clinic.name}</p>
-                        <p className="text-xs text-green-600 mt-0.5">
-                          {clinic.open_time} - {clinic.close_time}
+                        <p className="font-bold text-green-950 text-[15px]">{clinic.name}</p>
+                        <p className="text-xs text-green-600 mt-0.5 tracking-wide">
+                          診療時間 {clinic.open_time} - {clinic.close_time}
                         </p>
                       </div>
                     </div>
-                    <ChevronRight className="w-5 h-5 text-green-400" />
+                    <div className="w-8 h-8 rounded-full bg-green-50 group-hover:bg-green-700 flex items-center justify-center transition-colors duration-300">
+                      <ChevronRight className="w-4 h-4 text-green-700 group-hover:text-white transition-colors duration-300" />
+                    </div>
                   </div>
-                  <div className="space-y-1 text-sm text-muted-foreground">
+                  <div className="space-y-1.5 text-sm text-muted-foreground">
                     {clinic.address && (
-                      <div className="flex items-center gap-1.5">
-                        <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
+                      <div className="flex items-center gap-2">
+                        <MapPin className="w-3.5 h-3.5 flex-shrink-0 text-green-500" />
                         <span className="line-clamp-1">{clinic.address}</span>
                       </div>
                     )}
                     {clinic.phone && (
-                      <div className="flex items-center gap-1.5">
-                        <Phone className="w-3.5 h-3.5 flex-shrink-0" />
+                      <div className="flex items-center gap-2">
+                        <Phone className="w-3.5 h-3.5 flex-shrink-0 text-green-500" />
                         <span>{clinic.phone}</span>
                       </div>
                     )}
                   </div>
                   {/* 院別お知らせプレビュー */}
                   {clinicAnnouncements.length > 0 && (
-                    <div className="mt-3 pt-3 border-t border-green-50">
+                    <div className="mt-3.5 pt-3 border-t border-green-50">
                       <p className="text-xs text-amber-700 font-medium line-clamp-1">
                         {clinicAnnouncements[0].title}
                       </p>

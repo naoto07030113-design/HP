@@ -444,7 +444,7 @@ export default function AnalyticsPage() {
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {inactivePatients.map((p) => (
-                  <tr key={p.id} className="hover:bg-slate-50/50">
+                  <tr key={p.id} className="hover:bg-green-50/40">
                     <td className="py-2.5">
                       <div className="font-medium text-green-900">{p.name}</div>
                       {p.name_kana && <div className="text-xs text-muted-foreground">{p.name_kana}</div>}

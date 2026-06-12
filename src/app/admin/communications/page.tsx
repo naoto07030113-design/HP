@@ -143,7 +143,7 @@ export default function CommunicationsPage() {
                       { key: 'smsReminderEnabled', label: 'SMS', desc: 'Twilio / AWS SNS 連携' },
                       { key: 'emailReminderEnabled', label: 'メール', desc: 'SMTP / SendGrid 連携' },
                     ].map(({ key, label, desc }) => (
-                      <div key={key} className="flex items-center justify-between py-2 px-3 rounded-lg bg-slate-50">
+                      <div key={key} className="flex items-center justify-between py-2 px-3 rounded-lg bg-green-50/60">
                         <div>
                           <p className="text-sm font-medium">{label}</p>
                           <p className="text-xs text-muted-foreground">{desc}</p>
@@ -206,7 +206,7 @@ export default function CommunicationsPage() {
         <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-slate-50 border-b">
+              <tr className="bg-green-50/60 border-b">
                 <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground">送信日時</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground">患者名</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground">チャンネル</th>
@@ -216,7 +216,7 @@ export default function CommunicationsPage() {
             </thead>
             <tbody className="divide-y">
               {MOCK_HISTORY.map((h) => (
-                <tr key={h.id} className="hover:bg-slate-50/50">
+                <tr key={h.id} className="hover:bg-green-50/40">
                   <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{h.sentAt}</td>
                   <td className="px-4 py-3 font-medium">{h.patient}</td>
                   <td className="px-4 py-3">
@@ -238,7 +238,7 @@ export default function CommunicationsPage() {
               ))}
             </tbody>
           </table>
-          <div className="px-4 py-3 border-t bg-slate-50 text-xs text-muted-foreground">
+          <div className="px-4 py-3 border-t bg-green-50/60 text-xs text-muted-foreground">
             直近5件を表示（デモデータ）
           </div>
         </div>

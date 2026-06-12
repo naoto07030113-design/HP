@@ -137,7 +137,7 @@ export default function ExportsPage() {
               <label
                 key={t.value}
                 className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                  exportType === t.value ? 'border-green-600 bg-green-50' : 'border-border hover:bg-slate-50'
+                  exportType === t.value ? 'border-green-600 bg-green-50' : 'border-border hover:bg-green-50/60'
                 }`}
               >
                 <input

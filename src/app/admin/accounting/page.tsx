@@ -208,7 +208,7 @@ export default function AccountingPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b bg-slate-50">
+                <tr className="border-b bg-green-50/60">
                   <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground whitespace-nowrap">伝票番号</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground whitespace-nowrap">来院日</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground whitespace-nowrap">患者名</th>
@@ -224,7 +224,7 @@ export default function AccountingPage() {
                 {filtered.map((inv) => {
                   const staffMember = staff.find((s) => s.id === inv.staff_id)
                   return (
-                    <tr key={inv.id} className="hover:bg-slate-50/50 transition-colors">
+                    <tr key={inv.id} className="hover:bg-green-50/40 transition-colors">
                       <td className="px-4 py-3">
                         <span className="text-xs text-muted-foreground font-mono">{inv.invoice_number}</span>
                       </td>
@@ -283,7 +283,7 @@ export default function AccountingPage() {
               </tbody>
               {/* フッター: 合計 */}
               <tfoot>
-                <tr className="border-t bg-slate-50">
+                <tr className="border-t bg-green-50/60">
                   <td colSpan={5} className="px-4 py-3 text-xs font-semibold text-muted-foreground">
                     {filtered.length}件
                   </td>

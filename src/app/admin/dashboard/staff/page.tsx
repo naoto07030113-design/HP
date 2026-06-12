@@ -223,7 +223,7 @@ export default function StaffDashboardPage() {
         {/* ランキングテーブル */}
         {!selectedStaff && (
           <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
-            <div className="px-4 py-3 border-b bg-slate-50 flex items-center gap-2">
+            <div className="px-4 py-3 border-b bg-green-50/60 flex items-center gap-2">
               <Award className="w-4 h-4 text-green-700" />
               <h2 className="text-sm font-semibold text-green-900">スタッフ別実績ランキング</h2>
               <span className="text-xs text-muted-foreground ml-1">（列名クリックで並び替え）</span>
@@ -234,7 +234,7 @@ export default function StaffDashboardPage() {
               <div className="overflow-auto">
                 <table className="w-full text-sm min-w-[700px]">
                   <thead>
-                    <tr className="border-b bg-slate-50/50">
+                    <tr className="border-b bg-green-50/40">
                       <th className="text-left px-4 py-2.5 text-xs text-muted-foreground font-medium w-10">順位</th>
                       <th className="text-left px-4 py-2.5 text-xs text-muted-foreground font-medium">スタッフ</th>
                       <th className="text-left px-4 py-2.5 text-xs text-muted-foreground font-medium hidden sm:table-cell">院</th>

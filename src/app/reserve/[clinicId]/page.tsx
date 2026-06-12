@@ -225,25 +225,25 @@ export default function ReserveClinicPage() {
   const progress = Math.round((currentStepIdx / (STEPS.length - 2)) * 100)
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-b from-[hsl(var(--surface))] to-white">
       {/* ヘッダー */}
-      <header className="bg-green-900 text-white sticky top-0 z-10">
-        <div className="max-w-lg mx-auto px-4 py-3 flex items-center gap-3">
-          <button onClick={goBack} className="p-1 rounded hover:bg-green-800 transition-colors">
+      <header className="bg-gradient-to-r from-green-950 to-green-900 text-white sticky top-0 z-10 shadow-md">
+        <div className="max-w-lg mx-auto px-4 py-3.5 flex items-center gap-3">
+          <button onClick={goBack} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="flex-1">
-            <p className="text-sm font-semibold">{clinic.name}</p>
+            <p className="text-sm font-bold tracking-wide">{clinic.name}</p>
             {step !== 'complete' && (
-              <p className="text-xs text-green-300">{STEP_LABELS[step]}</p>
+              <p className="text-[11px] text-gold-300/90 tracking-wider mt-0.5">{STEP_LABELS[step]}</p>
             )}
           </div>
         </div>
         {/* プログレスバー */}
         {step !== 'complete' && (
-          <div className="h-1 bg-green-800">
+          <div className="h-[3px] bg-white/10">
             <div
-              className="h-full bg-gold-400 transition-all duration-300"
+              className="h-full bg-gradient-to-r from-gold-500 to-gold-300 transition-all duration-500 ease-out"
               style={{ width: `${progress}%` }}
             />
           </div>
