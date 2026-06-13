@@ -70,11 +70,17 @@ npm run dev
 | `/cashbook` | 経費・出納帳（メイン） |
 | `/businesses` | 事業所管理 |
 
-## Vercel デプロイ
+## Vercel デプロイ（このリポジトリのサブフォルダから）
 
-1. GitHub リポジトリをインポート
-2. Environment Variables に `.env.local` の内容を設定
-3. デプロイ
+このアプリは `hp` リポジトリ内の `keihi-app/` フォルダに置かれています。新しいリポジトリを作らずに、サブフォルダを指定してそのままデプロイできます。
+
+1. [Vercel](https://vercel.com) で「Add New… > Project」から `hp` リポジトリをインポート
+2. **Root Directory** を `keihi-app` に設定（ここが重要。これでこのフォルダだけがビルドされます）
+3. Framework Preset が「Next.js」になっていることを確認
+4. **Environment Variables** に `.env.example` と同じ3つ（`NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` / `OPENAI_API_KEY`）を設定
+5. デプロイ
+
+> 治療院システム本体とは別のVercelプロジェクトとして登録してください。Root Directory が `keihi-app` になっているため、両者は独立してビルド・公開されます。
 
 ## 補足：振込期日の通知について
 
