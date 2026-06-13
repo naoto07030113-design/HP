@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 import { useCashbookStore, cashbookStore } from '@/lib/cashbook-store'
 import { useScheduledPaymentStore, scheduledPaymentStore } from '@/lib/scheduled-payment-store'
-import { useClinicStore } from '@/lib/clinic-store'
+import { useBusinessStore } from '@/lib/business-store'
 import { EntryForm } from '@/features/cashbook/components/EntryForm'
 import { DocumentUploadDialog } from '@/features/cashbook/components/DocumentUploadDialog'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
@@ -33,11 +33,11 @@ const MONTH_START = format(startOfMonth(new Date()), 'yyyy-MM-dd')
 const MONTH_END = format(endOfMonth(new Date()), 'yyyy-MM-dd')
 
 // 税理士提出用の出納帳CSV（日付昇順・収入/支出/差引残高）
-function downloadCashbookCsv(entries: CashbookEntry[], clinicName: (id: string | null) => string) {
+function downloadCashbookCsv(entries: CashbookEntry[], businessName: (id: string | null) => string) {
   const sorted = [...entries].sort((a, b) =>
     a.entry_date.localeCompare(b.entry_date) || a.created_at.localeCompare(b.created_at))
 
-  const header = ['日付', '勘定科目', '摘要', '収入金額', '支出金額', '差引残高', '部門', '入出金方法', '取込元', 'メモ']
+  const header = ['日付', '勘定科目', '摘要', '収入金額', '支出金額', '差引残高', '事業所', '入出金方法', '取込元', 'メモ']
   let balance = 0
   const rows = sorted.map((e) => {
     const income = e.entry_type === 'income' ? e.amount : 0
@@ -51,7 +51,7 @@ function downloadCashbookCsv(entries: CashbookEntry[], clinicName: (id: string |
       income ? String(income) : '',
       expense ? String(expense) : '',
       String(balance),
-      clinicName(e.clinic_id),
+      businessName(e.business_id),
       PAYMENT_METHOD_LABELS[e.payment_method],
       ENTRY_SOURCE_LABELS[e.source],
       e.memo ?? '',
@@ -74,7 +74,7 @@ function downloadCashbookCsv(entries: CashbookEntry[], clinicName: (id: string |
 export default function CashbookPage() {
   useCashbookStore()
   const scheduledPayments = useScheduledPaymentStore()
-  const { clinics } = useClinicStore()
+  const { businesses } = useBusinessStore()
 
   const [formOpen, setFormOpen] = useState(false)
   const [uploadOpen, setUploadOpen] = useState(false)
@@ -86,7 +86,7 @@ export default function CashbookPage() {
   // Filters
   const [dateFrom, setDateFrom] = useState(MONTH_START)
   const [dateTo, setDateTo] = useState(MONTH_END)
-  const [filterClinic, setFilterClinic] = useState('all')
+  const [filterBusiness, setFilterBusiness] = useState('all')
   const [filterType, setFilterType] = useState<'all' | EntryType>('all')
   const [filterCategory, setFilterCategory] = useState<'all' | CashbookCategory>('all')
   const [search, setSearch] = useState('')
@@ -97,14 +97,14 @@ export default function CashbookPage() {
     return entries
       .filter((e) => e.entry_date >= dateFrom && e.entry_date <= dateTo)
       .filter((e) => {
-        if (filterClinic === 'all') return true
-        if (filterClinic === '__common__') return e.clinic_id === null
-        return e.clinic_id === filterClinic
+        if (filterBusiness === 'all') return true
+        if (filterBusiness === '__common__') return e.business_id === null
+        return e.business_id === filterBusiness
       })
       .filter((e) => filterType === 'all' || e.entry_type === filterType)
       .filter((e) => filterCategory === 'all' || e.category === filterCategory)
       .filter((e) => !search || e.description.includes(search) || e.vendor.includes(search))
-  }, [entries, dateFrom, dateTo, filterClinic, filterType, filterCategory, search])
+  }, [entries, dateFrom, dateTo, filterBusiness, filterType, filterCategory, search])
 
   const incomeTotal = filtered.filter((e) => e.entry_type === 'income').reduce((s, e) => s + e.amount, 0)
   const expenseTotal = filtered.filter((e) => e.entry_type === 'expense').reduce((s, e) => s + e.amount, 0)
@@ -121,9 +121,9 @@ export default function CashbookPage() {
     return Array.from(totals.entries()).sort((a, b) => b[1] - a[1])
   }, [filtered])
 
-  function clinicName(id: string | null): string {
+  function businessName(id: string | null): string {
     if (id === null) return '全社共通'
-    return clinics.find((c) => c.id === id)?.name ?? '-'
+    return businesses.find((c) => c.id === id)?.name ?? '-'
   }
 
   function openAdd() {
@@ -174,7 +174,7 @@ export default function CashbookPage() {
   async function handleMarkPaid(payment: ScheduledPayment) {
     try {
       await cashbookStore.create({
-        clinic_id: payment.clinic_id,
+        business_id: payment.business_id,
         entry_date: TODAY,
         entry_type: 'expense',
         category: 'misc',
@@ -217,7 +217,7 @@ export default function CashbookPage() {
           </Button>
           <Button
             variant="outline" size="sm" className="gap-1.5"
-            onClick={() => downloadCashbookCsv(filtered, clinicName)}
+            onClick={() => downloadCashbookCsv(filtered, businessName)}
             disabled={filtered.length === 0}
           >
             <Download className="w-4 h-4" />
@@ -263,7 +263,7 @@ export default function CashbookPage() {
                         )}
                       </td>
                       <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
-                        {clinicName(p.clinic_id)}
+                        {businessName(p.business_id)}
                       </td>
                       <td className="px-4 py-3 text-right font-semibold whitespace-nowrap">
                         {p.amount.toLocaleString()}円
@@ -382,13 +382,13 @@ export default function CashbookPage() {
             </Select>
           </div>
           <div className="space-y-1">
-            <p className="text-xs text-muted-foreground font-medium">院</p>
-            <Select value={filterClinic} onValueChange={setFilterClinic}>
+            <p className="text-xs text-muted-foreground font-medium">事業所</p>
+            <Select value={filterBusiness} onValueChange={setFilterBusiness}>
               <SelectTrigger className="h-8 text-xs w-32"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">全て</SelectItem>
                 <SelectItem value="__common__">全社共通</SelectItem>
-                {clinics.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                {businesses.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -451,7 +451,7 @@ export default function CashbookPage() {
                   <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground whitespace-nowrap">日付</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground whitespace-nowrap">勘定科目</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground">摘要</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground whitespace-nowrap">院</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground whitespace-nowrap">事業所</th>
                   <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground whitespace-nowrap">収入</th>
                   <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground whitespace-nowrap">支出</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground whitespace-nowrap">方法</th>
@@ -483,7 +483,7 @@ export default function CashbookPage() {
                       )}
                     </td>
                     <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
-                      {clinicName(entry.clinic_id)}
+                      {businessName(entry.business_id)}
                     </td>
                     <td className="px-4 py-3 text-right font-semibold whitespace-nowrap text-green-800">
                       {entry.entry_type === 'income' ? `${entry.amount.toLocaleString()}円` : ''}

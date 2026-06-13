@@ -17,7 +17,7 @@ import {
   EXPENSE_CATEGORY_LABELS, INCOME_CATEGORY_LABELS, PAYMENT_METHOD_LABELS,
   ENTRY_TYPE_LABELS, DOCUMENT_TYPE_LABELS,
 } from '@/types/cashbook'
-import { useClinicStore } from '@/lib/clinic-store'
+import { useBusinessStore } from '@/lib/business-store'
 import { fileToResizedDataUrl } from '@/lib/image-utils'
 import { cn } from '@/lib/utils'
 
@@ -41,20 +41,20 @@ type Step =
   | { mode: 'payment_due'; payment: PaymentDueOcrResult }
 
 export function DocumentUploadDialog({ open, onOpenChange, onSaveEntries, onSaveScheduledPayment }: Props) {
-  const { clinics } = useClinicStore()
+  const { businesses } = useBusinessStore()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [step, setStep] = useState<Step>({ mode: 'select' })
   const [saving, setSaving] = useState(false)
   const [preview, setPreview] = useState<string | null>(null)
-  const [clinicId, setClinicId] = useState<string | null>(null)
+  const [businessId, setBusinessId] = useState<string | null>(null)
   const [paymentMethod, setPaymentMethod] = useState<CashbookPaymentMethod>('cash')
 
   function reset() {
     setStep({ mode: 'select' })
     setSaving(false)
     setPreview(null)
-    setClinicId(null)
+    setBusinessId(null)
     setPaymentMethod('cash')
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
@@ -112,7 +112,7 @@ export function DocumentUploadDialog({ open, onOpenChange, onSaveEntries, onSave
     setSaving(true)
     try {
       await onSaveEntries([{
-        clinic_id: clinicId,
+        business_id: businessId,
         entry_date: receipt.entry_date,
         entry_type: 'expense',
         category: receipt.category,
@@ -135,7 +135,7 @@ export function DocumentUploadDialog({ open, onOpenChange, onSaveEntries, onSave
     setSaving(true)
     try {
       await onSaveEntries(valid.map((r) => ({
-        clinic_id: clinicId,
+        business_id: businessId,
         entry_date: r.entry_date,
         entry_type: r.entry_type,
         category: r.category,
@@ -156,7 +156,7 @@ export function DocumentUploadDialog({ open, onOpenChange, onSaveEntries, onSave
     setSaving(true)
     try {
       await onSaveScheduledPayment({
-        clinic_id: clinicId,
+        business_id: businessId,
         document_type: payment.document_type,
         vendor: payment.vendor,
         description: payment.description,
@@ -175,17 +175,17 @@ export function DocumentUploadDialog({ open, onOpenChange, onSaveEntries, onSave
   // 共通パーツ
   // -------------------------------------------------------------------------
 
-  const clinicSelect = (
+  const businessSelect = (
     <div className="space-y-1">
-      <Label>院</Label>
+      <Label>事業所</Label>
       <Select
-        value={clinicId ?? '__common__'}
-        onValueChange={(v) => setClinicId(v === '__common__' ? null : v)}
+        value={businessId ?? '__common__'}
+        onValueChange={(v) => setBusinessId(v === '__common__' ? null : v)}
       >
         <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
         <SelectContent>
           <SelectItem value="__common__">全社共通</SelectItem>
-          {clinics.filter((c) => c.is_active).map((c) => (
+          {businesses.filter((c) => c.is_active).map((c) => (
             <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
           ))}
         </SelectContent>
@@ -315,7 +315,7 @@ export function DocumentUploadDialog({ open, onOpenChange, onSaveEntries, onSave
                   </SelectContent>
                 </Select>
               </div>
-              {clinicSelect}
+              {businessSelect}
             </div>
 
             <DialogFooter className="gap-2">
@@ -348,7 +348,7 @@ export function DocumentUploadDialog({ open, onOpenChange, onSaveEntries, onSave
                 判定結果: 通帳（入出金明細を出納帳に一括登録）
               </div>
               <div className="flex items-end justify-between gap-3 flex-wrap">
-                <div className="w-44">{clinicSelect}</div>
+                <div className="w-44">{businessSelect}</div>
                 <div className="text-xs text-muted-foreground space-x-4">
                   <span>入金合計 <span className="font-semibold text-green-800">{incomeTotal.toLocaleString()}円</span></span>
                   <span>出金合計 <span className="font-semibold text-red-700">{expenseTotal.toLocaleString()}円</span></span>
@@ -521,7 +521,7 @@ export function DocumentUploadDialog({ open, onOpenChange, onSaveEntries, onSave
                   <p className="text-xs text-amber-700">期日を読み取れませんでした。手動で入力してください</p>
                 )}
               </div>
-              {clinicSelect}
+              {businessSelect}
             </div>
 
             <div className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5 text-xs text-amber-800">

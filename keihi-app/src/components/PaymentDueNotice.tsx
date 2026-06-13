@@ -5,17 +5,14 @@ import Link from 'next/link'
 import { format, addDays } from 'date-fns'
 import { BellRing, X } from 'lucide-react'
 import { useScheduledPaymentStore } from '@/lib/scheduled-payment-store'
-import { useCurrentUser, PERMISSIONS } from '@/lib/auth-store'
 import { cn } from '@/lib/utils'
 
-// 振込期日の前日・当日・期日超過の支払予定を管理画面上部に通知する
+// 振込期日の前日・当日・期日超過の支払予定をアプリ上部に通知する
 export function PaymentDueNotice() {
   const payments = useScheduledPaymentStore()
-  const currentUser = useCurrentUser()
   const [dismissed, setDismissed] = useState(false)
 
   if (dismissed) return null
-  if (!currentUser || !PERMISSIONS.canViewAccounting(currentUser.role)) return null
 
   const today = format(new Date(), 'yyyy-MM-dd')
   const tomorrow = format(addDays(new Date(), 1), 'yyyy-MM-dd')
@@ -65,7 +62,7 @@ export function PaymentDueNotice() {
           ))}
           {due.length > 5 && <span className="opacity-70">ほか{due.length - 5}件</span>}
         </div>
-        <Link href="/admin/cashbook" className="inline-block text-xs underline mt-1 opacity-80 hover:opacity-100">
+        <Link href="/cashbook" className="inline-block text-xs underline mt-1 opacity-80 hover:opacity-100">
           経費・出納帳で確認する
         </Link>
       </div>

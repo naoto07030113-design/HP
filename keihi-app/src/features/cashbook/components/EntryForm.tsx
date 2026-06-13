@@ -15,7 +15,7 @@ import type {
 import {
   EXPENSE_CATEGORY_LABELS, INCOME_CATEGORY_LABELS, PAYMENT_METHOD_LABELS,
 } from '@/types/cashbook'
-import { useClinicStore } from '@/lib/clinic-store'
+import { useBusinessStore } from '@/lib/business-store'
 
 interface Props {
   open: boolean
@@ -27,11 +27,11 @@ interface Props {
 const TODAY = format(new Date(), 'yyyy-MM-dd')
 
 export function EntryForm({ open, onOpenChange, editTarget, onSave }: Props) {
-  const { clinics } = useClinicStore()
+  const { businesses } = useBusinessStore()
 
   const [entryDate, setEntryDate] = useState(TODAY)
   const [entryType, setEntryType] = useState<EntryType>('expense')
-  const [clinicId, setClinicId] = useState<string | null>(null)
+  const [businessId, setBusinessId] = useState<string | null>(null)
   const [category, setCategory] = useState<CashbookCategory>('supplies')
   const [vendor, setVendor] = useState('')
   const [description, setDescription] = useState('')
@@ -45,7 +45,7 @@ export function EntryForm({ open, onOpenChange, editTarget, onSave }: Props) {
     if (editTarget) {
       setEntryDate(editTarget.entry_date)
       setEntryType(editTarget.entry_type)
-      setClinicId(editTarget.clinic_id)
+      setBusinessId(editTarget.business_id)
       setCategory(editTarget.category)
       setVendor(editTarget.vendor)
       setDescription(editTarget.description)
@@ -55,7 +55,7 @@ export function EntryForm({ open, onOpenChange, editTarget, onSave }: Props) {
     } else {
       setEntryDate(TODAY)
       setEntryType('expense')
-      setClinicId(null)
+      setBusinessId(null)
       setCategory('supplies')
       setVendor('')
       setDescription('')
@@ -75,7 +75,7 @@ export function EntryForm({ open, onOpenChange, editTarget, onSave }: Props) {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     onSave({
-      clinic_id: clinicId,
+      business_id: businessId,
       entry_date: entryDate,
       entry_type: entryType,
       category,
@@ -129,15 +129,15 @@ export function EntryForm({ open, onOpenChange, editTarget, onSave }: Props) {
               <Input type="date" value={entryDate} onChange={(e) => setEntryDate(e.target.value)} required />
             </div>
             <div className="space-y-1">
-              <Label>院</Label>
+              <Label>事業所</Label>
               <Select
-                value={clinicId ?? '__common__'}
-                onValueChange={(v) => setClinicId(v === '__common__' ? null : v)}
+                value={businessId ?? '__common__'}
+                onValueChange={(v) => setBusinessId(v === '__common__' ? null : v)}
               >
                 <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__common__">全社共通</SelectItem>
-                  {clinics.filter((c) => c.is_active).map((c) => (
+                  {businesses.filter((c) => c.is_active).map((c) => (
                     <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                   ))}
                 </SelectContent>

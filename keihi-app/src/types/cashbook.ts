@@ -83,7 +83,7 @@ export const PAYMENT_METHOD_LABELS: Record<CashbookPaymentMethod, string> = {
 
 export interface CashbookEntry {
   id: string
-  clinic_id: string | null
+  business_id: string | null
   entry_date: string
   entry_type: EntryType
   category: CashbookCategory
@@ -120,7 +120,7 @@ export const SCHEDULED_PAYMENT_STATUS_LABELS: Record<ScheduledPaymentStatus, str
 
 export interface ScheduledPayment {
   id: string
-  clinic_id: string | null
+  business_id: string | null
   document_type: DocumentType
   vendor: string
   description: string
