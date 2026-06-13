@@ -99,6 +99,47 @@ export interface CashbookEntry {
 
 export type CashbookEntryFormData = Omit<CashbookEntry, 'id' | 'created_at' | 'updated_at'>
 
+// ---------------------------------------------------------------------------
+// 支払予定（請求書・見積書など振込期日がある書類）
+// ---------------------------------------------------------------------------
+
+export type DocumentType = 'invoice' | 'quote' | 'other'
+export type ScheduledPaymentStatus = 'pending' | 'paid' | 'cancelled'
+
+export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
+  invoice: '請求書',
+  quote:   '見積書',
+  other:   'その他',
+}
+
+export const SCHEDULED_PAYMENT_STATUS_LABELS: Record<ScheduledPaymentStatus, string> = {
+  pending:   '未払い',
+  paid:      '支払済',
+  cancelled: '取消',
+}
+
+export interface ScheduledPayment {
+  id: string
+  clinic_id: string | null
+  document_type: DocumentType
+  vendor: string
+  description: string
+  amount: number
+  due_date: string
+  status: ScheduledPaymentStatus
+  memo: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type ScheduledPaymentFormData = Omit<ScheduledPayment, 'id' | 'created_at' | 'updated_at'>
+
+// ---------------------------------------------------------------------------
+// 書類OCR（1つの窓口でAIが書類種別を判定して振り分ける）
+// ---------------------------------------------------------------------------
+
+export type DocumentKind = 'receipt' | 'bankbook' | 'payment_due' | 'unknown'
+
 // OCR結果（レシート読取）
 export interface ReceiptOcrResult {
   entry_date: string
@@ -114,4 +155,20 @@ export interface BankbookOcrRow {
   entry_type: EntryType
   description: string
   amount: number
+}
+
+// OCR結果（請求書・見積書読取）
+export interface PaymentDueOcrResult {
+  document_type: DocumentType
+  vendor: string
+  description: string
+  amount: number
+  due_date: string // 読み取れなかった場合は空文字
+}
+
+export interface DocumentOcrResult {
+  kind: DocumentKind
+  receipt?: ReceiptOcrResult
+  entries?: BankbookOcrRow[]
+  payment?: PaymentDueOcrResult
 }

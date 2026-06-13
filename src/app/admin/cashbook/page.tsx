@@ -8,19 +8,23 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
   Wallet, Plus, Search, TrendingDown, TrendingUp, Scale,
-  Pencil, Trash2, Download, Camera, BookOpen,
+  Pencil, Trash2, Download, ScanLine, BellRing, CheckCircle2,
 } from 'lucide-react'
 import { useCashbookStore, cashbookStore } from '@/lib/cashbook-store'
+import { useScheduledPaymentStore, scheduledPaymentStore } from '@/lib/scheduled-payment-store'
 import { useClinicStore } from '@/lib/clinic-store'
 import { EntryForm } from '@/features/cashbook/components/EntryForm'
-import { ReceiptUploadDialog } from '@/features/cashbook/components/ReceiptUploadDialog'
-import { BankbookUploadDialog } from '@/features/cashbook/components/BankbookUploadDialog'
+import { DocumentUploadDialog } from '@/features/cashbook/components/DocumentUploadDialog'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { EmptyState } from '@/components/common/EmptyState'
-import type { CashbookEntry, CashbookEntryFormData, CashbookCategory, EntryType, ExpenseCategory } from '@/types/cashbook'
+import type {
+  CashbookEntry, CashbookEntryFormData, CashbookCategory, EntryType,
+  ExpenseCategory, ScheduledPayment, ScheduledPaymentFormData,
+} from '@/types/cashbook'
 import {
   CATEGORY_LABELS, EXPENSE_CATEGORY_LABELS, INCOME_CATEGORY_LABELS,
   CATEGORY_BAR_COLORS, PAYMENT_METHOD_LABELS, ENTRY_SOURCE_LABELS,
+  DOCUMENT_TYPE_LABELS,
 } from '@/types/cashbook'
 import { cn } from '@/lib/utils'
 
@@ -69,13 +73,15 @@ function downloadCashbookCsv(entries: CashbookEntry[], clinicName: (id: string |
 
 export default function CashbookPage() {
   useCashbookStore()
+  const scheduledPayments = useScheduledPaymentStore()
   const { clinics } = useClinicStore()
 
   const [formOpen, setFormOpen] = useState(false)
-  const [receiptOpen, setReceiptOpen] = useState(false)
-  const [bankbookOpen, setBankbookOpen] = useState(false)
+  const [uploadOpen, setUploadOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<CashbookEntry | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [deletePaymentId, setDeletePaymentId] = useState<string | null>(null)
+  const [payTarget, setPayTarget] = useState<ScheduledPayment | null>(null)
 
   // Filters
   const [dateFrom, setDateFrom] = useState(MONTH_START)
@@ -140,24 +146,60 @@ export default function CashbookPage() {
     }
   }
 
-  async function handleReceiptSave(data: CashbookEntryFormData) {
+  async function handleDocumentEntries(rows: CashbookEntryFormData[]) {
     try {
-      await cashbookStore.create(data)
-      toast.success(`${format(new Date(data.entry_date), 'M月')}の出納帳に登録しました`)
+      await cashbookStore.createMany(rows)
+      if (rows.length === 1) {
+        toast.success(`${format(new Date(rows[0].entry_date), 'M月')}の出納帳に登録しました`)
+      } else {
+        toast.success(`${rows.length}件を出納帳に登録しました`)
+      }
     } catch {
       toast.error('登録に失敗しました')
       throw new Error('save failed')
     }
   }
 
-  async function handleBankbookSave(rows: CashbookEntryFormData[]) {
+  async function handleScheduledPaymentSave(data: ScheduledPaymentFormData) {
     try {
-      await cashbookStore.createMany(rows)
-      toast.success(`${rows.length}件を出納帳に登録しました`)
+      await scheduledPaymentStore.create(data)
+      toast.success(`支払予定に登録しました。振込期日（${data.due_date}）の前日に通知します`)
     } catch {
       toast.error('登録に失敗しました')
       throw new Error('save failed')
     }
+  }
+
+  // 支払予定を支払済にし、出納帳へ出金として自動記帳する
+  async function handleMarkPaid(payment: ScheduledPayment) {
+    try {
+      await cashbookStore.create({
+        clinic_id: payment.clinic_id,
+        entry_date: TODAY,
+        entry_type: 'expense',
+        category: 'misc',
+        vendor: payment.vendor,
+        description: payment.description || `${DOCUMENT_TYPE_LABELS[payment.document_type]}支払い`,
+        amount: payment.amount,
+        payment_method: 'bank_transfer',
+        source: 'manual',
+        memo: `支払予定（期日 ${payment.due_date}）より記帳`,
+      })
+      await scheduledPaymentStore.update(payment.id, { status: 'paid' })
+      toast.success('支払済にして出納帳へ記帳しました')
+    } catch {
+      toast.error('処理に失敗しました')
+    }
+  }
+
+  const pendingPayments = scheduledPayments.filter((p) => p.status === 'pending')
+
+  function dueChip(dueDate: string): { label: string; className: string } {
+    if (dueDate < TODAY) return { label: '期日超過', className: 'bg-red-600 text-white' }
+    if (dueDate === TODAY) return { label: '本日期日', className: 'bg-red-500 text-white' }
+    const days = Math.round((new Date(dueDate).getTime() - new Date(TODAY).getTime()) / 86400000)
+    if (days === 1) return { label: '明日期日', className: 'bg-amber-500 text-white' }
+    return { label: `あと${days}日`, className: 'bg-gray-200 text-gray-700' }
   }
 
   return (
@@ -169,13 +211,9 @@ export default function CashbookPage() {
           <p className="text-sm text-muted-foreground mt-0.5">経費・入出金の記録と税理士提出用の出納帳出力</p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setReceiptOpen(true)}>
-            <Camera className="w-4 h-4" />
-            レシート読み取り
-          </Button>
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setBankbookOpen(true)}>
-            <BookOpen className="w-4 h-4" />
-            通帳読み取り
+          <Button size="sm" className="gap-1.5" onClick={() => setUploadOpen(true)}>
+            <ScanLine className="w-4 h-4" />
+            書類読み取り
           </Button>
           <Button
             variant="outline" size="sm" className="gap-1.5"
@@ -185,12 +223,75 @@ export default function CashbookPage() {
             <Download className="w-4 h-4" />
             出納帳CSV出力
           </Button>
-          <Button size="sm" className="gap-1.5" onClick={openAdd}>
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={openAdd}>
             <Plus className="w-4 h-4" />
-            新規入力
+            手入力
           </Button>
         </div>
       </div>
+
+      {/* 支払予定（請求書・見積書由来） */}
+      {pendingPayments.length > 0 && (
+        <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
+          <div className="flex items-center gap-2 px-4 py-3 border-b bg-amber-50/60">
+            <BellRing className="w-4 h-4 text-amber-700" />
+            <p className="text-sm font-semibold">支払予定（{pendingPayments.length}件）</p>
+            <p className="text-xs text-muted-foreground ml-2">振込期日の前日に管理画面上部へ通知されます</p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <tbody className="divide-y">
+                {pendingPayments.map((p) => {
+                  const chip = dueChip(p.due_date)
+                  return (
+                    <tr key={p.id} className="hover:bg-amber-50/40 transition-colors">
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <span className={cn('inline-flex px-2 py-0.5 rounded text-xs font-semibold', chip.className)}>
+                          {chip.label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm">
+                        期日 <span className="font-medium">{p.due_date}</span>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
+                        {DOCUMENT_TYPE_LABELS[p.document_type]}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="font-medium">{p.vendor || '-'}</span>
+                        {p.description && (
+                          <span className="text-xs text-muted-foreground ml-2">{p.description}</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
+                        {clinicName(p.clinic_id)}
+                      </td>
+                      <td className="px-4 py-3 text-right font-semibold whitespace-nowrap">
+                        {p.amount.toLocaleString()}円
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1 justify-end">
+                          <Button
+                            variant="outline" size="sm"
+                            className="h-7 text-xs gap-1 border-green-300 text-green-700 hover:bg-green-50"
+                            onClick={() => setPayTarget(p)}
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            支払済にする
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"
+                            onClick={() => setDeletePaymentId(p.id)}>
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* サマリーカード */}
       <div className="grid grid-cols-3 gap-3">
@@ -440,16 +541,42 @@ export default function CashbookPage() {
         onSave={handleSave}
       />
 
-      <ReceiptUploadDialog
-        open={receiptOpen}
-        onOpenChange={setReceiptOpen}
-        onSave={handleReceiptSave}
+      <DocumentUploadDialog
+        open={uploadOpen}
+        onOpenChange={setUploadOpen}
+        onSaveEntries={handleDocumentEntries}
+        onSaveScheduledPayment={handleScheduledPaymentSave}
       />
 
-      <BankbookUploadDialog
-        open={bankbookOpen}
-        onOpenChange={setBankbookOpen}
-        onSave={handleBankbookSave}
+      <ConfirmDialog
+        open={!!payTarget}
+        onOpenChange={(o) => !o && setPayTarget(null)}
+        title="支払済にして出納帳へ記帳しますか？"
+        description={payTarget ? `${payTarget.vendor || payTarget.description} ${payTarget.amount.toLocaleString()}円を本日の日付で出金として記帳します` : undefined}
+        confirmLabel="支払済にする"
+        onConfirm={async () => {
+          if (payTarget) await handleMarkPaid(payTarget)
+          setPayTarget(null)
+        }}
+      />
+
+      <ConfirmDialog
+        open={!!deletePaymentId}
+        onOpenChange={(o) => !o && setDeletePaymentId(null)}
+        title="この支払予定を削除しますか？"
+        confirmLabel="削除"
+        variant="destructive"
+        onConfirm={async () => {
+          if (deletePaymentId) {
+            try {
+              await scheduledPaymentStore.delete(deletePaymentId)
+              toast.success('削除しました')
+            } catch {
+              toast.error('削除に失敗しました')
+            }
+          }
+          setDeletePaymentId(null)
+        }}
       />
 
       <ConfirmDialog

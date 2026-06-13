@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Sidebar } from './Sidebar'
+import { PaymentDueNotice } from '@/components/common/PaymentDueNotice'
 import { Menu, X } from 'lucide-react'
 
 interface Props {
@@ -56,6 +57,9 @@ export function AppShell({ children }: Props) {
             <span className="font-semibold text-white text-sm tracking-wide">統合業務システム</span>
           </div>
         </header>
+
+        {/* 支払期日通知 */}
+        <PaymentDueNotice />
 
         {/* ページコンテンツ */}
         <main className="flex-1 overflow-auto">
