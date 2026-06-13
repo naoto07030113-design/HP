@@ -1,0 +1,6 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+# Next.js（App Router・APIルート）は Netlify の Next.js Runtime が自動適用されます。
+# Netlify の管理画面で Base directory を「keihi-app」に設定してください。

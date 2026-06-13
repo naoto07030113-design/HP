@@ -82,6 +82,18 @@ npm run dev
 
 > 治療院システム本体とは別のVercelプロジェクトとして登録してください。Root Directory が `keihi-app` になっているため、両者は独立してビルド・公開されます。
 
+## Netlify デプロイ（このリポジトリのサブフォルダから）
+
+Vercel の代わりに Netlify でも公開できます。同梱の `netlify.toml` により、Next.js Runtime（App Router・APIルート対応）が自動で適用されます。
+
+1. [Netlify](https://app.netlify.com) で「Add new site > Import an existing project」から `hp` リポジトリを選択
+2. **Base directory** を `keihi-app` に設定（Vercel の Root Directory に相当。これでこのフォルダだけがビルドされます）
+3. Build command `npm run build` / Publish directory `.next` は `netlify.toml` で設定済み（自動入力されます）
+4. **Environment variables** に3つ（`NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` / `OPENAI_API_KEY`）を設定
+5. Deploy
+
+> Base directory を `keihi-app` にしているため、治療院システム本体とは独立してビルド・公開されます。新しいリポジトリを作らなくても、`hp` リポジトリのまま公開できます。
+
 ## 補足：振込期日の通知について
 
 通知は「アプリを開いたときに上部へ表示されるバナー」方式です。アプリを開いていなくても届くメール・LINE等のプッシュ通知が必要な場合は、Vercel Cron などの定期実行と組み合わせて拡張できます。
