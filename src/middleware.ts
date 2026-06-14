@@ -8,6 +8,7 @@ export function middleware(request: NextRequest) {
     pathname === '/' ||
     pathname.startsWith('/admin') ||
     pathname.startsWith('/reserve') ||
+    pathname.startsWith('/immersive') ||
     pathname.startsWith('/auth') ||
     pathname.startsWith('/api') ||
     pathname.startsWith('/login')

@@ -1,0 +1,386 @@
+.root {
+  position: relative;
+  background: #05060a;
+  color: #f3efe7;
+  font-family: var(--font-zen), system-ui, sans-serif;
+  --glow: 255, 190, 120;
+}
+
+/* スクロールスナップする縦長ステージ */
+.stage {
+  height: 100vh;
+  height: 100dvh;
+  overflow-y: scroll;
+  overflow-x: hidden;
+  scroll-snap-type: y mandatory;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.stage::-webkit-scrollbar {
+  display: none;
+}
+
+.scene {
+  position: relative;
+  height: 100vh;
+  height: 100dvh;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+}
+
+/* 背景画像：ゆっくり呼吸するKen Burns */
+.bg {
+  position: absolute;
+  inset: -8% -8% -8% -8%;
+  background-size: cover;
+  background-position: center;
+  transform: scale(1.08);
+  transition: transform 8s ease-out, filter 1.6s ease;
+  filter: brightness(0.62) saturate(1.05);
+  will-change: transform;
+}
+.scene.active .bg {
+  transform: scale(1.16);
+}
+
+/* 上下のシネマティックなグラデーション */
+.vignette {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to top, rgba(5, 6, 10, 0.92) 0%, rgba(5, 6, 10, 0.1) 38%, rgba(5, 6, 10, 0) 60%),
+    linear-gradient(to bottom, rgba(5, 6, 10, 0.55) 0%, rgba(5, 6, 10, 0) 30%),
+    radial-gradient(120% 80% at 50% 120%, rgba(var(--glow), 0.18), rgba(5, 6, 10, 0) 60%);
+  pointer-events: none;
+}
+
+/* テキストブロック */
+.copy {
+  position: relative;
+  z-index: 3;
+  max-width: min(640px, 86vw);
+  padding: 0 clamp(24px, 6vw, 96px) clamp(64px, 12vh, 140px);
+}
+.kicker {
+  font-size: clamp(11px, 1.4vw, 14px);
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  color: rgba(var(--glow), 0.92);
+  margin: 0 0 18px;
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 1s ease 0.1s, transform 1s ease 0.1s;
+}
+.title {
+  font-size: clamp(40px, 7vw, 92px);
+  font-weight: 900;
+  line-height: 1.04;
+  letter-spacing: 0.02em;
+  margin: 0 0 24px;
+  text-shadow: 0 8px 40px rgba(0, 0, 0, 0.55);
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 1.1s cubic-bezier(0.16, 1, 0.3, 1) 0.22s,
+    transform 1.1s cubic-bezier(0.16, 1, 0.3, 1) 0.22s;
+}
+.body {
+  font-size: clamp(15px, 1.9vw, 19px);
+  line-height: 2;
+  color: rgba(243, 239, 231, 0.82);
+  max-width: 30em;
+  margin: 0;
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 1.1s ease 0.42s, transform 1.1s ease 0.42s;
+}
+.scene.active .kicker,
+.scene.active .title,
+.scene.active .body {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* 各シーン右下の薄いインデックス */
+.indexTag {
+  position: absolute;
+  right: clamp(20px, 5vw, 64px);
+  bottom: clamp(28px, 5vh, 56px);
+  z-index: 3;
+  font-size: 12px;
+  letter-spacing: 0.34em;
+  color: rgba(243, 239, 231, 0.45);
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+}
+
+/* パーティクル（光の粒）キャンバス */
+.particles {
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
+/* カーソルに追従する光 */
+.cursorGlow {
+  position: fixed;
+  z-index: 5;
+  top: 0;
+  left: 0;
+  width: 460px;
+  height: 460px;
+  margin: -230px 0 0 -230px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(var(--glow), 0.16), rgba(var(--glow), 0) 62%);
+  transition: opacity 0.6s ease;
+  mix-blend-mode: screen;
+  will-change: transform;
+}
+
+/* 上部の進行バー */
+.progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 2px;
+  z-index: 7;
+  background: linear-gradient(90deg, rgba(var(--glow), 0.2), rgba(var(--glow), 1));
+  box-shadow: 0 0 14px rgba(var(--glow), 0.7);
+  transition: width 0.2s ease, background 1.2s ease;
+}
+
+/* 右側のドットナビ */
+.nav {
+  position: fixed;
+  right: clamp(16px, 2.4vw, 30px);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 7;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.dot {
+  width: 11px;
+  height: 11px;
+  border: 0;
+  padding: 0;
+  border-radius: 50%;
+  background: rgba(243, 239, 231, 0.22);
+  cursor: pointer;
+  transition: background 0.4s ease, transform 0.4s ease, box-shadow 0.4s ease;
+}
+.dot:hover {
+  transform: scale(1.25);
+  background: rgba(243, 239, 231, 0.5);
+}
+.dotActive {
+  background: rgba(var(--glow), 1);
+  box-shadow: 0 0 0 4px rgba(var(--glow), 0.18), 0 0 16px rgba(var(--glow), 0.7);
+}
+
+/* ヘッダ／フッタの極小UI */
+.brand {
+  position: fixed;
+  top: clamp(20px, 3.4vh, 34px);
+  left: clamp(20px, 4vw, 56px);
+  z-index: 7;
+  font-size: 13px;
+  letter-spacing: 0.3em;
+  color: rgba(243, 239, 231, 0.75);
+}
+.brand b {
+  color: rgba(var(--glow), 1);
+  font-weight: 700;
+}
+.scrollHint {
+  position: fixed;
+  bottom: clamp(20px, 3.4vh, 30px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 7;
+  font-size: 11px;
+  letter-spacing: 0.34em;
+  color: rgba(243, 239, 231, 0.55);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  transition: opacity 0.8s ease;
+}
+.scrollHint span {
+  display: block;
+  width: 1px;
+  height: 38px;
+  background: linear-gradient(rgba(var(--glow), 0.9), rgba(var(--glow), 0));
+  animation: drop 2.2s ease-in-out infinite;
+}
+@keyframes drop {
+  0% { transform: scaleY(0); transform-origin: top; opacity: 0; }
+  40% { transform: scaleY(1); transform-origin: top; opacity: 1; }
+  60% { transform: scaleY(1); transform-origin: bottom; opacity: 1; }
+  100% { transform: scaleY(0); transform-origin: bottom; opacity: 0; }
+}
+
+/* サウンドトグル */
+.sound {
+  position: fixed;
+  top: clamp(18px, 3.4vh, 32px);
+  right: clamp(20px, 4vw, 56px);
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(243, 239, 231, 0.85);
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+.sound:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(var(--glow), 0.5);
+}
+.eq {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 12px;
+}
+.eq i {
+  width: 2px;
+  background: rgba(var(--glow), 1);
+  height: 30%;
+}
+.eqOn i {
+  animation: eq 0.9s ease-in-out infinite;
+}
+.eqOn i:nth-child(2) { animation-delay: 0.15s; }
+.eqOn i:nth-child(3) { animation-delay: 0.3s; }
+.eqOn i:nth-child(4) { animation-delay: 0.45s; }
+@keyframes eq {
+  0%, 100% { height: 30%; }
+  50% { height: 100%; }
+}
+
+/* イントロ・オーバーレイ */
+.intro {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: radial-gradient(120% 120% at 50% 40%, #0b0d14, #050609 70%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+  text-align: center;
+  padding: 24px;
+  transition: opacity 1.4s ease, visibility 1.4s ease;
+}
+.introHidden {
+  opacity: 0;
+  visibility: hidden;
+}
+.introKicker {
+  font-size: 12px;
+  letter-spacing: 0.5em;
+  color: rgba(var(--glow), 0.85);
+  animation: fadeUp 1.4s ease both 0.2s;
+}
+.introTitle {
+  font-size: clamp(44px, 9vw, 120px);
+  font-weight: 900;
+  line-height: 1;
+  margin: 0;
+  letter-spacing: 0.04em;
+  background: linear-gradient(180deg, #fff, rgba(var(--glow), 0.85));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: fadeUp 1.6s cubic-bezier(0.16, 1, 0.3, 1) both 0.4s;
+}
+.introSub {
+  font-size: clamp(13px, 1.7vw, 16px);
+  letter-spacing: 0.16em;
+  color: rgba(243, 239, 231, 0.6);
+  max-width: 32em;
+  line-height: 1.9;
+  margin: 0;
+  animation: fadeUp 1.6s ease both 0.6s;
+}
+.enter {
+  margin-top: 12px;
+  background: transparent;
+  border: 1px solid rgba(var(--glow), 0.55);
+  color: rgba(243, 239, 231, 0.95);
+  border-radius: 999px;
+  padding: 16px 44px;
+  font-size: 13px;
+  letter-spacing: 0.32em;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: color 0.4s ease, border-color 0.4s ease;
+  animation: fadeUp 1.6s ease both 0.85s, pulse 3s ease-in-out infinite 2s;
+}
+.enter::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(var(--glow), 0.9);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: -1;
+}
+.enter:hover {
+  color: #05060a;
+  border-color: rgba(var(--glow), 1);
+}
+.enter:hover::before {
+  transform: scaleX(1);
+}
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(var(--glow), 0); }
+  50% { box-shadow: 0 0 32px 0 rgba(var(--glow), 0.35); }
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(26px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* フィルムグレイン */
+.grain {
+  position: fixed;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation: grain 0.6s steps(2) infinite;
+}
+@keyframes grain {
+  0% { transform: translate(0, 0); }
+  50% { transform: translate(-6px, 4px); }
+  100% { transform: translate(4px, -6px); }
+}
+
+@media (hover: none) {
+  .cursorGlow { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bg, .scene.active .bg { transition: none; transform: scale(1.08); }
+  .grain, .scrollHint span { animation: none; }
+}
