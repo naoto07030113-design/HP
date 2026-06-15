@@ -1,9 +1,10 @@
 [build]
   command = "npm run build"
+  publish = ".next"
 
 [build.environment]
   NODE_VERSION = "20"
 
 # Base directory は Netlify の管理画面で「keihi-app」に設定してください。
-# Next.js（App Router・APIルート）対応のランタイムと publish 先は、
-# Netlify が package.json を見て自動で適用します（手動で publish を指定しないこと）。
+# publish は base からの相対パスで keihi-app/.next を指します
+# （base と同一ディレクトリにすると @netlify/plugin-nextjs が失敗するため、必ず .next を指定）。
