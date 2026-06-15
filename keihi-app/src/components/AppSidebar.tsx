@@ -3,13 +3,14 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Wallet, Building2, LogOut, Receipt } from 'lucide-react'
+import { Wallet, Building2, LogOut, Receipt, LayoutDashboard } from 'lucide-react'
 import { getSupabaseClient } from '@/lib/supabase'
 import { useCurrentUser } from '@/lib/auth'
 
 const NAV_ITEMS = [
-  { href: '/cashbook',   label: '経費・出納帳', icon: Wallet },
-  { href: '/businesses', label: '事業所管理',   icon: Building2 },
+  { href: '/dashboard',  label: 'キャッシュフロー', icon: LayoutDashboard },
+  { href: '/cashbook',   label: '経費・出納帳',     icon: Wallet },
+  { href: '/businesses', label: '事業所管理',       icon: Building2 },
 ]
 
 interface Props {
