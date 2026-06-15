@@ -1,12 +1,9 @@
 [build]
   command = "npm run build"
-  publish = ".next"
 
 [build.environment]
   NODE_VERSION = "20"
 
-# Next.js（App Router・APIルート）対応のランタイムを明示的に適用
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
-
-# Netlify の管理画面で Base directory を「keihi-app」に設定してください。
+# Base directory は Netlify の管理画面で「keihi-app」に設定してください。
+# Next.js（App Router・APIルート）対応のランタイムと publish 先は、
+# Netlify が package.json を見て自動で適用します（手動で publish を指定しないこと）。
