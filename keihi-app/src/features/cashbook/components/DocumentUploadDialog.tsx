@@ -278,7 +278,8 @@ export function DocumentUploadDialog({ open, onOpenChange, onSaveEntries, onSave
             <div className="text-sm font-medium">書類を撮影またはアップロード（複数選択可）</div>
             <div className="text-xs leading-relaxed text-center">
               レシート・領収書 / クレジットカード利用明細 / 通帳 / 請求書・見積書をAIが自動で判別します<br />
-              カードの下4桁から事業所へ自動仕分け。複数枚まとめてアップロードしても1枚ずつ判定します
+              カードの下4桁から事業所へ自動仕分け。複数枚まとめてアップロードしても1枚ずつ判定します<br />
+              <span className="text-amber-700">精度を上げるため、レシートは1枚ずつ・明るくピントを合わせて撮影してください</span>
             </div>
           </button>
         )}

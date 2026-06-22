@@ -65,9 +65,9 @@ JSON形式:
   "receipt": {
     "entry_date": "yyyy-MM-dd形式の支払日。和暦は西暦に変換。年が読み取れない場合は本日（${today}）と同じ年。日付自体が読み取れない場合は "${today}"",
     "vendor": "店舗名・支払先（読み取れない場合は空文字）",
-    "description": "購入内容の要約（20字以内。例：事務用品、飲食代）",
+    "description": "実際に購入した品目に基づく内容の要約（20字以内）。レシートに印字された商品名・品目から判断すること。中身を確認せず『飲食代』などと決めつけない",
     "amount": 合計金額（税込・数値のみ）,
-    "category": "${EXPENSE_CATEGORIES.join(' | ')} のいずれか。最も適切な勘定科目を推定",
+    "category": "${EXPENSE_CATEGORIES.join(' | ')} のいずれか。店名と品目から推定（例：雑貨・布製品・ギフト等の物販は消耗品費か雑費、飲食店は雑費、事務用品は消耗品費）",
     "card_last4": "クレジットカード払いでカード番号の下4桁が読み取れた場合のみ4桁の数字。現金や読めない場合は空文字"
   },
 
@@ -75,7 +75,7 @@ JSON形式:
   "statement": [
     {
       "entry_date": "yyyy-MM-dd形式の利用日。和暦は西暦に変換",
-      "description": "利用店名・摘要",
+      "description": "明細に記載された実際の利用店名・摘要（推測で一般語に置き換えない）",
       "amount": 利用金額（数値のみ・正の値。合計行や手数料行以外の各利用）,
       "card_last4": "その行のカード番号下4桁（明細上部に記載のカード番号など）。読めなければ空文字",
       "category": "${EXPENSE_CATEGORIES.join(' | ')} のいずれか"
@@ -102,6 +102,7 @@ JSON形式:
   }
 }
 
+重要: 摘要(description)も勘定科目(category)も、必ずレシート・明細に実際に印字された店名や品目に基づくこと。読み取れない部分を一般的な語（飲食代など）で埋めない。判別に迷う購入品は misc(雑費)にする。
 勘定科目の目安: rent=地代家賃, utilities=水道光熱費, payroll=人件費, supplies=消耗品費, medical_supplies=医療材料費, advertising=広告宣伝費, communication=通信費, travel=旅費交通費, repairs=修繕費, fees=支払手数料, misc=雑費, other=その他
 通帳の注意: 繰越行・残高のみの行は entries に含めない
 カード明細の注意: 合計請求額やお支払い金額の行は statement に含めず、個々の利用のみ。カード番号下4桁が明細全体で1つなら各行に同じ値を入れる
@@ -110,7 +111,7 @@ JSONのみ返してください。`
 
   try {
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: process.env.OPENAI_OCR_MODEL || 'gpt-4o',
       messages: [
         {
           role: 'user',

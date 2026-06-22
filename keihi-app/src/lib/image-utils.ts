@@ -27,6 +27,7 @@ export async function fileToResizedDataUrl(file: File, maxDim = 1600): Promise<s
   canvas.height = Math.round(img.height * scale)
   const ctx = canvas.getContext('2d')
   if (!ctx) return dataUrl
+  ctx.imageSmoothingQuality = 'high'
   ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
-  return canvas.toDataURL('image/jpeg', 0.85)
+  return canvas.toDataURL('image/jpeg', 0.92)
 }
