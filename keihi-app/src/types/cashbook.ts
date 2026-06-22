@@ -1,5 +1,5 @@
 export type EntryType = 'income' | 'expense'
-export type EntrySource = 'manual' | 'receipt' | 'bankbook'
+export type EntrySource = 'manual' | 'receipt' | 'bankbook' | 'card_statement'
 
 export type ExpenseCategory =
   | 'rent'
@@ -27,9 +27,10 @@ export const ENTRY_TYPE_LABELS: Record<EntryType, string> = {
 }
 
 export const ENTRY_SOURCE_LABELS: Record<EntrySource, string> = {
-  manual:   '手入力',
-  receipt:  'レシート',
-  bankbook: '通帳',
+  manual:         '手入力',
+  receipt:        'レシート',
+  bankbook:       '通帳',
+  card_statement: 'カード明細',
 }
 
 export const EXPENSE_CATEGORY_LABELS: Record<ExpenseCategory, string> = {
@@ -93,6 +94,12 @@ export interface CashbookEntry {
   payment_method: CashbookPaymentMethod
   source: EntrySource
   memo: string | null
+  // クレジットカード仕分け・レシート/明細の突合・PDF保管（任意。未設定はDB既定値）
+  card_last4?: string | null
+  has_receipt?: boolean
+  has_card_statement?: boolean
+  receipt_pdf_path?: string | null
+  statement_pdf_path?: string | null
   created_at: string
   updated_at: string
 }
@@ -138,7 +145,7 @@ export type ScheduledPaymentFormData = Omit<ScheduledPayment, 'id' | 'created_at
 // 書類OCR（1つの窓口でAIが書類種別を判定して振り分ける）
 // ---------------------------------------------------------------------------
 
-export type DocumentKind = 'receipt' | 'bankbook' | 'payment_due' | 'unknown'
+export type DocumentKind = 'receipt' | 'bankbook' | 'payment_due' | 'card_statement' | 'unknown'
 
 // OCR結果（レシート読取）
 export interface ReceiptOcrResult {
@@ -146,6 +153,16 @@ export interface ReceiptOcrResult {
   vendor: string
   description: string
   amount: number
+  category: ExpenseCategory
+  card_last4: string // カード払いで下4桁が読めた場合。読めなければ空文字
+}
+
+// OCR結果（クレジットカード利用明細・1行分）
+export interface CardStatementOcrRow {
+  entry_date: string
+  description: string
+  amount: number
+  card_last4: string
   category: ExpenseCategory
 }
 
@@ -171,4 +188,5 @@ export interface DocumentOcrResult {
   receipt?: ReceiptOcrResult
   entries?: BankbookOcrRow[]
   payment?: PaymentDueOcrResult
+  statement?: CardStatementOcrRow[]
 }

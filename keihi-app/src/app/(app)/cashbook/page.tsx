@@ -146,14 +146,62 @@ export default function CashbookPage() {
     }
   }
 
+  // レシートとカード明細を「日付＋金額」で突合。重複は1件に統合し、両方あったことを記録する
   async function handleDocumentEntries(rows: CashbookEntryFormData[]) {
     try {
-      await cashbookStore.createMany(rows)
-      if (rows.length === 1) {
-        toast.success(`${format(new Date(rows[0].entry_date), 'M月')}の出納帳に登録しました`)
-      } else {
-        toast.success(`${rows.length}件を出納帳に登録しました`)
+      const existing = cashbookStore.getAll()
+      const toInsert: CashbookEntryFormData[] = []
+      const updates: { id: string; patch: Partial<CashbookEntryFormData> }[] = []
+
+      const flagsFor = (src: string) => ({
+        has_receipt: src === 'receipt',
+        has_card_statement: src === 'card_statement',
+      })
+
+      for (const r of rows) {
+        const f = flagsFor(r.source)
+        if (r.entry_type === 'expense' && (r.source === 'receipt' || r.source === 'card_statement')) {
+          // 既存エントリと突合（同日・同額・反対の取込元でまだ統合されていないもの）
+          const m = existing.find((e) =>
+            e.entry_type === 'expense' &&
+            e.entry_date === r.entry_date &&
+            e.amount === r.amount &&
+            ((r.source === 'receipt' && !e.has_receipt) || (r.source === 'card_statement' && !e.has_card_statement)),
+          )
+          if (m) {
+            updates.push({ id: m.id, patch: {
+              has_receipt: m.has_receipt || f.has_receipt,
+              has_card_statement: m.has_card_statement || f.has_card_statement,
+              card_last4: m.card_last4 ?? r.card_last4 ?? null,
+              business_id: m.business_id ?? r.business_id,
+            } })
+            continue
+          }
+          // 同一バッチ内で突合
+          const b = toInsert.find((t) =>
+            t.entry_type === 'expense' &&
+            t.entry_date === r.entry_date &&
+            t.amount === r.amount &&
+            ((r.source === 'receipt' && !t.has_receipt) || (r.source === 'card_statement' && !t.has_card_statement)),
+          )
+          if (b) {
+            b.has_receipt = b.has_receipt || f.has_receipt
+            b.has_card_statement = b.has_card_statement || f.has_card_statement
+            b.card_last4 = b.card_last4 ?? r.card_last4 ?? null
+            b.business_id = b.business_id ?? r.business_id
+            continue
+          }
+        }
+        toInsert.push({ ...r, ...f })
       }
+
+      for (const u of updates) await cashbookStore.update(u.id, u.patch)
+      if (toInsert.length > 0) await cashbookStore.createMany(toInsert)
+
+      const merged = updates.length
+      toast.success(
+        `出納帳に登録しました（${toInsert.length}件${merged > 0 ? ` ・ ${merged}件はレシート/明細を統合` : ''}）`,
+      )
     } catch {
       toast.error('登録に失敗しました')
       throw new Error('save failed')
@@ -484,6 +532,9 @@ export default function CashbookPage() {
                     </td>
                     <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
                       {businessName(entry.business_id)}
+                      {entry.card_last4 && (
+                        <span className="ml-1 text-[10px] text-indigo-600 font-mono">····{entry.card_last4}</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-right font-semibold whitespace-nowrap text-green-800">
                       {entry.entry_type === 'income' ? `${entry.amount.toLocaleString()}円` : ''}
@@ -494,8 +545,19 @@ export default function CashbookPage() {
                     <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
                       {PAYMENT_METHOD_LABELS[entry.payment_method]}
                     </td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
-                      {ENTRY_SOURCE_LABELS[entry.source]}
+                    <td className="px-4 py-3 text-xs whitespace-nowrap">
+                      {(entry.has_receipt || entry.has_card_statement) ? (
+                        <span className="inline-flex items-center gap-1">
+                          {entry.has_receipt && (
+                            <span className="px-1.5 py-0.5 rounded bg-green-100 text-green-800 text-[10px] font-medium">領収書</span>
+                          )}
+                          {entry.has_card_statement && (
+                            <span className="px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-800 text-[10px] font-medium">明細</span>
+                          )}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">{ENTRY_SOURCE_LABELS[entry.source]}</span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1 justify-end">
