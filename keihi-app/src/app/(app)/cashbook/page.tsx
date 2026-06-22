@@ -487,7 +487,7 @@ export default function CashbookPage() {
         <EmptyState
           icon={Wallet}
           title="該当するデータがありません"
-          description="レシートや通帳の読み取り、または新規入力から登録してください"
+          description="レシート・カード明細・通帳の読み取り、または新規入力から登録してください"
           action={{ label: '新規入力', onClick: openAdd }}
         />
       ) : (
