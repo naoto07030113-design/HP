@@ -67,8 +67,9 @@ export default function SchedulePage() {
       toast.success('定休日を追加しました')
       setRDow(null)
       setRReason('')
-    } catch {
-      toast.error('追加に失敗しました')
+    } catch (err) {
+      const msg = (err as { message?: string })?.message
+      toast.error(msg ? `追加に失敗しました: ${msg}` : '追加に失敗しました')
     }
   }
 
@@ -87,8 +88,9 @@ export default function SchedulePage() {
       })
       toast.success('臨時休診を追加しました')
       setOReason('')
-    } catch {
-      toast.error('追加に失敗しました')
+    } catch (err) {
+      const msg = (err as { message?: string })?.message
+      toast.error(msg ? `追加に失敗しました: ${msg}` : '追加に失敗しました')
     }
   }
 

@@ -99,8 +99,9 @@ export default function MerchandisePage() {
       }
       toast.success('保存しました')
       setFormOpen(false)
-    } catch {
-      toast.error('保存に失敗しました')
+    } catch (err) {
+      const msg = (err as { message?: string })?.message
+      toast.error(msg ? `保存に失敗しました: ${msg}` : '保存に失敗しました')
     } finally {
       setSaving(false)
     }
