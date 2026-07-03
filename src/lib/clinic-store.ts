@@ -511,7 +511,7 @@ export function useClinicStore() {
 // ── Reset / reload ──────────────────────────────────────────
 
 /** Clears local state and reloads from Supabase. Does not insert any demo data. */
-export async function resetDemoData(): Promise<void> {
+export async function reloadFromServer(): Promise<void> {
   _loadPromise = null
   setState(() => ({
     clinics: [],

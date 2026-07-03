@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { format, parseISO, isSameDay } from 'date-fns'
+import { format, parseISO, isSameDay, addDays, differenceInHours } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import Link from 'next/link'
 import { Input } from '@/components/ui/input'
@@ -9,8 +9,9 @@ import { ArrowLeft, Phone, CalendarCheck, X, Pencil, ChevronLeft, ChevronRight }
 import { getSupabaseClient } from '@/lib/supabase'
 import { useClinicStore } from '@/lib/clinic-store'
 import { useClosedDaysStore, closedDaysStore } from '@/lib/closed-days-store'
+import { useSettingsStore } from '@/lib/settings-store'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
-import { cn } from '@/lib/utils'
+import { cn, normalizePhone } from '@/lib/utils'
 import type { Reservation } from '@/types/clinic'
 
 function timeToMinutes(t: string) {
@@ -31,6 +32,7 @@ function generateSlots(open: string, close: string, duration: number) {
 export default function CancelPage() {
   const store = useClinicStore()
   useClosedDaysStore()
+  const settings = useSettingsStore()
 
   const [phone, setPhone] = useState('')
   const [reservations, setReservations] = useState<Reservation[]>([])
@@ -78,9 +80,13 @@ export default function CancelPage() {
     const date = format(changeDate, 'yyyy-MM-dd')
     const duration = changeMenu.duration_min
     const slots = generateSlots(changeClinic.open_time, changeClinic.close_time, duration)
+    const closure = closedDaysStore.getClosureForDate(changeDate, changeTarget.clinic_id)
     return slots.filter((t) => {
       const startMin = timeToMinutes(t)
       const endMin = startMin + duration
+      if (closure && !closure.allDay && closure.closedFrom && closure.closedTo) {
+        if (startMin >= timeToMinutes(closure.closedFrom) && startMin < timeToMinutes(closure.closedTo)) return false
+      }
       return !store.reservations.some((r) => {
         if (r.id === changeTarget.id) return false
         if (r.status === 'cancelled' || r.status === 'no_show') return false
@@ -103,15 +109,17 @@ export default function CancelPage() {
     setChangeTarget(null)
     try {
       const supabase = getSupabaseClient()
+      // ハイフン有無などの表記ゆれに対応するため、今後の予約を取得して正規化比較で絞り込む
       const { data, error: err } = await supabase
         .from('reservations')
         .select('*')
-        .eq('patient_phone', phone.replace(/-/g, '').trim())
         .eq('status', 'confirmed')
+        .not('patient_phone', 'is', null)
         .gte('start_at', new Date().toISOString())
         .order('start_at')
       if (err) throw err
-      setReservations(data ?? [])
+      const target = normalizePhone(phone.trim())
+      setReservations((data ?? []).filter((r) => normalizePhone(r.patient_phone ?? '') === target))
       setSearched(true)
     } catch {
       setError('検索に失敗しました。しばらくしてから再試行してください。')
@@ -244,6 +252,8 @@ export default function CancelPage() {
                 <p className="text-xs text-stone-400 px-1">{reservations.length}件の予約が見つかりました</p>
                 {reservations.map((r) => {
                   const isChanging = changeTarget?.id === r.id
+                  const hoursUntil = differenceInHours(parseISO(r.start_at), new Date())
+                  const withinDeadline = hoursUntil < settings.minCancellationHours
                   return (
                     <div key={r.id} className={cn(
                       'bg-white rounded-2xl border shadow-sm overflow-hidden transition-all',
@@ -260,7 +270,7 @@ export default function CancelPage() {
                             <p className="text-sm text-stone-500 mt-0.5">{r.patient_name}</p>
                           </div>
                           <div className="flex gap-2 flex-shrink-0">
-                            {!isChanging && (
+                            {!isChanging && !withinDeadline && (
                               <button
                                 className="h-8 px-3 rounded-xl border border-emerald-200 text-emerald-700 text-xs font-semibold hover:bg-emerald-50 transition-colors flex items-center gap-1"
                                 onClick={() => openChange(r)}
@@ -277,15 +287,22 @@ export default function CancelPage() {
                                 閉じる
                               </button>
                             )}
-                            <button
-                              className="h-8 px-3 rounded-xl border border-red-200 text-red-500 text-xs font-semibold hover:bg-red-50 transition-colors flex items-center gap-1"
-                              onClick={() => setCancelId(r.id)}
-                            >
-                              <X className="w-3 h-3" />
-                              キャンセル
-                            </button>
+                            {!withinDeadline && (
+                              <button
+                                className="h-8 px-3 rounded-xl border border-red-200 text-red-500 text-xs font-semibold hover:bg-red-50 transition-colors flex items-center gap-1"
+                                onClick={() => setCancelId(r.id)}
+                              >
+                                <X className="w-3 h-3" />
+                                キャンセル
+                              </button>
+                            )}
                           </div>
                         </div>
+                        {withinDeadline && (
+                          <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 mt-3">
+                            ご予約{settings.minCancellationHours}時間前を過ぎているため、Webからの変更・キャンセルはできません。院に直接お電話ください。
+                          </p>
+                        )}
                       </div>
 
                       {/* 日時変更パネル */}
@@ -325,8 +342,9 @@ export default function CancelPage() {
                                 if (!day) return <div key={`empty-${idx}`} />
                                 const dow = day.getDay()
                                 const isPast = day < new Date(new Date().setHours(0, 0, 0, 0))
+                                const isTooFar = day > addDays(new Date(), settings.maxAdvanceBookingDays)
                                 const isClosed = isDayClosed(day)
-                                const disabled = isPast || isClosed
+                                const disabled = isPast || isTooFar || isClosed
                                 const isSelected = changeDate && isSameDay(day, changeDate)
                                 const isToday = isSameDay(day, new Date())
                                 return (

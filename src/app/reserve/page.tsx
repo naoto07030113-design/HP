@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { MapPin, Phone, ChevronRight, ShoppingBag } from 'lucide-react'
+import { MapPin, Phone, ChevronRight, ShoppingBag, CalendarX2 } from 'lucide-react'
 import { useClinicStore } from '@/lib/clinic-store'
 import { useAnnouncementsStore, announcementsStore } from '@/lib/announcement-store'
 import { useMerchandiseStore } from '@/lib/merchandise-store'
@@ -117,6 +117,23 @@ export default function ReservePage() {
             })}
           </div>
         </div>
+
+        {/* 予約の確認・変更・キャンセル */}
+        <Link
+          href="/reserve/cancel"
+          className="flex items-center justify-between bg-white rounded-2xl border border-stone-200 shadow-sm p-4 hover:border-emerald-300 hover:shadow-md transition-all group"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-stone-100 flex items-center justify-center flex-shrink-0">
+              <CalendarX2 className="w-5 h-5 text-stone-500" />
+            </div>
+            <div>
+              <p className="font-semibold text-green-950 text-sm">予約の確認・変更・キャンセル</p>
+              <p className="text-xs text-muted-foreground mt-0.5">電話番号でご予約を検索できます</p>
+            </div>
+          </div>
+          <ChevronRight className="w-4 h-4 text-stone-300 group-hover:text-emerald-600 transition-colors" />
+        </Link>
       </div>
     </div>
   )

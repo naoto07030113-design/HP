@@ -6,7 +6,7 @@ import { format, parseISO } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { Button } from '@/components/ui/button'
 import { PermissionGuard } from '@/components/common/PermissionGuard'
-import { reportStore } from '@/lib/report-store'
+import { reportStore, hydrateReportStore } from '@/lib/report-store'
 import { cn } from '@/lib/utils'
 import {
   ACTION_STATUS_LABELS,
@@ -39,7 +39,8 @@ export default function MonthlyReportsPage() {
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
 
   useEffect(() => {
-    setReports(reportStore.getAll())
+    hydrateReportStore().then(() => setReports(reportStore.getAll()))
+    return reportStore.subscribe(() => setReports(reportStore.getAll()))
   }, [])
 
   function handleDelete(id: string) {

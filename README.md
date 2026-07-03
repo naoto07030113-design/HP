@@ -1,6 +1,9 @@
-# Pre-Site Sales AI Engine
+# 鍼灸整骨院 統合業務システム
 
-AI事前制作型HP営業システム — HP未保有または集客力が弱い中小企業を対象に、Web診断・LP構成案生成・営業メール生成・営業活動管理を一元管理するB2B SaaS。
+複数院の鍼灸整骨院向け 予約・患者・カルテ・会計・物販・経営分析の統合管理システム。
+
+- **患者向け**（ログイン不要）: `/reserve` — Web予約（初診問診票つき）・予約の確認/変更/キャンセル・物販予約
+- **スタッフ向け**（要ログイン）: `/admin` — 当日受付・予約カレンダー・患者管理・カルテ・会計・日計・シフト・休診日・物販・お知らせ・各種ダッシュボード/レポート・CSV出力
 
 ## 技術スタック
 
@@ -8,167 +11,64 @@ AI事前制作型HP営業システム — HP未保有または集客力が弱い
 |---|---|
 | Frontend | Next.js 14 App Router + TypeScript + Tailwind CSS |
 | UI | shadcn/ui + Radix UI |
-| Backend | Next.js Route Handlers |
-| Database | Supabase PostgreSQL |
-| Auth | Supabase Auth |
-| AI | OpenAI GPT-4o-mini |
+| Database / Auth / Realtime | Supabase |
 | Hosting | Vercel |
-
----
 
 ## セットアップ手順
 
-### 1. リポジトリをクローン
+### 1. Supabase の準備
 
-```bash
-git clone https://github.com/YOUR_ORG/presales-ai-engine.git
-cd presales-ai-engine
-npm install
-```
+1. [Supabase](https://supabase.com) でプロジェクトを作成（既存プロジェクトでも可）
+2. **SQL Editor** を開き、**`supabase/setup.sql` の内容を全文コピー＆実行**
+   - 何度実行しても安全（冪等）。過去に `supabase/migrations/` の一部を実行済みでも、このスクリプト1本で最新の状態に収束します
+   - テーブル作成・不足カラム補完・RLS（アクセス権限）・リアルタイム配信までまとめて設定されます
+3. **Authentication → Users → Add user** で管理者ユーザーを作成（メールアドレス＋パスワード）
+   - スタッフの権限は user_metadata の `role`（`admin` / `staff` / `receptionist`）と `clinic_id` で制御できます。未設定の場合は admin 扱いです
 
-### 2. Supabase設定
+### 2. 環境変数
 
-1. [Supabase](https://supabase.com) でプロジェクトを新規作成
-2. **SQL Editor** を開き、`supabase/migrations/001_initial_schema.sql` の内容をすべてコピー＆実行
-3. **Authentication > Providers > Google** を有効化し、Google Cloud Console で OAuth 2.0 クライアントIDを作成してクライアントID・シークレットを設定
-4. **Authentication > URL Configuration** の「Redirect URLs」に `https://YOUR_DOMAIN/auth/callback` を追加（ローカルは `http://localhost:3000/auth/callback`）
+Vercel（または `.env.local`）に設定:
 
-### 3. 環境変数の設定
-
-```bash
-cp .env.example .env.local
-```
-
-`.env.local` を編集：
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
-OPENAI_API_KEY=sk-your_openai_api_key_here
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-```
-
-Supabase のキーは **Project Settings > API** から取得してください。
-
-### 4. ローカル起動
-
-```bash
-npm run dev
-```
-
-`http://localhost:3000` にアクセスし、**Googleアカウント**でログインしてください。
-
----
-
-## 主要機能
-
-### 顧客管理
-
-- 事業者の手動登録（事業者名・業種・住所・電話・メール・HP URL・GoogleMap URL）
-- CSVファイルによる一括インポート
-- ステータス管理（新規 / 連絡済 / 商談中 / 契約済 / 失注）
-
-### Web診断AI
-
-口コミ情報・競合情報を入力してAI分析を実行：
-
-- HP有無判定・Web集客力スコア
-- HP未保有確率
-- 競合差分スコア
-- AIの分析根拠（reasoning）を全件保存
-
-### LP構成案生成
-
-AIが以下のセクションで構成されたLP案を生成：
-
-- ファーストビュー
-- 選ばれる理由
-- サービス紹介
-- 強み
-- FAQ
-- CTA
-
-### 営業メール生成
-
-- 押し売りなし・相手の強みを褒める文体
-- 件名・本文を生成・保存
-- コピー機能付き
-
-### 営業活動ログ
-
-送信 → 開封 → 返信 → 商談 → 見積 → 契約 → 失注 のタイムライン記録
-
----
-
-## CSVインポート方法
-
-`/businesses/import` ページからCSVをアップロードします。
-
-### CSVフォーマット（1行目はヘッダー）
-
-```csv
-事業者名,業種,住所,電話,メール,HP,GoogleMapURL
-田中歯科クリニック,歯科医院,東京都新宿区西新宿1-1-1,03-1234-5678,info@tanaka-dental.com,,https://maps.google.com/...
-```
-
-| カラム名 | 必須 | 説明 |
+| 変数 | 必須 | 説明 |
 |---|---|---|
-| 事業者名 | ✓ | 事業者の正式名称 |
-| 業種 | | 例：歯科医院、美容院 |
-| 住所 | | 所在地 |
-| 電話 | | 電話番号 |
-| メール | | メールアドレス |
-| HP | | HP URL |
-| GoogleMapURL | | GoogleマップのURL |
+| `NEXT_PUBLIC_CLINIC_SUPABASE_URL` | ✓ | Supabase プロジェクトURL |
+| `NEXT_PUBLIC_CLINIC_SUPABASE_ANON_KEY` | ✓ | anon (publishable) キー |
+| `CLINIC_SERVICE_ROLE_KEY` | 推奨 | service_role キー（初診予約APIで使用。未設定でも動作） |
+| `LINE_CHANNEL_TOKENS` | 任意 | 新規予約のLINE通知。`{"<clinicのUUID>": "<チャネルトークン>"}` 形式のJSON |
 
----
+### 3. ローカル起動 / デプロイ
 
-## データベーススキーマ
-
-```
-businesses         → 事業者マスタ
-web_presence_scores → Web診断結果（全履歴保存）
-competitors        → 競合情報
-reviews            → 口コミ情報
-predictions        → 契約確率・優先度スコア
-lp_variants        → LP構成案
-outreach_messages  → 営業メール
-outreach_events    → 営業活動ログ
+```bash
+npm install
+npm run dev   # http://localhost:3000 → /admin/login にリダイレクト
 ```
 
-スコア計算式：
+Vercel には main ブランチを接続してデプロイします。
 
-```
-web_presence_score = website_quality * 0.35 + sns * 0.15 + review * 0.15 + competitor_gap * 0.25 + confidence * 0.10
-no_hp_probability = 1 - website_quality_score
-priority_score = no_hp_probability * 0.30 + competitor_gap * 0.25 + revenue_uplift * 0.25 + contract_probability * 0.20
-```
+### 4. 初期データ投入（管理画面から）
 
----
+1. `/admin/login` でログイン
+2. 「院管理」で院を登録 → 「スタッフ管理」「メニュー管理」で施術者・メニューを登録
+3. 「休診日管理」で定休日を設定
+4. 患者向けページ `/reserve` から予約できることを確認
 
-## Vercelデプロイ方法
+## データベース
 
-1. GitHubリポジトリを作成してプッシュ
-2. [Vercel](https://vercel.com) でプロジェクトをインポート
-3. Environment Variables に `.env.local` の内容を設定
-4. `NEXT_PUBLIC_APP_URL` を本番URLに変更
-5. デプロイ実行
+スキーマ・権限の正は **`supabase/setup.sql`** です（`supabase/migrations/` は過去の履歴として残していますが、新規適用には setup.sql を使ってください）。
 
----
+主なテーブル: `clinics` / `staff` / `menus` / `shifts` / `shift_blocks` / `patients` / `reservations` / `medical_records` / `announcements` / `invoices` / `invoice_items` / `app_settings` / `closed_days` / `merchandise` / `merchandise_bookings` / `monthly_reports`
 
-## 必須画面一覧
+### アクセス権限（RLS）の方針
 
-| URL | 説明 |
-|---|---|
-| `/login` | ログイン |
-| `/dashboard` | ダッシュボード |
-| `/businesses` | 事業者一覧 |
-| `/businesses/new` | 新規登録 |
-| `/businesses/import` | CSVインポート |
-| `/businesses/[id]` | 事業者詳細 |
-| `/businesses/[id]/analysis` | Web診断 |
-| `/businesses/[id]/lp` | LP構成案 |
-| `/businesses/[id]/outreach` | 営業メール |
-| `/businesses/[id]/events` | 活動ログ |
-| `/settings` | 設定 |
+- ログイン済みスタッフ（authenticated）: 全テーブル全操作可
+- 患者（anon・ログイン不要）:
+  - 閲覧: 院・スタッフ・メニュー・お知らせ・休診日・商品・予約設定（公開中のもののみ）
+  - 予約（reservations）: 閲覧・作成・更新（空き枠計算とWebキャンセル/日時変更に必要）
+  - 問診票（patients）・物販予約（merchandise_bookings）: **作成のみ**（閲覧不可）
+  - カルテ・会計・月次レポート: 完全にアクセス不可
+
+> 補足: Web予約をログイン不要で成立させるため、予約テーブルは匿名でも読める設計です（空き枠計算・電話番号での予約検索に使用）。予約者名・電話番号が技術的には匿名APIから参照可能な点は認識してください。より厳密に秘匿したい場合はサーバーAPI化が必要です。
+
+## LINE通知
+
+新規予約が入ると、院ごとに設定したLINE公式アカウントへブロードキャスト通知します。`LINE_CHANNEL_TOKENS` を設定し、通知を受けたいスタッフがその公式アカウントを友だち追加してください。未設定の場合は通知なしで正常動作します。

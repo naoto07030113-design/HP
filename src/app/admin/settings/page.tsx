@@ -9,7 +9,7 @@ import {
   Building2, CalendarDays, Database, Save, RotateCcw, Download, CheckCircle2, ShieldCheck,
 } from 'lucide-react'
 import { useSettingsStore, settingsStore } from '@/lib/settings-store'
-import { resetDemoData } from '@/lib/clinic-store'
+import { reloadFromServer } from '@/lib/clinic-store'
 import { useClinicStore } from '@/lib/clinic-store'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { PermissionGuard } from '@/components/common/PermissionGuard'
@@ -41,7 +41,7 @@ export default function SettingsPage() {
   }
 
   function handleReset() {
-    resetDemoData()
+    reloadFromServer()
     setResetOpen(false)
   }
 
@@ -255,30 +255,25 @@ export default function SettingsPage() {
           </div>
 
           <div className="bg-white rounded-xl border shadow-sm p-5 space-y-4">
-            <h2 className="font-semibold text-green-900">暗号化ストレージ</h2>
+            <h2 className="font-semibold text-green-900">データ保存について</h2>
             <p className="text-sm text-muted-foreground">
-              全データはAES-256-GCMで暗号化してブラウザのlocalStorageに保存されています。
-              <br />
-              環境変数 <code className="bg-slate-100 px-1 rounded text-xs">NEXT_PUBLIC_ENCRYPTION_KEY</code> に強力なランダム文字列を設定してください。
+              全データはSupabase（クラウドデータベース）に保存され、複数の端末・スタッフ間でリアルタイムに共有されます。
+              通信はTLSで暗号化され、管理画面へのアクセスにはログインが必要です。
             </p>
-            <div className="bg-green-50/60 rounded-lg p-3 font-mono text-xs text-muted-foreground">
-              openssl rand -base64 32
-            </div>
           </div>
 
-          <div className="bg-red-50 rounded-xl border border-red-200 p-5 space-y-3">
-            <h2 className="font-semibold text-red-800">デモデータリセット</h2>
-            <p className="text-sm text-red-700">
-              全ての予約・患者・会計・シフトデータをデモデータに戻します。
-              この操作は取り消せません。
+          <div className="bg-white rounded-xl border shadow-sm p-5 space-y-3">
+            <h2 className="font-semibold text-green-900">データ再読み込み</h2>
+            <p className="text-sm text-muted-foreground">
+              画面の表示がおかしい場合、サーバーから全データを再取得します。データが消えることはありません。
             </p>
             <Button
               variant="outline"
-              className="border-red-300 text-red-700 hover:bg-red-100 gap-2"
+              className="gap-2"
               onClick={() => setResetOpen(true)}
             >
               <RotateCcw className="w-4 h-4" />
-              デモデータに戻す
+              データを再読み込み
             </Button>
           </div>
         </div>
@@ -287,10 +282,9 @@ export default function SettingsPage() {
       <ConfirmDialog
         open={resetOpen}
         onOpenChange={setResetOpen}
-        title="デモデータにリセットしますか？"
-        description="全ての予約・患者・会計・シフトがデモデータに戻ります。この操作は取り消せません。"
-        confirmLabel="リセット"
-        variant="destructive"
+        title="データを再読み込みしますか？"
+        description="サーバーから全データを再取得して画面を最新の状態にします。データは削除されません。"
+        confirmLabel="再読み込み"
         onConfirm={handleReset}
       />
     </div>

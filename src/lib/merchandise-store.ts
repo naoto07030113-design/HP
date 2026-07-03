@@ -38,15 +38,17 @@ async function loadFromSupabase(): Promise<void> {
     supabase.from('merchandise_bookings').select('*, merchandise(*)').order('booked_at', { ascending: false }),
   ])
 
-  if (mercRes.error || bookRes.error) {
-    setState((s) => ({ ...s, loading: false, error: (mercRes.error ?? bookRes.error)!.message }))
+  // 予約一覧はスタッフ専用（患者側の匿名アクセスでは読めない）ため、
+  // 商品一覧と独立して処理し、片方の失敗でもう片方を壊さない
+  if (mercRes.error) {
+    setState((s) => ({ ...s, loading: false, error: mercRes.error!.message }))
     return
   }
 
   setState((s) => ({
     ...s,
     merchandise: (mercRes.data ?? []) as Merchandise[],
-    bookings: (bookRes.data ?? []) as MerchandiseBooking[],
+    bookings: bookRes.error ? s.bookings : ((bookRes.data ?? []) as MerchandiseBooking[]),
     loading: false,
     error: null,
   }))
@@ -143,13 +145,20 @@ export const merchandiseBookingsStore = {
   create: async (data: MerchandiseBookingFormData): Promise<MerchandiseBooking> => {
     const supabase = getSupabaseClient()
     const now = new Date().toISOString()
-    const { data: created, error } = await supabase
+    // 患者(anon)は予約一覧の閲覧権限を持たないため、RETURNING(.select())を使わず
+    // IDをクライアント側で発行して挿入する
+    const id = crypto.randomUUID()
+    const { error } = await supabase
       .from('merchandise_bookings')
-      .insert({ ...data, booked_at: now })
-      .select('*, merchandise(*)')
-      .single()
+      .insert({ ...data, id, booked_at: now })
     if (error) throw error
-    const booking = created as MerchandiseBooking
+    const booking: MerchandiseBooking = {
+      ...data,
+      id,
+      booked_at: now,
+      created_at: now,
+      updated_at: now,
+    } as MerchandiseBooking
     setState((s) => ({ ...s, bookings: [booking, ...s.bookings] }))
     return booking
   },

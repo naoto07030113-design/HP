@@ -2,8 +2,9 @@
 
 import { useState, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { format, isSameDay, parseISO } from 'date-fns'
+import { format, isSameDay, parseISO, addDays } from 'date-fns'
 import { ja } from 'date-fns/locale'
+import { toast } from 'sonner'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -13,8 +14,10 @@ import { useClinicStore, reservationsStore } from '@/lib/clinic-store'
 import { useMerchandiseStore } from '@/lib/merchandise-store'
 import { useAnnouncementsStore, announcementsStore } from '@/lib/announcement-store'
 import { useClosedDaysStore, closedDaysStore } from '@/lib/closed-days-store'
+import { useSettingsStore } from '@/lib/settings-store'
+import { getSupabaseClient } from '@/lib/supabase'
 import { AnnouncementBanners } from '@/components/common/AnnouncementBanner'
-import { cn } from '@/lib/utils'
+import { cn, normalizePhone } from '@/lib/utils'
 import type { Staff, Menu } from '@/types/clinic'
 import { VISIT_TYPE_LABELS } from '@/types/clinic'
 
@@ -82,6 +85,7 @@ export default function ReserveClinicPage() {
   const store = useClinicStore()
   const announcements = useAnnouncementsStore()
   useClosedDaysStore()
+  const settings = useSettingsStore()
   const router = useRouter()
 
   const clinic = store.clinics.find((c) => c.id === clinicId)
@@ -132,25 +136,43 @@ export default function ReserveClinicPage() {
     return { cells, firstOfMonth }
   }, [calendarOffset])
 
-  // 利用可能時間帯（休診時間帯を除外）
+  // 利用可能時間帯（休診時間帯・担当者のシフト/予約不可ブロックを除外）
   const availableSlots = useMemo(() => {
     if (!clinic || !selectedMenu || !selectedDate) return []
     const date = format(selectedDate, 'yyyy-MM-dd')
     const slots = generateTimeSlots(clinic.open_time, clinic.close_time, selectedMenu.duration_min)
     const closure = closedDaysStore.getClosureForDate(selectedDate, clinicId)
+
+    // 指名ありの場合: その日のシフトを参照（シフト登録が無い日は院の営業時間で受付）
+    const staffShift = selectedStaff
+      ? store.shifts.find((sh) => sh.staff_id === selectedStaff.id && sh.work_date === date)
+      : null
+    if (selectedStaff && staffShift && staffShift.shift_type !== 'work') return []
+    const staffBlocks = selectedStaff
+      ? store.shiftBlocks.filter((b) => b.staff_id === selectedStaff.id && b.block_date === date)
+      : []
+
     return slots.filter((t) => {
+      const slotStart = timeToMinutes(t)
+      const slotEnd = slotStart + selectedMenu.duration_min
       if (!isSlotAvailable(date, t, selectedStaff?.id ?? null, selectedMenu.duration_min, store.reservations)) {
         return false
       }
       if (closure && !closure.allDay && closure.closedFrom && closure.closedTo) {
-        const slotMin = timeToMinutes(t)
-        const fromMin = timeToMinutes(closure.closedFrom)
-        const toMin = timeToMinutes(closure.closedTo)
-        if (slotMin >= fromMin && slotMin < toMin) return false
+        if (slotStart >= timeToMinutes(closure.closedFrom) && slotStart < timeToMinutes(closure.closedTo)) return false
+      }
+      if (staffShift && staffShift.shift_type === 'work') {
+        if (slotStart < timeToMinutes(staffShift.start_time) || slotEnd > timeToMinutes(staffShift.end_time)) return false
+        if (staffShift.break_start && staffShift.break_end) {
+          if (slotStart < timeToMinutes(staffShift.break_end) && slotEnd > timeToMinutes(staffShift.break_start)) return false
+        }
+      }
+      if (staffBlocks.some((b) => slotStart < timeToMinutes(b.end_time) && slotEnd > timeToMinutes(b.start_time))) {
+        return false
       }
       return true
     })
-  }, [clinic, clinicId, selectedMenu, selectedStaff, selectedDate, store.reservations])
+  }, [clinic, clinicId, selectedMenu, selectedStaff, selectedDate, store.reservations, store.shifts, store.shiftBlocks])
 
   function goNext() {
     const idx = STEPS.indexOf(step)
@@ -171,12 +193,31 @@ export default function ReserveClinicPage() {
       new Date(`${date}T${selectedTime}:00`).getTime() + selectedMenu.duration_min * 60 * 1000,
     ).toISOString()
 
+    // 直前の重複チェック（指名ありの場合のみ）: 画面表示後に他の患者が同枠を取った場合を検知
+    if (selectedStaff) {
+      const { data: conflicts } = await getSupabaseClient()
+        .from('reservations')
+        .select('id')
+        .eq('staff_id', selectedStaff.id)
+        .in('status', ['confirmed', 'visited'])
+        .lt('start_at', endAt)
+        .gt('end_at', startAt)
+        .limit(1)
+      if (conflicts && conflicts.length > 0) {
+        setSubmitting(false)
+        toast.error('申し訳ありません、この時間はたった今埋まってしまいました。別の時間をお選びください。')
+        setSelectedTime(null)
+        setStep('time')
+        return
+      }
+    }
+
     const reservationData = {
       clinic_id: clinicId,
       staff_id: selectedStaff?.id ?? null,
       menu_id: selectedMenu.id,
       patient_name: patientName,
-      patient_phone: patientPhone || null,
+      patient_phone: patientPhone ? normalizePhone(patientPhone) : null,
       start_at: startAt,
       end_at: endAt,
       memo: memo || null,
@@ -188,7 +229,7 @@ export default function ReserveClinicPage() {
         name_kana: patientNameKana,
         gender: patientGender,
         birth_date: patientBirthDate || undefined,
-        phone: patientPhone,
+        phone: patientPhone ? normalizePhone(patientPhone) : '',
         email: patientEmail,
         postal_code: patientPostalCode,
         address: patientAddress,
@@ -205,9 +246,14 @@ export default function ReserveClinicPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ patient: patientData, reservation: reservationData }),
         })
-        if (!res.ok) throw new Error('送信エラー')
-      } catch {
+        if (!res.ok) {
+          const body = await res.json().catch(() => null)
+          throw new Error(body?.error ?? '送信エラー')
+        }
+      } catch (err) {
         setSubmitting(false)
+        const msg = err instanceof Error ? err.message : ''
+        toast.error(msg ? `予約の送信に失敗しました: ${msg}` : '予約の送信に失敗しました。時間をおいて再度お試しください。')
         return
       }
     } else {
@@ -218,8 +264,10 @@ export default function ReserveClinicPage() {
           referral_name: referralSource === '紹介' ? referralName || null : null,
           status: 'confirmed',
         })
-      } catch {
+      } catch (err) {
         setSubmitting(false)
+        const msg = (err as { message?: string })?.message
+        toast.error(msg ? `予約の送信に失敗しました: ${msg}` : '予約の送信に失敗しました。時間をおいて再度お試しください。')
         return
       }
     }
@@ -448,10 +496,11 @@ export default function ReserveClinicPage() {
                   if (!day) return <div key={`empty-${idx}`} />
                   const dow = day.getDay()
                   const isPast = day < new Date(new Date().setHours(0, 0, 0, 0))
+                  const isTooFar = day > addDays(new Date(), settings.maxAdvanceBookingDays)
                   const closure = closedDaysStore.getClosureForDate(day, clinicId)
                   const isAllDayClosed = closure?.allDay === true
                   const isPartialClosed = !!closure && !closure.allDay
-                  const isDisabled = isPast || isAllDayClosed
+                  const isDisabled = isPast || isTooFar || isAllDayClosed
                   return (
                     <button
                       key={day.toISOString()}
