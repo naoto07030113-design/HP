@@ -6,7 +6,6 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Switch } from '@/components/ui/switch'
 import {
   Receipt, Plus, Search, TrendingUp, Calendar, AlertCircle,
   Pencil, Trash2, Printer, Eye,
@@ -112,7 +111,7 @@ export default function AccountingPage() {
             <span className="text-xs text-muted-foreground font-medium">本日の売上</span>
           </div>
           <p className="text-2xl font-bold text-green-900">¥{todaySales.toLocaleString()}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">{format(new Date(), 'M月d日')}</p>
+          <p className="text-xs text-muted-foreground mt-0.5" suppressHydrationWarning>{format(new Date(), 'M月d日')}</p>
         </div>
         <div className="bg-white rounded-xl border shadow-sm p-4">
           <div className="flex items-center gap-2 mb-2">
@@ -122,7 +121,7 @@ export default function AccountingPage() {
             <span className="text-xs text-muted-foreground font-medium">今月の売上</span>
           </div>
           <p className="text-2xl font-bold text-green-900">¥{monthSales.toLocaleString()}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">{format(new Date(), 'M月')}</p>
+          <p className="text-xs text-muted-foreground mt-0.5" suppressHydrationWarning>{format(new Date(), 'M月')}</p>
         </div>
         <div className="bg-white rounded-xl border shadow-sm p-4">
           <div className="flex items-center gap-2 mb-2">
@@ -209,7 +208,7 @@ export default function AccountingPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b bg-slate-50">
+                <tr className="border-b bg-green-50/60">
                   <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground whitespace-nowrap">伝票番号</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground whitespace-nowrap">来院日</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground whitespace-nowrap">患者名</th>
@@ -225,7 +224,7 @@ export default function AccountingPage() {
                 {filtered.map((inv) => {
                   const staffMember = staff.find((s) => s.id === inv.staff_id)
                   return (
-                    <tr key={inv.id} className="hover:bg-slate-50/50 transition-colors">
+                    <tr key={inv.id} className="hover:bg-green-50/40 transition-colors">
                       <td className="px-4 py-3">
                         <span className="text-xs text-muted-foreground font-mono">{inv.invoice_number}</span>
                       </td>
@@ -284,7 +283,7 @@ export default function AccountingPage() {
               </tbody>
               {/* フッター: 合計 */}
               <tfoot>
-                <tr className="border-t bg-slate-50">
+                <tr className="border-t bg-green-50/60">
                   <td colSpan={5} className="px-4 py-3 text-xs font-semibold text-muted-foreground">
                     {filtered.length}件
                   </td>

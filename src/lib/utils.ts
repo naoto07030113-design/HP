@@ -23,43 +23,8 @@ export function formatDateTime(dateString: string) {
   })
 }
 
-export function formatScore(score: number | null): string {
-  if (score === null || score === undefined) return '-'
-  return (score * 100).toFixed(0)
-}
-
-export function getPriorityLabel(score: number | null): {
-  label: string
-  color: string
-} {
-  if (score === null) return { label: '未評価', color: 'gray' }
-  const s = score * 100
-  if (s >= 80) return { label: '最優先', color: 'red' }
-  if (s >= 60) return { label: '優先', color: 'orange' }
-  if (s >= 40) return { label: '保留', color: 'yellow' }
-  return { label: '対象外', color: 'gray' }
-}
-
-export function getStatusLabel(status: string): string {
-  const map: Record<string, string> = {
-    new: '新規',
-    contacted: '連絡済',
-    negotiating: '商談中',
-    contracted: '契約済',
-    lost: '失注',
-  }
-  return map[status] ?? status
-}
-
-export function getEventTypeLabel(eventType: string): string {
-  const map: Record<string, string> = {
-    sent: '送信',
-    opened: '開封',
-    replied: '返信',
-    meeting: '商談',
-    estimate: '見積',
-    contracted: '契約',
-    lost: '失注',
-  }
-  return map[eventType] ?? eventType
+// 電話番号の正規化（ハイフン・空白・全角ハイフン除去）。
+// 予約の保存時と検索時の両方で使い、表記ゆれによる不一致を防ぐ。
+export function normalizePhone(p: string): string {
+  return p.replace(/[-‐−ー\s]/g, '')
 }

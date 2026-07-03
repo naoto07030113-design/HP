@@ -76,7 +76,7 @@ export function PatientReservationHistory({ patientId, patientName, reservations
           const hasRecord = existingRecordIds.has(r.id)
           const existingRecord = medicalRecordStore.getByReservation(r.id)
           return (
-            <div key={r.id} className="flex items-start gap-3 p-3 rounded-lg bg-slate-50 border border-border">
+            <div key={r.id} className="flex items-start gap-3 p-3 rounded-lg bg-green-50/60 border border-border">
               <div className="flex-shrink-0 text-center min-w-[52px]">
                 <p className="text-xs text-muted-foreground">{format(parseISO(r.start_at), 'M月d日', { locale: ja })}</p>
                 <p className="text-xs font-medium">{format(parseISO(r.start_at), 'HH:mm')}</p>

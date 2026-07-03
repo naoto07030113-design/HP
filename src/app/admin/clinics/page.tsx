@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-import { Plus, Pencil, Building2 } from 'lucide-react'
+import { Plus, Pencil, Trash2, Building2 } from 'lucide-react'
 import { useClinicStore, clinicsStore } from '@/lib/clinic-store'
 import { ClinicForm } from '@/features/clinics/components/ClinicForm'
 import { ActiveBadge } from '@/components/common/StatusBadge'
@@ -59,9 +59,14 @@ export default function ClinicsPage() {
                     <ActiveBadge isActive={c.is_active} className="mt-0.5" />
                   </div>
                 </div>
-                <Button variant="ghost" size="icon" className="h-8 w-8 -mt-1 -mr-1" onClick={() => openEdit(c)}>
-                  <Pencil className="w-4 h-4" />
-                </Button>
+                <div className="flex items-center -mt-1 -mr-1">
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(c)}>
+                    <Pencil className="w-4 h-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-red-400 hover:text-red-600" onClick={() => setDeleteId(c.id)}>
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
               <div className="space-y-1.5 text-sm text-muted-foreground">
                 {c.address && <p className="line-clamp-1">{c.address}</p>}

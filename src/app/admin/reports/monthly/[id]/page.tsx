@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
-import { reportStore } from '@/lib/report-store'
+import { reportStore, hydrateReportStore } from '@/lib/report-store'
 import { cn } from '@/lib/utils'
 import {
   ACTION_PRIORITY_LABELS,
@@ -104,9 +104,11 @@ export default function MonthlyReportDetailPage({
   const notesRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
-    const r = reportStore.getById(id)
-    setReport(r)
-    setMeetingNotes(r?.meetingNotes ?? '')
+    hydrateReportStore().then(() => {
+      const r = reportStore.getById(id)
+      setReport(r)
+      setMeetingNotes(r?.meetingNotes ?? '')
+    })
   }, [id])
 
   function refresh() {

@@ -68,13 +68,13 @@ export default function RecordDetailPage() {
 
   function handleSubmit(data: MedicalRecordFormData) {
     if (!record) return
-    medicalRecordStore.update(record.id, data)
+    medicalRecordStore.update(record.id, data).catch(() => {})
     router.refresh()
   }
 
   function handleDelete() {
     if (!record) return
-    medicalRecordStore.delete(record.id)
+    medicalRecordStore.delete(record.id).catch(() => {})
     router.push('/admin/records')
   }
 

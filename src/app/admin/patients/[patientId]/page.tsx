@@ -70,9 +70,9 @@ export default function PatientDetailPage() {
     .filter((r) => r.status === 'visited')
     .sort((a, b) => (a.start_at > b.start_at ? -1 : 1))[0]
 
-  // この患者の会計履歴（患者名で検索）
+  // この患者の会計履歴（patient_id を優先し、未紐付けの旧データは名前で照合）
   const patientInvoices = invoices
-    .filter((inv) => inv.patient_name === patient.name)
+    .filter((inv) => inv.patient_id === patient.id || (!inv.patient_id && inv.patient_name === patient.name))
     .sort((a, b) => (a.visit_date > b.visit_date ? -1 : 1))
   const totalPaid = patientInvoices
     .filter((inv) => inv.status === 'paid')
@@ -80,12 +80,12 @@ export default function PatientDetailPage() {
 
   function handleSubmit(data: PatientFormData) {
     if (!patient) return
-    patientStore.update(patient.id, data)
+    patientStore.update(patient.id, data).catch(() => {})
   }
 
   function handleDelete() {
     if (!patient) return
-    patientStore.delete(patient.id)
+    patientStore.delete(patient.id).catch(() => {})
     router.push('/admin/patients')
   }
 

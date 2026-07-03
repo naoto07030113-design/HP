@@ -30,27 +30,37 @@ export default function AdminLoginPage() {
       return
     }
 
-    router.replace('/admin/calendar')
+    router.replace('/admin')
   }
 
   return (
-    <div className="min-h-screen bg-green-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-sm">
-        <div className="flex items-center justify-center gap-3 mb-8">
-          <div className="w-10 h-10 rounded-xl bg-green-800 flex items-center justify-center">
-            <span className="text-white font-bold text-sm tracking-tight">IMC</span>
+    <div className="relative min-h-screen bg-gradient-to-br from-green-950 via-[#10291d] to-[#0c2016] flex items-center justify-center p-4 overflow-hidden">
+      {/* 装飾: 柔らかな光 */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            'radial-gradient(600px circle at 15% 20%, rgba(207,166,79,0.07), transparent 60%), radial-gradient(800px circle at 85% 80%, rgba(65,140,100,0.12), transparent 60%)',
+        }}
+      />
+
+      <div className="relative w-full max-w-sm animate-fade-up">
+        {/* ブランド */}
+        <div className="flex flex-col items-center mb-8">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-green-700 to-green-900 ring-1 ring-gold-400/50 shadow-lg flex items-center justify-center mb-4">
+            <span className="text-gold-200 font-bold text-base tracking-[0.15em]">IMC</span>
           </div>
-          <div>
-            <p className="font-bold text-green-900 leading-tight">イトーメディカルケア</p>
-            <p className="text-xs text-green-600 leading-tight">統合業務システム</p>
-          </div>
+          <p className="font-bold text-white text-lg tracking-wide">イトーメディカルケア</p>
+          <p className="text-[11px] text-gold-300/70 tracking-[0.3em] mt-1">CLINIC MANAGEMENT SYSTEM</p>
         </div>
 
-        <div className="bg-white rounded-2xl border border-green-100 shadow-sm p-6">
-          <h1 className="text-lg font-bold text-green-900 mb-5">管理者ログイン</h1>
+        <div className="bg-white rounded-3xl shadow-lg p-7">
+          <h1 className="text-lg font-bold text-green-950 mb-1">管理者ログイン</h1>
+          <p className="text-xs text-muted-foreground mb-6">登録済みのアカウントでサインインしてください</p>
 
           {error && (
-            <div className="mb-4 px-3 py-2.5 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
+            <div className="mb-4 px-3 py-2.5 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700">
               {error}
             </div>
           )}
@@ -66,7 +76,7 @@ export default function AdminLoginPage() {
                 placeholder="admin@example.com"
                 required
                 autoComplete="email"
-                className="h-10"
+                className="h-11"
               />
             </div>
             <div className="space-y-1.5">
@@ -80,23 +90,27 @@ export default function AdminLoginPage() {
                   placeholder="パスワードを入力"
                   required
                   autoComplete="current-password"
-                  className="h-10 pr-10"
+                  className="h-11 pr-10"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground"
+                  className="absolute right-3 top-3.5 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
-            <Button type="submit" className="w-full gap-2" disabled={loading}>
+            <Button type="submit" className="w-full gap-2 h-11 text-[15px]" disabled={loading}>
               <LogIn className="w-4 h-4" />
               {loading ? 'ログイン中...' : 'ログイン'}
             </Button>
           </form>
         </div>
+
+        <p className="text-center text-[11px] text-green-100/40 mt-6 tracking-wider">
+          イトーメディカルケア 統合業務システム
+        </p>
       </div>
     </div>
   )

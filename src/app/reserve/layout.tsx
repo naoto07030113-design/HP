@@ -2,7 +2,7 @@ import { StoreHydrationProvider } from '@/components/providers/StoreHydrationPro
 
 export default function ReserveLayout({ children }: { children: React.ReactNode }) {
   return (
-    <StoreHydrationProvider>
+    <StoreHydrationProvider scope="public">
       {children}
     </StoreHydrationProvider>
   )

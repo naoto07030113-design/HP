@@ -42,7 +42,6 @@ export default function MeetingAIPage() {
     setGenerating(true)
     setPreview(null)
     setSaved(false)
-    await new Promise((resolve) => setTimeout(resolve, 1200))
     const clinic = store.clinics.find((c) => c.id === clinicId)
     const result = generateMonthlyReport(
       month,

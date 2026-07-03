@@ -37,9 +37,13 @@ export async function POST(request: Request) {
     let patientId: string | null = null
 
     if (patient?.name) {
-      const { data: patientData, error: patientError } = await supabase
+      // anonキーで動作する場合、patientsテーブルにSELECT権限がなくRETURNINGが使えないため
+      // IDをサーバー側で発行して挿入する
+      const newId = crypto.randomUUID()
+      const { error: patientError } = await supabase
         .from('patients')
         .insert({
+          id: newId,
           clinic_id: reservation.clinic_id,
           name: patient.name,
           name_kana: patient.name_kana ?? '',
@@ -56,11 +60,9 @@ export async function POST(request: Request) {
           allergies: patient.allergies || null,
           referral_source: patient.referral_source || null,
         })
-        .select('id')
-        .single()
 
       if (patientError) throw patientError
-      patientId = patientData.id
+      patientId = newId
     }
 
     const { error: resError } = await supabase.from('reservations').insert({

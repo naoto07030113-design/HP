@@ -93,7 +93,7 @@ export default function ShiftsPage() {
             onClick={() => setViewMode('week')}
             className={cn(
               'px-3 py-1.5 text-xs font-medium transition-colors',
-              viewMode === 'week' ? 'bg-green-800 text-white' : 'bg-white text-muted-foreground hover:bg-slate-50',
+              viewMode === 'week' ? 'bg-green-800 text-white' : 'bg-white text-muted-foreground hover:bg-green-50/60',
             )}
           >
             週次
@@ -102,7 +102,7 @@ export default function ShiftsPage() {
             onClick={() => setViewMode('month')}
             className={cn(
               'px-3 py-1.5 text-xs font-medium transition-colors border-l',
-              viewMode === 'month' ? 'bg-green-800 text-white' : 'bg-white text-muted-foreground hover:bg-slate-50',
+              viewMode === 'month' ? 'bg-green-800 text-white' : 'bg-white text-muted-foreground hover:bg-green-50/60',
             )}
           >
             月次
