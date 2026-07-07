@@ -87,7 +87,9 @@ ${report.decisions.length > 0 ? `<h2>決定事項</h2>${report.decisions.map((d,
   if (w) {
     w.document.write(html)
     w.document.close()
-    w.print()
+    w.focus()
+    // レンダリング完了を待ってから印刷ダイアログを開く（即時だと空白になることがある）
+    setTimeout(() => w.print(), 300)
   }
 }
 
