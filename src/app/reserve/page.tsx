@@ -15,9 +15,9 @@ export default function ReservePage() {
   const companyAnnouncements = announcementsStore.getActive('company')
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[hsl(var(--surface))] to-white">
+    <div className="min-h-screen">
       {/* ヘッダー */}
-      <header className="relative bg-gradient-to-br from-green-950 via-green-900 to-[#16382a] text-white px-4 pt-8 pb-9 overflow-hidden">
+      <header className="relative bg-gradient-to-br from-green-950/95 via-green-900/95 to-[#16382a]/95 backdrop-blur-md text-white px-4 pt-8 pb-9 overflow-hidden">
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0"
@@ -45,7 +45,7 @@ export default function ReservePage() {
           <h2 className="text-lg font-bold text-green-950 mb-1">院を選んでください</h2>
           <p className="text-xs text-muted-foreground mb-4">ご希望の院を選択すると予約画面に進みます</p>
           <div className="space-y-3">
-            {activeClinics.map((clinic) => {
+            {activeClinics.map((clinic, i) => {
               const clinicAnnouncements = announcementsStore.getActive('clinic', clinic.id)
                 .filter((a) => a.scope === 'clinic')
               const hasMerchandise = merchandise.merchandise.some(
@@ -54,7 +54,8 @@ export default function ReservePage() {
               return (
                 <div
                   key={clinic.id}
-                  className="bg-white rounded-2xl border border-green-100 shadow-sm hover:shadow-md hover:border-green-300 transition-all duration-300 overflow-hidden"
+                  style={{ ['--rs-i' as string]: i }}
+                  className="rs-press rs-rise bg-white/72 backdrop-blur-md rounded-2xl border border-green-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 hover:border-green-300 overflow-hidden"
                 >
                   <Link
                     href={`/reserve/${clinic.id}`}
@@ -121,7 +122,7 @@ export default function ReservePage() {
         {/* 予約の確認・変更・キャンセル */}
         <Link
           href="/reserve/cancel"
-          className="flex items-center justify-between bg-white rounded-2xl border border-stone-200 shadow-sm p-4 hover:border-emerald-300 hover:shadow-md transition-all group"
+          className="flex items-center justify-between bg-white/72 backdrop-blur-md rounded-2xl border border-stone-200 shadow-sm p-4 hover:border-emerald-300 hover:shadow-md transition-all group"
         >
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-stone-100 flex items-center justify-center flex-shrink-0">

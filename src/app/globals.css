@@ -130,6 +130,150 @@
   animation: fade-up 0.35s cubic-bezier(0.21, 1.02, 0.73, 1) both;
 }
 
+/* ==========================================================================
+   患者向け予約サイトの演出（.reserve-scope 配下のみ。管理画面には影響しない）
+   ========================================================================== */
+
+.reserve-scope {
+  /* 明るい癒し系のパレット。管理画面の深緑＋ゴールドとは切り分ける */
+  --rs-ground:   #F4FAF6;
+  --rs-mint:     #7FD9AE;
+  --rs-sky:      #9BD4EE;
+  --rs-apricot:  #FFCBA4;
+  --rs-ink:      #123227;
+  /* 平坦な白にせず、上下でごくわずかに色を振る */
+  background-color: var(--rs-ground);
+  background-image: linear-gradient(180deg, #EEF8F1 0%, #F6FBF7 45%, #FFF7EF 100%);
+  background-attachment: fixed;
+}
+
+/* ── ゆっくり漂う背景（transform/opacity のみで動かす）── */
+.rs-aurora {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.rs-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(46px);
+  opacity: 0.8;
+  will-change: transform;
+}
+.rs-blob-1 {
+  width: 88vw; height: 88vw; max-width: 560px; max-height: 560px;
+  left: -22%; top: -8%;
+  background: radial-gradient(circle at 40% 40%, var(--rs-mint), transparent 66%);
+  animation: rs-drift-1 34s ease-in-out infinite;
+}
+.rs-blob-2 {
+  width: 82vw; height: 82vw; max-width: 520px; max-height: 520px;
+  right: -26%; top: 26%;
+  background: radial-gradient(circle at 55% 45%, var(--rs-sky), transparent 66%);
+  animation: rs-drift-2 41s ease-in-out infinite;
+}
+.rs-blob-3 {
+  width: 78vw; height: 78vw; max-width: 480px; max-height: 480px;
+  left: -14%; bottom: -14%;
+  background: radial-gradient(circle at 50% 50%, var(--rs-apricot), transparent 68%);
+  animation: rs-drift-3 47s ease-in-out infinite;
+}
+@keyframes rs-drift-1 {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  33%      { transform: translate3d(6vw, 5vh, 0) scale(1.09); }
+  66%      { transform: translate3d(-3vw, 9vh, 0) scale(0.95); }
+}
+@keyframes rs-drift-2 {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  40%      { transform: translate3d(-7vw, 7vh, 0) scale(1.12); }
+  70%      { transform: translate3d(-2vw, -5vh, 0) scale(0.97); }
+}
+@keyframes rs-drift-3 {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  45%      { transform: translate3d(8vw, -7vh, 0) scale(1.07); }
+  75%      { transform: translate3d(3vw, -2vh, 0) scale(0.94); }
+}
+
+/* ── ステップの切り替え ── */
+@keyframes rs-step-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.rs-step {
+  animation: rs-step-in 0.42s cubic-bezier(0.22, 0.9, 0.32, 1) both;
+}
+
+/* ── 順番に現れるカード ── */
+@keyframes rs-rise {
+  from { opacity: 0; transform: translateY(12px) scale(0.985); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.rs-rise {
+  animation: rs-rise 0.44s cubic-bezier(0.22, 0.9, 0.32, 1) both;
+  animation-delay: calc(var(--rs-i, 0) * 55ms);
+}
+
+/* ── 押した感触 ── */
+.rs-press {
+  transition: transform 0.16s cubic-bezier(0.22, 0.9, 0.32, 1), box-shadow 0.22s ease, border-color 0.22s ease;
+}
+.rs-press:active { transform: scale(0.975); }
+
+/* ── 選択中のカードがやわらかく脈打つ ── */
+@keyframes rs-selected-pop {
+  0%   { transform: scale(0.96); }
+  55%  { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+.rs-selected { animation: rs-selected-pop 0.34s cubic-bezier(0.22, 0.9, 0.32, 1) both; }
+
+/* ── 進捗ドット ── */
+.rs-dot { transition: width 0.34s cubic-bezier(0.22, 0.9, 0.32, 1), background-color 0.34s ease; }
+
+/* ── 予約完了の演出 ── */
+@keyframes rs-ring {
+  0%   { transform: scale(0.6); opacity: 0.55; }
+  100% { transform: scale(2.1); opacity: 0; }
+}
+.rs-ring {
+  animation: rs-ring 1.9s cubic-bezier(0.2, 0.7, 0.3, 1) infinite;
+}
+@keyframes rs-check-draw {
+  from { stroke-dashoffset: 34; }
+  to   { stroke-dashoffset: 0; }
+}
+.rs-check path {
+  stroke-dasharray: 34;
+  animation: rs-check-draw 0.6s cubic-bezier(0.6, 0, 0.3, 1) 0.25s both;
+}
+@keyframes rs-petal {
+  0%   { opacity: 0; transform: translate3d(0, 0, 0) scale(0.4) rotate(0deg); }
+  15%  { opacity: 0.9; }
+  100% { opacity: 0; transform: translate3d(var(--rs-x, 0px), 128px, 0) scale(1) rotate(var(--rs-r, 180deg)); }
+}
+.rs-petal {
+  position: absolute;
+  top: 0; left: 50%;
+  width: 9px; height: 9px;
+  border-radius: 9px 0 9px 0;
+  animation: rs-petal 2.6s ease-in forwards;
+  animation-delay: calc(var(--rs-i, 0) * 130ms);
+}
+
+/* ── 動きを控える設定を尊重する ── */
+@media (prefers-reduced-motion: reduce) {
+  .rs-blob, .rs-ring, .rs-petal { animation: none; }
+  .rs-blob { opacity: 0.32; }
+  .rs-petal { display: none; }
+  .rs-step, .rs-rise, .rs-selected, .rs-check path {
+    animation-duration: 0.01ms;
+    animation-delay: 0ms;
+  }
+  .rs-check path { stroke-dashoffset: 0; }
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }

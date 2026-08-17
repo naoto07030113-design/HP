@@ -23,6 +23,18 @@ import { VISIT_TYPE_LABELS } from '@/types/clinic'
 
 type Step = 'visit_type' | 'menu' | 'staff' | 'date' | 'time' | 'info' | 'confirm' | 'complete'
 
+// 予約完了時に舞う花びら。毎回同じ見え方になるよう座標は固定で持つ
+const PETALS = [
+  { x: -58, rotate: 200, color: '#A7E8C8' },
+  { x: -30, rotate: -160, color: '#FFCBA4' },
+  { x: -8,  rotate: 240, color: '#9BD4EE' },
+  { x: 22,  rotate: -210, color: '#A7E8C8' },
+  { x: 46,  rotate: 180, color: '#FFE3A4' },
+  { x: 68,  rotate: -240, color: '#9BD4EE' },
+  { x: -72, rotate: 150, color: '#FFCBA4' },
+  { x: 8,   rotate: -190, color: '#A7E8C8' },
+]
+
 const STEP_LABELS: Record<Step, string> = {
   visit_type: '初診・再来選択',
   menu: 'メニュー選択',
@@ -299,9 +311,9 @@ export default function ReserveClinicPage() {
   const visibleSteps = STEPS.filter((s) => s !== 'complete')
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[hsl(var(--surface))] to-white">
+    <div className="min-h-screen">
       {/* ヘッダー */}
-      <header className="bg-gradient-to-r from-green-950 to-green-900 text-white sticky top-0 z-10 shadow-md">
+      <header className="bg-gradient-to-r from-green-950/95 to-green-900/95 backdrop-blur-md text-white sticky top-0 z-20 shadow-md">
         <div className="max-w-lg mx-auto px-4 py-3.5 flex items-center gap-3">
           <button onClick={goBack} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
             <ArrowLeft className="w-5 h-5" />
@@ -323,7 +335,7 @@ export default function ReserveClinicPage() {
         )}
       </header>
 
-      <div className="max-w-lg mx-auto px-4 py-5 space-y-5">
+      <div key={step} className="rs-step max-w-lg mx-auto px-4 py-5 space-y-5">
         {/* お知らせ */}
         {step === 'visit_type' && clinicAnnouncements.length > 0 && (
           <AnnouncementBanners announcements={clinicAnnouncements} />
@@ -336,12 +348,12 @@ export default function ReserveClinicPage() {
               <div
                 key={s}
                 className={cn(
-                  'rounded-full transition-all duration-300',
+                  'rs-dot rounded-full',
                   s === step
-                    ? 'w-5 h-2 bg-emerald-700'
+                    ? 'w-6 h-2 bg-emerald-700'
                     : i < currentStepIdx
                     ? 'w-2 h-2 bg-emerald-400'
-                    : 'w-2 h-2 bg-stone-200',
+                    : 'w-2 h-2 bg-stone-300/70',
                 )}
               />
             ))}
@@ -363,7 +375,7 @@ export default function ReserveClinicPage() {
                 <button
                   key={type}
                   onClick={() => { setVisitType(type); goNext() }}
-                  className="group bg-white rounded-2xl border-2 border-stone-100 p-7 text-center hover:border-emerald-400 hover:shadow-md active:scale-[0.97] transition-all duration-200"
+                  className="group rs-press rs-rise bg-white/72 backdrop-blur-md rounded-2xl border-2 border-stone-100 p-7 text-center hover:border-emerald-400 hover:shadow-lg hover:-translate-y-0.5"
                 >
                   <p className="text-xs font-bold text-stone-400 tracking-widest uppercase mb-1">{sub}</p>
                   <p className="text-lg font-black text-emerald-950">{title}</p>
@@ -373,7 +385,7 @@ export default function ReserveClinicPage() {
             {hasMerchandise && (
               <Link
                 href={`/reserve/${clinicId}/merchandise`}
-                className="flex items-center justify-between bg-white rounded-2xl border border-pink-100 shadow-sm p-4 hover:border-pink-300 hover:shadow-md transition-all group"
+                className="flex items-center justify-between rs-press rs-rise bg-white/72 backdrop-blur-md rounded-2xl border border-pink-100 shadow-sm p-4 hover:border-pink-300 hover:shadow-md group"
               >
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-50 to-pink-100 ring-1 ring-pink-200/60 flex items-center justify-center flex-shrink-0">
@@ -397,11 +409,12 @@ export default function ReserveClinicPage() {
               <h2 className="text-xl font-black text-emerald-950">メニューを選んでください</h2>
             </div>
             <div className="space-y-2.5">
-              {availableMenus.map((m) => (
+              {availableMenus.map((m, i) => (
                 <button
                   key={m.id}
                   onClick={() => { setSelectedMenu(m); goNext() }}
-                  className="w-full bg-white rounded-2xl border border-stone-100 p-4 text-left hover:border-emerald-300 hover:shadow-sm active:scale-[0.99] transition-all duration-150"
+                  style={{ ['--rs-i' as string]: i }}
+                  className="w-full rs-press rs-rise bg-white/72 backdrop-blur-md rounded-2xl border border-stone-100 p-4 text-left hover:border-emerald-300 hover:shadow-md hover:-translate-y-0.5"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex-1 min-w-0">
@@ -431,7 +444,7 @@ export default function ReserveClinicPage() {
             <div className="space-y-2.5">
               <button
                 onClick={() => { setSelectedStaff(null); goNext() }}
-                className="w-full bg-white rounded-2xl border border-stone-100 p-4 text-left hover:border-emerald-300 hover:shadow-sm active:scale-[0.99] transition-all duration-150"
+                className="w-full rs-press rs-rise bg-white/72 backdrop-blur-md rounded-2xl border border-stone-100 p-4 text-left hover:border-emerald-300 hover:shadow-md hover:-translate-y-0.5"
               >
                 <div className="flex items-center gap-4">
                   <div className="w-11 h-11 rounded-full bg-stone-100 flex items-center justify-center flex-shrink-0">
@@ -448,7 +461,7 @@ export default function ReserveClinicPage() {
                 <button
                   key={s.id}
                   onClick={() => { setSelectedStaff(s); goNext() }}
-                  className="w-full bg-white rounded-2xl border border-stone-100 p-4 text-left hover:border-emerald-300 hover:shadow-sm active:scale-[0.99] transition-all duration-150"
+                  className="w-full rs-press rs-rise bg-white/72 backdrop-blur-md rounded-2xl border border-stone-100 p-4 text-left hover:border-emerald-300 hover:shadow-md hover:-translate-y-0.5"
                 >
                   <div className="flex items-center gap-4">
                     <div className="w-11 h-11 rounded-full bg-emerald-800 flex items-center justify-center flex-shrink-0">
@@ -470,7 +483,7 @@ export default function ReserveClinicPage() {
         {step === 'date' && (
           <div className="space-y-4">
             <h2 className="text-xl font-black text-emerald-950">日付を選んでください</h2>
-            <div className="bg-white rounded-2xl border border-stone-100 p-4 shadow-sm">
+            <div className="bg-white/72 backdrop-blur-md rounded-2xl border border-stone-100 p-4 shadow-sm">
               <div className="flex items-center justify-between mb-4">
                 <button onClick={() => setCalendarOffset((o) => Math.max(0, o - 1))}
                   className="w-8 h-8 rounded-full bg-stone-100 hover:bg-emerald-100 flex items-center justify-center transition-colors disabled:opacity-30" disabled={calendarOffset === 0}>
@@ -550,11 +563,12 @@ export default function ReserveClinicPage() {
               <p className="text-sm text-stone-500 mt-1">{format(selectedDate, 'M月d日（E）', { locale: ja })}</p>
             </div>
             <div className="grid grid-cols-3 gap-2">
-              {availableSlots.map((t) => (
+              {availableSlots.map((t, i) => (
                 <button
                   key={t}
                   onClick={() => { setSelectedTime(t); goNext() }}
-                  className="bg-white border border-stone-100 rounded-2xl py-3.5 text-center font-bold text-emerald-900 hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-sm active:scale-[0.97] transition-all"
+                  style={{ ['--rs-i' as string]: i }}
+                  className="rs-press rs-rise bg-white/72 backdrop-blur-md border border-stone-100 rounded-2xl py-3.5 text-center font-bold text-emerald-900 hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-md"
                 >
                   {t}
                 </button>
@@ -581,7 +595,7 @@ export default function ReserveClinicPage() {
                 </p>
               )}
             </div>
-            <div className="bg-white rounded-2xl border border-stone-100 p-5 space-y-4 shadow-sm">
+            <div className="bg-white/72 backdrop-blur-md rounded-2xl border border-stone-100 p-5 space-y-4 shadow-sm">
               {/* 基本情報 - 共通 */}
               <div className="space-y-1.5">
                 <Label htmlFor="name" className="text-sm font-semibold text-stone-700">お名前 <span className="text-red-400">*</span></Label>
@@ -786,7 +800,7 @@ export default function ReserveClinicPage() {
         {step === 'confirm' && selectedMenu && selectedDate && selectedTime && (
           <div className="space-y-4">
             <h2 className="text-xl font-black text-emerald-950">予約内容をご確認ください</h2>
-            <div className="bg-white rounded-2xl border border-stone-100 shadow-sm overflow-hidden">
+            <div className="bg-white/72 backdrop-blur-md rounded-2xl border border-stone-100 shadow-sm overflow-hidden">
               <div className="h-1 bg-gradient-to-r from-emerald-600 to-emerald-400" />
               <div className="px-5 py-4 border-b border-stone-100">
                 <p className="font-bold text-emerald-950">{clinic.name}</p>
@@ -811,7 +825,7 @@ export default function ReserveClinicPage() {
               </div>
             </div>
             {visitType === 'first' && (
-              <div className="bg-white rounded-2xl border border-stone-100 p-5 space-y-2.5 text-sm shadow-sm">
+              <div className="bg-white/72 backdrop-blur-md rounded-2xl border border-stone-100 p-5 space-y-2.5 text-sm shadow-sm">
                 <p className="text-xs font-bold text-emerald-700 tracking-wider uppercase mb-3">問診情報</p>
                 {patientNameKana && <Row label="フリガナ" value={patientNameKana} />}
                 {patientGender !== 'unknown' && <Row label="性別" value={{ male: '男性', female: '女性', other: 'その他', unknown: '' }[patientGender]} />}
@@ -845,8 +859,28 @@ export default function ReserveClinicPage() {
         {step === 'complete' && (
           <div className="py-8 space-y-5">
             <div className="text-center space-y-3">
-              <div className="w-20 h-20 rounded-full bg-emerald-100 flex items-center justify-center mx-auto shadow-sm">
-                <Check className="w-10 h-10 text-emerald-700" strokeWidth={3} />
+              {/* 完了の手応え：広がる輪 → チェックが描かれる → 花びらが舞う */}
+              <div className="relative w-20 h-20 mx-auto">
+                <span aria-hidden className="rs-ring absolute inset-0 rounded-full border-2 border-emerald-400" />
+                <span aria-hidden className="rs-ring absolute inset-0 rounded-full border-2 border-emerald-300" style={{ animationDelay: '0.6s' }} />
+                <div className="relative w-20 h-20 rounded-full bg-emerald-100 flex items-center justify-center shadow-sm">
+                  <svg className="rs-check w-10 h-10" viewBox="0 0 24 24" fill="none" aria-hidden>
+                    <path d="M4.5 12.5l5 5 10-11" stroke="rgb(4 120 87)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
+                {PETALS.map((petal, i) => (
+                  <span
+                    key={i}
+                    aria-hidden
+                    className="rs-petal"
+                    style={{
+                      background: petal.color,
+                      ['--rs-i' as string]: i,
+                      ['--rs-x' as string]: `${petal.x}px`,
+                      ['--rs-r' as string]: `${petal.rotate}deg`,
+                    }}
+                  />
+                ))}
               </div>
               <h2 className="text-2xl font-black text-emerald-950">予約が完了しました</h2>
               <p className="text-stone-500 text-sm">ご予約ありがとうございます</p>
@@ -854,7 +888,7 @@ export default function ReserveClinicPage() {
 
             {/* 予約サマリー */}
             {selectedDate && selectedMenu && selectedTime && (
-              <div className="bg-white rounded-2xl border border-stone-100 shadow-sm overflow-hidden">
+              <div className="bg-white/72 backdrop-blur-md rounded-2xl border border-stone-100 shadow-sm overflow-hidden">
                 <div className="h-1 bg-gradient-to-r from-emerald-600 to-emerald-400" />
                 <div className="p-5 space-y-2.5">
                   <p className="text-xs font-bold text-emerald-700 tracking-wider uppercase mb-3">予約内容</p>
