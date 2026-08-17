@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { format, addDays, subDays, startOfWeek, addWeeks, subWeeks, addMonths, subMonths, parseISO } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { Button } from '@/components/ui/button'
@@ -25,7 +25,8 @@ export default function CalendarPage() {
   const store = useClinicStore()
   const [view, setView] = useState<View>('day')
   const [currentDate, setCurrentDate] = useState(new Date())
-  const [selectedClinicId, setSelectedClinicId] = useState(store.clinics[0]?.id ?? '')
+  // 院データは非同期で届くため、初回レンダー時点では空。読み込み後に先頭院を自動選択する
+  const [selectedClinicId, setSelectedClinicId] = useState('')
   const [formOpen, setFormOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<Reservation | null>(null)
   const [defaultDate, setDefaultDate] = useState<string>()
@@ -36,6 +37,14 @@ export default function CalendarPage() {
 
   const clinic = store.clinics.find((c) => c.id === selectedClinicId)
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 })
+
+  // 院の読み込み完了後（または選択中の院が無効化された場合）に有効な院を選び直す
+  useEffect(() => {
+    if (store.clinics.length === 0) return
+    if (store.clinics.some((c) => c.id === selectedClinicId && c.is_active)) return
+    const first = store.clinics.find((c) => c.is_active)
+    if (first) setSelectedClinicId(first.id)
+  }, [store.clinics, selectedClinicId])
 
   function goBack() {
     if (view === 'day') setCurrentDate((d) => subDays(d, 1))

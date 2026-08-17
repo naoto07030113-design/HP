@@ -118,10 +118,13 @@ function TickerStrip({
     <div className={cn('flex items-stretch border-b overflow-hidden', STRIP_COLORS[type])}>
       {/* 左バッジ */}
       <div className={cn(
-        'flex items-center justify-center gap-2 px-5 py-4 flex-shrink-0 font-bold text-sm leading-none w-28',
+        // 幅は最低値のみ指定。固定幅だと「キャンペーン」等の長いラベルが2行に折り返して崩れる。
+        // スマホでは本文の表示領域を確保するためバッジを一段小さくする
+        'flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-4 flex-shrink-0',
+        'font-bold text-xs sm:text-sm leading-none min-w-20 sm:min-w-28 whitespace-nowrap',
         BADGE_COLORS[type],
       )}>
-        <Icon className="w-4 h-4 flex-shrink-0" />
+        <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
         <span>{ANNOUNCEMENT_TYPE_LABELS[type]}</span>
       </div>
 

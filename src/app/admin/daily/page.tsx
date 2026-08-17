@@ -26,7 +26,8 @@ const PAYMENT_METHOD_COLORS: Record<PaymentMethod, string> = {
 }
 
 export default function DailyLedgerPage() {
-  useAccountingStore()
+  // 会計データは非同期で遅れて届く。useMemo 依存に含めないと到着後に再集計されない
+  const invoices = useAccountingStore()
   const store = useClinicStore()
 
   const [selectedDate, setSelectedDate] = useState(TODAY)
@@ -50,7 +51,7 @@ export default function DailyLedgerPage() {
       .getByDate(selectedDate)
       .filter((inv) => filterClinic === 'all' || inv.clinic_id === filterClinic)
       .filter((inv) => inv.status === 'paid')
-  }, [selectedDate, filterClinic, store])
+  }, [selectedDate, filterClinic, invoices])
 
   // KPI calculations
   const kpi = useMemo(() => {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   format, addWeeks, subWeeks, startOfWeek, addDays,
   addMonths, subMonths, startOfMonth,
@@ -20,11 +20,20 @@ type ViewMode = 'week' | 'month'
 
 export default function ShiftsPage() {
   const store = useClinicStore()
-  const [clinicId, setClinicId] = useState(store.clinics[0]?.id ?? '')
+  // 院データは非同期で届くため、初回レンダー時点では空。読み込み後に先頭院を自動選択する
+  const [clinicId, setClinicId] = useState('')
   const [viewMode, setViewMode] = useState<ViewMode>('week')
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
   const [monthStart, setMonthStart] = useState(() => startOfMonth(new Date()))
   const [bulkOpen, setBulkOpen] = useState(false)
+
+  // 院の読み込み完了後（または選択中の院が無効化された場合）に有効な院を選び直す
+  useEffect(() => {
+    if (store.clinics.length === 0) return
+    if (store.clinics.some((c) => c.id === clinicId && c.is_active)) return
+    const first = store.clinics.find((c) => c.is_active)
+    if (first) setClinicId(first.id)
+  }, [store.clinics, clinicId])
 
   const weekEnd = addDays(weekStart, 6)
   const weekLabel = `${format(weekStart, 'yyyy年M月d日', { locale: ja })} 〜 ${format(weekEnd, 'M月d日（E）', { locale: ja })}`

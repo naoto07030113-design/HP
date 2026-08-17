@@ -100,8 +100,10 @@ const PERIOD_OPTIONS: { value: PeriodFilter; label: string }[] = [
 
 // ── Main page ───────────────────────────────────────────────────────────
 export default function ExecutiveDashboardPage() {
-  useAccountingStore()
-  usePatientStore()
+  // 会計・患者データは非同期で遅れて届く。集計の useMemo 依存に含めないと
+  // 到着後に再計算されず、売上¥0・新患0名のまま表示され続けるため戻り値を保持する
+  const invoices = useAccountingStore()
+  const patients = usePatientStore()
   const store = useClinicStore()
 
   const [period, setPeriod] = useState<PeriodFilter>('month')
@@ -118,7 +120,7 @@ export default function ExecutiveDashboardPage() {
         customRange,
         clinicFilter,
       ),
-    [period, store.reservations, store.staff, store.clinics, customRange, clinicFilter],
+    [period, store.reservations, store.staff, store.clinics, customRange, clinicFilter, invoices, patients],
   )
 
   const now = new Date()

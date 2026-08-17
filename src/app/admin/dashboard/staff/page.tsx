@@ -41,8 +41,10 @@ function ChangeBadge({ current, prev }: { current: number; prev: number }) {
 type SortKey = keyof Pick<StaffKPI, 'sales' | 'visits' | 'newPatients' | 'repeatRate' | 'cancellations' | 'averageSpend'>
 
 export default function StaffDashboardPage() {
-  useAccountingStore()
-  usePatientStore()
+  // 会計・患者データは非同期で遅れて届く。集計の useMemo 依存に含めないと
+  // 到着後に再計算されず、売上¥0のまま表示され続けるため戻り値を保持する
+  const invoices = useAccountingStore()
+  const patients = usePatientStore()
   const store = useClinicStore()
 
   const [period, setPeriod] = useState<PeriodFilter>('month')
@@ -53,12 +55,12 @@ export default function StaffDashboardPage() {
 
   const data = useMemo(
     () => buildDashboard(period, store.reservations, store.staff, store.clinics, undefined, clinicFilter),
-    [period, store.reservations, store.staff, store.clinics, clinicFilter],
+    [period, store.reservations, store.staff, store.clinics, clinicFilter, invoices, patients],
   )
 
   const prevData = useMemo(
     () => buildDashboard('lastMonth', store.reservations, store.staff, store.clinics, undefined, clinicFilter),
-    [store.reservations, store.staff, store.clinics, clinicFilter],
+    [store.reservations, store.staff, store.clinics, clinicFilter, invoices, patients],
   )
 
   const sortedStaff = useMemo(() => {

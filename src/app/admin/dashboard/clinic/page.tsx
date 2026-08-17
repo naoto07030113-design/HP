@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { format, parseISO, subMonths, startOfMonth, endOfMonth } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import {
@@ -100,17 +100,23 @@ const PERIOD_OPTIONS: { value: PeriodFilter; label: string }[] = [
 
 // ── Main page ───────────────────────────────────────────────────────────
 export default function ClinicDashboardPage() {
-  useAccountingStore()
-  usePatientStore()
+  // 会計・患者データは非同期で遅れて届く。集計の useMemo 依存に含めないと
+  // 到着後に再計算されず、売上¥0のまま表示され続けるため戻り値を保持する
+  const invoices = useAccountingStore()
+  const patients = usePatientStore()
   const store = useClinicStore()
 
   const [period, setPeriod] = useState<PeriodFilter>('month')
   const [customRange] = useState<DateRange | undefined>()
 
   const activeClinics = store.clinics.filter((c) => c.is_active)
-  const [selectedClinic, setSelectedClinic] = useState<string>(
-    activeClinics[0]?.id ?? '',
-  )
+  // 院データは非同期で届くため、初回レンダー時点では空。読み込み後に先頭院を自動選択する
+  const [selectedClinic, setSelectedClinic] = useState<string>('')
+  useEffect(() => {
+    if (activeClinics.length === 0) return
+    if (activeClinics.some((c) => c.id === selectedClinic)) return
+    setSelectedClinic(activeClinics[0].id)
+  }, [activeClinics, selectedClinic])
 
   // Build dashboard for the selected clinic
   const data = useMemo(
@@ -123,7 +129,7 @@ export default function ClinicDashboardPage() {
         customRange,
         selectedClinic || 'all',
       ),
-    [period, store.reservations, store.staff, store.clinics, customRange, selectedClinic],
+    [period, store.reservations, store.staff, store.clinics, customRange, selectedClinic, invoices, patients],
   )
 
   // Build overall dashboard (all clinics) for comparison
@@ -137,7 +143,7 @@ export default function ClinicDashboardPage() {
         customRange,
         'all',
       ),
-    [period, store.reservations, store.staff, store.clinics, customRange],
+    [period, store.reservations, store.staff, store.clinics, customRange, invoices, patients],
   )
 
   // Menu ranking for selected clinic
@@ -166,7 +172,7 @@ export default function ClinicDashboardPage() {
       .map(([name, d]) => ({ name, ...d }))
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 8)
-  }, [selectedClinic, data.period.from, data.period.to])
+  }, [selectedClinic, data.period.from, data.period.to, invoices])
 
   // Last 6 months trend for this clinic
   const monthlyTrend = useMemo(() => {
@@ -194,7 +200,7 @@ export default function ClinicDashboardPage() {
       ).length
       return { label: monthLabel, sales, visits }
     })
-  }, [selectedClinic, store.reservations])
+  }, [selectedClinic, store.reservations, invoices])
 
   const clinicKPI = data.overall
   const prevKPI = data.prevOverall
