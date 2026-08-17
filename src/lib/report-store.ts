@@ -20,13 +20,36 @@ type ReportRow = {
   id: string
   month: string
   clinic_id: string
-  data: Omit<MonthlyReport, 'id'>
+  data: Partial<Omit<MonthlyReport, 'id'>> | null
   created_at: string
   updated_at: string
 }
 
+const arr = <T,>(v: unknown): T[] => (Array.isArray(v) ? (v as T[]) : [])
+const str = (v: unknown, fallback = ''): string => (typeof v === 'string' ? v : fallback)
+
+// data は JSONB のため、旧バージョンや生成途中の行では項目が欠けていることがある。
+// そのまま展開すると一覧側の report.actionPlans.filter(...) 等で画面全体が落ちるので、
+// 読み込み時にこの一箇所で必ず既定値を埋めて型どおりの形に整える。
 function fromRow(row: ReportRow): MonthlyReport {
-  return { ...row.data, id: row.id }
+  const d = (row.data ?? {}) as Partial<Omit<MonthlyReport, 'id'>>
+  return {
+    ...d,
+    id: row.id,
+    month: str(d.month, row.month),
+    clinicId: str(d.clinicId, row.clinic_id || 'all'),
+    clinicName: str(d.clinicName, '全院'),
+    title: str(d.title, `${str(d.month, row.month)} 月次レポート`),
+    summary: str(d.summary),
+    sections: arr(d.sections),
+    issues: arr(d.issues),
+    actionPlans: arr<ActionPlan>(d.actionPlans),
+    meetingNotes: str(d.meetingNotes),
+    decisions: arr(d.decisions),
+    kpiSnapshot: (d.kpiSnapshot && typeof d.kpiSnapshot === 'object') ? d.kpiSnapshot : {},
+    createdAt: str(d.createdAt, row.created_at),
+    updatedAt: str(d.updatedAt, row.updated_at),
+  }
 }
 
 function toRow(report: MonthlyReport): Omit<ReportRow, 'created_at' | 'updated_at'> {

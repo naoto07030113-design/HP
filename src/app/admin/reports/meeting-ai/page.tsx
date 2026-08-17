@@ -6,6 +6,7 @@ import { format, parseISO } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { PermissionGuard } from '@/components/common/PermissionGuard'
 import { useClinicStore } from '@/lib/clinic-store'
 import { reportStore } from '@/lib/report-store'
@@ -102,23 +103,20 @@ export default function MeetingAIPage() {
               <label className="text-xs font-medium text-green-800" htmlFor="clinic-select">
                 対象院
               </label>
-              <select
-                id="clinic-select"
-                value={clinicId}
-                onChange={(e) => setClinicId(e.target.value)}
-                className={cn(
-                  'flex h-9 w-full rounded-md border border-green-200 bg-white px-3 py-1 text-sm shadow-sm',
-                  'focus:outline-none focus:ring-1 focus:ring-green-400 focus:border-green-400',
-                  'text-green-900',
-                )}
-              >
-                <option value="all">全院</option>
-                {store.clinics.map((clinic) => (
-                  <option key={clinic.id} value={clinic.id}>
-                    {clinic.name}
-                  </option>
-                ))}
-              </select>
+              {/* 他画面と同じ Select を使う。閉院した院はレポート対象に出さない */}
+              <Select value={clinicId} onValueChange={setClinicId}>
+                <SelectTrigger id="clinic-select" className="h-9 text-sm">
+                  <SelectValue placeholder="対象院を選択" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">全院</SelectItem>
+                  {store.clinics.filter((c) => c.is_active).map((clinic) => (
+                    <SelectItem key={clinic.id} value={clinic.id}>
+                      {clinic.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

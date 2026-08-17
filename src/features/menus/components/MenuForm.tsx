@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { Menu, MenuFormData, Clinic } from '@/types/clinic'
 import { VISIT_TYPE_LABELS } from '@/types/clinic'
 import { Button } from '@/components/ui/button'
@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { toast } from 'sonner'
 
 interface Props {
   open: boolean
@@ -28,9 +29,19 @@ export function MenuForm({ open, onOpenChange, initial, clinics, defaultClinicId
           price: 0, visit_type: 'both', is_active: true, sort_order: 0 },
   )
 
+  // 新規追加フォームは key が固定のため初回マウントのまま再生成されない。
+  // 院の一覧は非同期で届くので、届いた時点で未選択なら先頭の有効な院を入れる。
+  useEffect(() => {
+    if (form.clinic_id) return
+    const first = clinics.find((c) => c.is_active)
+    if (first) setForm((f) => ({ ...f, clinic_id: defaultClinicId ?? first.id }))
+  }, [clinics, form.clinic_id, defaultClinicId])
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.name.trim() || !form.clinic_id) return
+    // 以前は無言で return しており、追加ボタンを押しても何も起きなかった
+    if (!form.clinic_id) { toast.error('所属院を選択してください'); return }
+    if (!form.name.trim()) { toast.error('メニュー名を入力してください'); return }
     onSubmit(form)
     onOpenChange(false)
   }
@@ -50,7 +61,8 @@ export function MenuForm({ open, onOpenChange, initial, clinics, defaultClinicId
             <Select value={form.clinic_id} onValueChange={(v) => set('clinic_id', v)}>
               <SelectTrigger><SelectValue placeholder="院を選択" /></SelectTrigger>
               <SelectContent>
-                {clinics.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                {/* 閉院した院には新規に割り当てられないようにする */}
+                {clinics.filter((c) => c.is_active).map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>

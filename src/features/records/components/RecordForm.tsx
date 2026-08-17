@@ -15,6 +15,7 @@ import { useClinicStore } from '@/lib/clinic-store'
 import { usePatientStore, patientStore } from '@/lib/patient-store'
 import { Search, UserCheck, Mic, MicOff, Camera } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 
 // ── Web Speech API 型定義 ──────────────────────────────────────
 interface ISpeechRecognition {
@@ -236,7 +237,9 @@ export function RecordForm({
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!form.patient_name.trim() || !form.clinic_id || !form.visit_date) return
+    if (!form.patient_name.trim()) { toast.error('患者名を入力してください'); return }
+    if (!form.clinic_id) { toast.error('院を選択してください'); return }
+    if (!form.visit_date) { toast.error('来院日を入力してください'); return }
     onSubmit(form)
     onOpenChange(false)
   }

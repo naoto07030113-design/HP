@@ -628,9 +628,10 @@ export default function ReserveClinicPage() {
               )}
 
               <div className="space-y-1.5">
-                <Label htmlFor="phone" className="text-sm font-semibold text-stone-700">電話番号</Label>
+                <Label htmlFor="phone" className="text-sm font-semibold text-stone-700">電話番号 <span className="text-red-400">*</span></Label>
                 <Input id="phone" value={patientPhone} onChange={(e) => setPatientPhone(e.target.value)}
-                  placeholder="090-0000-0000" type="tel" className="h-11 rounded-xl border-stone-200 focus:border-emerald-400" />
+                  placeholder="090-0000-0000" type="tel" inputMode="tel" className="h-11 rounded-xl border-stone-200 focus:border-emerald-400" />
+                <p className="text-xs text-stone-400">ご予約の変更やご連絡に使用します</p>
               </div>
 
               {visitType === 'first' && (
@@ -769,11 +770,11 @@ export default function ReserveClinicPage() {
             <button
               className={cn(
                 'w-full h-12 rounded-2xl text-base font-bold transition-all',
-                (!patientName.trim() || (visitType === 'first' && !chiefComplaint.trim()))
+                (!patientName.trim() || !patientPhone.trim() || (visitType === 'first' && !chiefComplaint.trim()))
                   ? 'bg-stone-200 text-stone-400 cursor-not-allowed'
                   : 'bg-emerald-800 text-white hover:bg-emerald-700 active:scale-[0.99]',
               )}
-              disabled={!patientName.trim() || (visitType === 'first' && !chiefComplaint.trim())}
+              disabled={!patientName.trim() || !patientPhone.trim() || (visitType === 'first' && !chiefComplaint.trim())}
               onClick={goNext}
             >
               次へ進む
@@ -802,7 +803,7 @@ export default function ReserveClinicPage() {
                 <Row label="料金" value={`¥${selectedMenu.price.toLocaleString()}`} />
                 <Row label="担当" value={selectedStaff?.name ?? 'おまかせ'} />
                 <Row label="お名前" value={patientName} />
-                {patientPhone && <Row label="電話番号" value={patientPhone} />}
+                <Row label="電話番号" value={patientPhone} />
                 {memo && <Row label="ご要望" value={memo} />}
                 {referralSource === '紹介' && referralName && (
                   <Row label="紹介者" value={`${referralName}様`} />

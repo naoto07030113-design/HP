@@ -150,9 +150,16 @@ export default function PatientDetailPage() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="bg-white rounded-xl border border-border shadow-sm p-4">
               <h3 className="text-sm font-semibold text-green-900 mb-3">連絡先</h3>
-              <InfoRow label="電話番号" value={patient.phone} icon={Phone} />
-              <InfoRow label="メールアドレス" value={patient.email} icon={Mail} />
-              <InfoRow label="住所" value={[patient.postal_code, patient.address].filter(Boolean).join(' ')} icon={MapPin} />
+              {/* 全て未登録だと見出しだけの空カードになり壊れて見えるため、その旨を明示する */}
+              {!patient.phone && !patient.email && !patient.postal_code && !patient.address ? (
+                <p className="text-sm text-muted-foreground">連絡先が未登録です。「編集」から追加できます。</p>
+              ) : (
+                <>
+                  <InfoRow label="電話番号" value={patient.phone} icon={Phone} />
+                  <InfoRow label="メールアドレス" value={patient.email} icon={Mail} />
+                  <InfoRow label="住所" value={[patient.postal_code, patient.address].filter(Boolean).join(' ')} icon={MapPin} />
+                </>
+              )}
             </div>
             <div className="bg-white rounded-xl border border-border shadow-sm p-4">
               <h3 className="text-sm font-semibold text-green-900 mb-3">来院情報</h3>

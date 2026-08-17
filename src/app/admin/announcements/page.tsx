@@ -266,7 +266,8 @@ export default function AnnouncementsPage() {
                 <Select value={form.clinic_id ?? ''} onValueChange={(v) => setF('clinic_id', v || null)}>
                   <SelectTrigger className="h-9"><SelectValue placeholder="院を選択" /></SelectTrigger>
                   <SelectContent>
-                    {store.clinics.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                    {/* 閉院した院にはお知らせを新規掲出できないようにする */}
+                    {store.clinics.filter((c) => c.is_active).map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>

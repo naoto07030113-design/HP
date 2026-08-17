@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { Staff, StaffFormData, Clinic } from '@/types/clinic'
 import { STAFF_ROLES } from '@/types/clinic'
 import { Button } from '@/components/ui/button'
@@ -10,6 +10,7 @@ import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 
 interface Props {
   open: boolean
@@ -39,6 +40,14 @@ export function StaffForm({ open, onOpenChange, initial, clinics, defaultClinicI
   const [isActive, setIsActive] = useState(initial?.is_active ?? true)
   const [sortOrder] = useState(initial?.sort_order ?? 0)
 
+  // 新規追加フォームは key が固定のため初回マウントのまま再生成されない。
+  // 院の一覧は非同期で届くので、届いた時点で未選択なら先頭の有効な院を入れる。
+  useEffect(() => {
+    if (clinicId) return
+    const first = clinics.find((c) => c.is_active)
+    if (first) setClinicId(defaultClinicId ?? first.id)
+  }, [clinics, clinicId, defaultClinicId])
+
   function toggleRole(role: string) {
     setSelectedRoles((prev) =>
       prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role],
@@ -47,7 +56,9 @@ export function StaffForm({ open, onOpenChange, initial, clinics, defaultClinicI
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!name.trim() || !clinicId) return
+    // 以前は無言で return しており、追加ボタンを押しても何も起きなかった
+    if (!clinicId) { toast.error('所属院を選択してください'); return }
+    if (!name.trim()) { toast.error('スタッフ名を入力してください'); return }
     onSubmit({
       clinic_id: clinicId,
       name: name.trim(),
@@ -71,7 +82,8 @@ export function StaffForm({ open, onOpenChange, initial, clinics, defaultClinicI
             <Select value={clinicId} onValueChange={setClinicId}>
               <SelectTrigger><SelectValue placeholder="院を選択" /></SelectTrigger>
               <SelectContent>
-                {clinics.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                {/* 閉院した院には新規に割り当てられないようにする */}
+                {clinics.filter((c) => c.is_active).map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>

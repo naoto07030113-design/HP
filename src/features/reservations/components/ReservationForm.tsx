@@ -152,7 +152,8 @@ export function ReservationForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!patientName.trim() || !clinicId) return
+    if (!clinicId) { toast.error('院を選択してください'); return }
+    if (!patientName.trim()) { toast.error('患者名を入力してください'); return }
 
     const newStart = buildISO(startDate, startTime)
     const newEnd = buildISO(startDate, endTime)
@@ -245,7 +246,17 @@ export function ReservationForm({
                   </div>
                 )}
                 {patientSearch && searchedPatients.length === 0 && showPatientSearch && (
-                  <p className="text-xs text-muted-foreground px-1">患者が見つかりません。新患として入力してください。</p>
+                  // 検索欄に入れた名前を下の氏名欄へ打ち直させず、そのまま新患として使えるようにする
+                  <div className="flex items-center justify-between gap-2 px-1">
+                    <p className="text-xs text-muted-foreground">患者が見つかりません</p>
+                    <button
+                      type="button"
+                      onClick={() => { setPatientName(patientSearch.trim()); setShowPatientSearch(false) }}
+                      className="text-xs font-medium text-green-700 hover:text-green-900 underline underline-offset-2 whitespace-nowrap"
+                    >
+                      「{patientSearch.trim()}」を新患として登録
+                    </button>
+                  </div>
                 )}
                 {/* 新患として直接入力 */}
                 <div className="grid grid-cols-2 gap-3 pt-1">

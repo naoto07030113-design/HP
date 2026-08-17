@@ -15,6 +15,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import type { Clinic, Staff } from '@/types/clinic'
 import { format } from 'date-fns'
+import { toast } from 'sonner'
 
 interface Props {
   open: boolean
@@ -69,7 +70,7 @@ export function PatientForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.name.trim()) return
+    if (!form.name.trim()) { toast.error('患者名を入力してください'); return }
     onSubmit({
       ...form,
       name_kana: form.name_kana || '',
@@ -108,7 +109,8 @@ export function PatientForm({
                 <Select value={form.clinic_id} onValueChange={(v) => set('clinic_id', v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {clinics.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                    {/* 閉院した院には新規に割り当てられないようにする */}
+                {clinics.filter((c) => c.is_active).map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>

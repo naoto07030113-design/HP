@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { toast } from 'sonner'
 
 interface Props {
   open: boolean
@@ -32,7 +33,7 @@ export function ClinicForm({ open, onOpenChange, initial, onSubmit }: Props) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.name.trim()) return
+    if (!form.name.trim()) { toast.error('院名を入力してください'); return }
     onSubmit(form)
     onOpenChange(false)
   }
