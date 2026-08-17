@@ -17,6 +17,7 @@ import { useClosedDaysStore, closedDaysStore } from '@/lib/closed-days-store'
 import { useSettingsStore } from '@/lib/settings-store'
 import { getSupabaseClient } from '@/lib/supabase'
 import { AnnouncementBanners } from '@/components/common/AnnouncementBanner'
+import { SelfCareGuide } from '@/components/reserve/SelfCareGuide'
 import { cn, normalizePhone } from '@/lib/utils'
 import type { Staff, Menu } from '@/types/clinic'
 import { VISIT_TYPE_LABELS } from '@/types/clinic'
@@ -923,6 +924,9 @@ export default function ReserveClinicPage() {
                 LINEで予約内容を保存する
               </a>
             )}
+
+            {/* 来院までの待ち時間に、整骨院らしいセルフケアを案内する */}
+            <SelfCareGuide />
 
             {clinic.phone && (
               <p className="text-xs text-center text-stone-400">
