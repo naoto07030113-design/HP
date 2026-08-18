@@ -1,12 +1,15 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { format } from 'date-fns'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, Pencil, Trash2, User, Stethoscope, Activity, FileText, CalendarDays } from 'lucide-react'
-import { medicalRecordStore } from '@/lib/medical-record-store'
+import { apiPost, ApiError } from '@/lib/api-client'
+import { toApiInput, toRecord, type MedicalRecordDto } from '@/features/records/hooks/useMedicalRecordList'
+import { toast } from 'sonner'
+import type { MedicalRecord } from '@/types/medical-record'
 import { useClinicStore } from '@/lib/clinic-store'
 import { usePatientStore } from '@/lib/patient-store'
 import { RecordForm } from '@/features/records/components/RecordForm'
@@ -48,13 +51,38 @@ export default function RecordDetailPage() {
   const [formOpen, setFormOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
 
-  // Use local state-driven re-read since store doesn't have a per-record hook
-  const record = medicalRecordStore.getById(recordId)
+  // カルテはAPI経由で1件だけ取得する。
+  // 全カルテをブラウザに載せてから探す形をやめ、所属院の判定もサーバーで行う。
+  const [record, setRecord] = useState<MedicalRecord | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+
+  const fetchRecord = useCallback(async () => {
+    setLoading(true)
+    setLoadError(null)
+    try {
+      const res = await apiPost<{ record: MedicalRecordDto }>(
+        '/api/v1/medical-records/get', { id: recordId }, { authenticated: true },
+      )
+      setRecord(toRecord(res.record))
+    } catch (err) {
+      setRecord(null)
+      setLoadError(err instanceof ApiError ? `${err.message}（${err.supportCode}）` : 'カルテを取得できませんでした。')
+    } finally {
+      setLoading(false)
+    }
+  }, [recordId])
+
+  useEffect(() => { void fetchRecord() }, [fetchRecord])
+
+  if (loading) {
+    return <div className="p-8 text-center text-sm text-muted-foreground">読み込み中...</div>
+  }
 
   if (!record) {
     return (
       <div className="p-8 text-center space-y-4">
-        <p className="text-muted-foreground">カルテが見つかりません</p>
+        <p className="text-muted-foreground">{loadError ?? 'カルテが見つかりません'}</p>
         <Link href="/admin/records">
           <Button variant="outline" size="sm">カルテ一覧に戻る</Button>
         </Link>
@@ -66,16 +94,28 @@ export default function RecordDetailPage() {
   const clinic = store.clinics.find((c) => c.id === record.clinic_id)
   const patient = patients.find((p) => p.id === record.patient_id)
 
-  function handleSubmit(data: MedicalRecordFormData) {
+  // 以前は失敗を握りつぶしていたため、保存できていないことに気づけなかった
+  async function handleSubmit(data: MedicalRecordFormData) {
     if (!record) return
-    medicalRecordStore.update(record.id, data).catch(() => {})
-    router.refresh()
+    try {
+      await apiPost('/api/v1/medical-records/update',
+        { id: record.id, ...toApiInput(data) }, { authenticated: true })
+      toast.success('カルテを更新しました')
+      await fetchRecord()
+    } catch (err) {
+      toast.error(err instanceof ApiError ? `${err.message}（${err.supportCode}）` : '更新に失敗しました')
+    }
   }
 
-  function handleDelete() {
+  async function handleDelete() {
     if (!record) return
-    medicalRecordStore.delete(record.id).catch(() => {})
-    router.push('/admin/records')
+    try {
+      await apiPost('/api/v1/medical-records/delete', { id: record.id }, { authenticated: true })
+      toast.success('カルテを削除しました')
+      router.push('/admin/records')
+    } catch (err) {
+      toast.error(err instanceof ApiError ? `${err.message}（${err.supportCode}）` : '削除に失敗しました')
+    }
   }
 
   const bp = record.blood_pressure_systolic && record.blood_pressure_diastolic

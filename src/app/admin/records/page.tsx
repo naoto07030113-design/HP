@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Plus, Search, Trash2, FileText, ChevronRight } from 'lucide-react'
-import { useMedicalRecordStore, medicalRecordStore } from '@/lib/medical-record-store'
+import { useMedicalRecordList, toApiInput } from '@/features/records/hooks/useMedicalRecordList'
+import { apiPost, ApiError } from '@/lib/api-client'
 import { useClinicStore } from '@/lib/clinic-store'
 import { usePatientStore } from '@/lib/patient-store'
 import { RecordForm } from '@/features/records/components/RecordForm'
@@ -18,7 +19,6 @@ import type { MedicalRecordFormData } from '@/types/medical-record'
 import { cn } from '@/lib/utils'
 
 export default function RecordsPage() {
-  const records = useMedicalRecordStore()
   const store = useClinicStore()
   const patients = usePatientStore()
 
@@ -30,24 +30,17 @@ export default function RecordsPage() {
   const [formOpen, setFormOpen] = useState(false)
   const [deleteId, setDeleteId] = useState<string | null>(null)
 
-  const filtered = useMemo(() => {
-    const q = search.toLowerCase()
-    return records.filter((r) => {
-      if (filterClinic !== 'all' && r.clinic_id !== filterClinic) return false
-      if (filterStaff !== 'all' && r.staff_id !== filterStaff) return false
-      if (filterFrom && r.visit_date < filterFrom) return false
-      if (filterTo && r.visit_date > filterTo) return false
-      if (!q) return true
-      return (
-        r.patient_name.toLowerCase().includes(q) ||
-        (r.subjective ?? '').includes(q) ||
-        r.treatment_methods.some((m) => m.includes(q))
-      )
-    })
-  }, [records, search, filterClinic, filterStaff, filterFrom, filterTo])
-
-  const thisMonth = format(new Date(), 'yyyy-MM')
-  const newThisMonth = records.filter((r) => r.visit_date.startsWith(thisMonth)).length
+  // 検索・絞り込み・ページングはサーバー側で行う。
+  // 診療録を全件ブラウザに載せると、他院の分まで端末に残り、件数上限で取りこぼす。
+  const {
+    items: filtered, stats, total, page, setPage, hasNext, loading, error, reload, perPage,
+  } = useMedicalRecordList({
+    search,
+    clinicId: filterClinic === 'all' ? null : filterClinic,
+    staffId: filterStaff === 'all' ? null : filterStaff,
+    from: filterFrom,
+    to: filterTo,
+  })
 
   const staffOptions = store.staff.filter(
     (s) => filterClinic === 'all' || s.clinic_id === filterClinic,
@@ -55,10 +48,11 @@ export default function RecordsPage() {
 
   async function handleSubmit(data: MedicalRecordFormData) {
     try {
-      await medicalRecordStore.create(data)
+      await apiPost('/api/v1/medical-records/create', toApiInput(data), { authenticated: true })
       toast.success('カルテを保存しました')
-    } catch {
-      toast.error('保存に失敗しました')
+      reload()
+    } catch (err) {
+      toast.error(err instanceof ApiError ? `${err.message}（${err.supportCode}）` : '保存に失敗しました')
     }
   }
 
@@ -79,16 +73,16 @@ export default function RecordsPage() {
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <div className="bg-white rounded-xl border border-border shadow-sm p-4">
           <p className="text-sm text-muted-foreground">総カルテ数</p>
-          <p className="text-3xl font-bold text-green-900 mt-1">{records.length}</p>
+          <p className="text-3xl font-bold text-green-900 mt-1">{stats.total}</p>
         </div>
         <div className="bg-white rounded-xl border border-border shadow-sm p-4">
           <p className="text-sm text-muted-foreground">今月の記録</p>
-          <p className="text-3xl font-bold text-gold-600 mt-1">{newThisMonth}</p>
+          <p className="text-3xl font-bold text-gold-600 mt-1">{stats.thisMonth}</p>
         </div>
         <div className="bg-white rounded-xl border border-border shadow-sm p-4 hidden sm:block">
           <p className="text-sm text-muted-foreground">対象患者数</p>
           <p className="text-3xl font-bold text-green-700 mt-1">
-            {new Set(records.map((r) => r.patient_id)).size}
+            {stats.patientCount}
           </p>
         </div>
       </div>
@@ -139,7 +133,7 @@ export default function RecordsPage() {
             クリア
           </Button>
         )}
-        <span className="text-xs text-muted-foreground self-center ml-auto">{filtered.length}件</span>
+        <span className="text-xs text-muted-foreground self-center ml-auto">{total}件</span>
       </div>
 
       {/* 一覧 */}
@@ -260,7 +254,8 @@ export default function RecordsPage() {
         onConfirm={async () => {
           if (deleteId) {
             try {
-              await medicalRecordStore.delete(deleteId)
+              await apiPost('/api/v1/medical-records/delete', { id: deleteId }, { authenticated: true })
+              reload()
               toast.success('削除しました')
             } catch {
               toast.error('削除に失敗しました')

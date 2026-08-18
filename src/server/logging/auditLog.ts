@@ -15,7 +15,7 @@ export type AuditAction =
   | 'patient.view' | 'patient.create' | 'patient.update' | 'patient.delete'
   | 'appointment.create' | 'appointment.update' | 'appointment.cancel' | 'appointment.reschedule'
   | 'appointment.lookup'
-  | 'medical_record.create' | 'medical_record.update' | 'medical_record.delete'
+  | 'medical_record.view' | 'medical_record.create' | 'medical_record.update' | 'medical_record.delete'
   | 'invoice.create' | 'invoice.update' | 'invoice.cancel' | 'invoice.delete'
   | 'staff.create' | 'staff.update' | 'role.update'
   | 'settings.update'
