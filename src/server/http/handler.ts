@@ -14,7 +14,7 @@
  */
 
 import { NextResponse } from 'next/server'
-import type { ZodSchema } from 'zod'
+import type { ZodType, ZodTypeDef } from 'zod'
 import { AppError, ERROR_CODES, toErrorBody, type FieldError } from '../errors/AppError'
 import { logger, type RequestLogger } from '../logging/logger'
 import { requireActor, type Actor } from '../auth/session'
@@ -52,8 +52,12 @@ type Options<TBody> = {
   auth: 'required' | 'public'
   /** auth: 'required' のときに要求する権限 */
   capability?: Capability
-  /** リクエストボディ（または検索文字列）のスキーマ */
-  schema?: ZodSchema<TBody>
+  /**
+   * リクエストボディ（または検索文字列）のスキーマ。
+   * .default() や .transform() を使うと入力型と出力型が変わるため、
+   * 入力側は unknown を許して出力側の型だけをハンドラへ渡す。
+   */
+  schema?: ZodType<TBody, ZodTypeDef, unknown>
   /** クエリ文字列を検証する場合は 'query' を指定（既定は JSON ボディ） */
   source?: 'body' | 'query'
 }

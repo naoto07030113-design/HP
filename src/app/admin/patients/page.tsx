@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Plus, Search, Trash2, Users, ChevronRight } from 'lucide-react'
-import { usePatientStore, patientStore } from '@/lib/patient-store'
+import { usePatientList, toApiInput } from '@/features/patients/hooks/usePatientList'
+import { apiPost, ApiError } from '@/lib/api-client'
 import { useClinicStore } from '@/lib/clinic-store'
 import { PatientForm } from '@/features/patients/components/PatientForm'
 import { ActiveBadge } from '@/components/common/StatusBadge'
@@ -20,46 +21,32 @@ import type { Patient, PatientFormData } from '@/types/patient'
 import { cn } from '@/lib/utils'
 
 export default function PatientsPage() {
-  const patients = usePatientStore()
   const store = useClinicStore()
-  const { loading } = store
   const [search, setSearch] = useState('')
   const [filterClinic, setFilterClinic] = useState('all')
+
+  // 検索・絞り込み・ページングはサーバー側で行う。
+  // 全患者をブラウザに載せると件数上限で取りこぼし、他院の情報まで端末に残る。
+  const {
+    items: filtered, stats, total, page, setPage, hasNext, loading, error, reload, perPage,
+  } = usePatientList({ search, clinicId: filterClinic === 'all' ? null : filterClinic })
   const [formOpen, setFormOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<Patient | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
-
-  const filtered = useMemo(() => {
-    const q = search.toLowerCase()
-    return patients
-      .filter((p) => {
-        if (filterClinic !== 'all' && p.clinic_id !== filterClinic) return false
-        if (!q) return true
-        return (
-          p.name.includes(q) ||
-          p.name_kana.toLowerCase().includes(q) ||
-          (p.phone ?? '').replace(/-/g, '').includes(q.replace(/-/g, ''))
-        )
-      })
-      .sort((a, b) => a.name_kana < b.name_kana ? -1 : 1)
-  }, [patients, search, filterClinic])
-
-  // 今月の新患数
-  const thisMonth = format(new Date(), 'yyyy-MM')
-  const newThisMonth = patients.filter(
-    (p) => p.first_visit_date?.startsWith(thisMonth) && (filterClinic === 'all' || p.clinic_id === filterClinic),
-  ).length
 
   function openEdit(p: Patient) { setEditTarget(p); setFormOpen(true) }
   function openAdd() { setEditTarget(null); setFormOpen(true) }
 
   async function handleSubmit(data: PatientFormData) {
     try {
-      if (editTarget) await patientStore.update(editTarget.id, data)
-      else await patientStore.create(data)
+      const input = toApiInput(data)
+      if (editTarget) await apiPost('/api/v1/patients/update', { id: editTarget.id, ...input }, { authenticated: true })
+      else await apiPost('/api/v1/patients/create', input, { authenticated: true })
       toast.success('保存しました')
-    } catch {
-      toast.error('保存に失敗しました')
+      reload()
+    } catch (err) {
+      // 失敗の理由と問い合わせ用の識別子を必ず伝える
+      toast.error(err instanceof ApiError ? `${err.message}（${err.supportCode}）` : '保存に失敗しました')
     }
   }
 
@@ -91,17 +78,17 @@ export default function PatientsPage() {
         <div className="bg-white rounded-xl border border-border shadow-sm p-4">
           <p className="text-sm text-muted-foreground">総患者数</p>
           <p className="text-3xl font-bold text-green-900 mt-1">
-            {filterClinic === 'all' ? patients.length : patients.filter((p) => p.clinic_id === filterClinic).length}
+            {stats.total}
           </p>
         </div>
         <div className="bg-white rounded-xl border border-border shadow-sm p-4">
           <p className="text-sm text-muted-foreground">今月の新患</p>
-          <p className="text-3xl font-bold text-gold-600 mt-1">{newThisMonth}</p>
+          <p className="text-3xl font-bold text-gold-600 mt-1">{stats.newThisMonth}</p>
         </div>
         <div className="bg-white rounded-xl border border-border shadow-sm p-4 hidden sm:block">
           <p className="text-sm text-muted-foreground">アクティブ</p>
           <p className="text-3xl font-bold text-green-700 mt-1">
-            {patients.filter((p) => p.is_active && (filterClinic === 'all' || p.clinic_id === filterClinic)).length}
+            {stats.active}
           </p>
         </div>
       </div>
@@ -130,8 +117,15 @@ export default function PatientsPage() {
             クリア
           </Button>
         )}
-        <span className="text-xs text-muted-foreground self-center ml-auto">{filtered.length}件</span>
+        <span className="text-xs text-muted-foreground self-center ml-auto">{total}件</span>
       </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm flex items-center justify-between gap-3">
+          <span>{error}</span>
+          <Button variant="outline" size="sm" className="h-7 text-xs" onClick={reload}>再試行</Button>
+        </div>
+      )}
 
       {/* 患者リスト */}
       {filtered.length === 0 ? (
@@ -240,18 +234,36 @@ export default function PatientsPage() {
         onSubmit={handleSubmit}
       />
 
+      {/* ページ送り。全件をブラウザに載せないため、ページ単位で取得している */}
+      {total > perPage && (
+        <div className="flex items-center justify-center gap-3 pt-1">
+          <Button variant="outline" size="sm" className="h-8"
+            disabled={page <= 1 || loading} onClick={() => setPage(page - 1)}>
+            前へ
+          </Button>
+          <span className="text-xs text-muted-foreground tabular-nums">
+            {(page - 1) * perPage + 1}–{Math.min(page * perPage, total)} / {total}件
+          </span>
+          <Button variant="outline" size="sm" className="h-8"
+            disabled={!hasNext || loading} onClick={() => setPage(page + 1)}>
+            次へ
+          </Button>
+        </div>
+      )}
+
       <ConfirmDialog
         open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}
         title="患者を削除しますか？"
-        description="この患者に関連するカルテ・予約も削除されます。この操作は元に戻せません。"
+        description="一覧に表示されなくなります。カルテと予約は記録として残り、必要な場合は管理者が復元できます。"
         confirmLabel="削除" variant="destructive"
         onConfirm={async () => {
           if (deleteId) {
             try {
-              await patientStore.delete(deleteId)
+              await apiPost('/api/v1/patients/delete', { id: deleteId }, { authenticated: true })
+              reload()
               toast.success('削除しました')
-            } catch {
-              toast.error('削除に失敗しました')
+            } catch (err) {
+              toast.error(err instanceof ApiError ? `${err.message}（${err.supportCode}）` : '削除に失敗しました')
             }
           }
           setDeleteId(null)
