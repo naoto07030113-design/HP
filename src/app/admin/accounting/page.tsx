@@ -10,7 +10,8 @@ import {
   Receipt, Plus, Search, TrendingUp, Calendar, AlertCircle,
   Pencil, Trash2, Printer, Eye,
 } from 'lucide-react'
-import { useAccountingStore, accountingStore } from '@/lib/accounting-store'
+import { useInvoiceList, toApiInput } from '@/features/accounting/hooks/useInvoiceList'
+import { apiPost, ApiError } from '@/lib/api-client'
 import { useClinicStore } from '@/lib/clinic-store'
 import { InvoiceForm } from '@/features/accounting/components/InvoiceForm'
 import { ReceiptDialog } from '@/features/accounting/components/ReceiptDialog'
@@ -28,7 +29,6 @@ const MONTH_START = format(startOfMonth(new Date()), 'yyyy-MM-dd')
 const MONTH_END = format(endOfMonth(new Date()), 'yyyy-MM-dd')
 
 export default function AccountingPage() {
-  useAccountingStore()
   const { clinics, staff } = useClinicStore()
 
   const [formOpen, setFormOpen] = useState(false)
@@ -43,20 +43,21 @@ export default function AccountingPage() {
   const [filterStatus, setFilterStatus] = useState<'all' | InvoiceStatus>('all')
   const [search, setSearch] = useState('')
 
-  const invoices = accountingStore.getAll()
+  // 検索・絞り込み・集計・ページングはサーバー側で行う。
+  // 金額もサーバーが計算するため、画面から合計を送ることはしない。
+  const {
+    items: filtered, stats, total, page, setPage, hasNext, loading, error, reload, perPage,
+  } = useInvoiceList({
+    clinicId: filterClinic === 'all' ? null : filterClinic,
+    status: filterStatus === 'all' ? null : filterStatus,
+    search,
+    from: dateFrom,
+    to: dateTo,
+  })
 
-  const filtered = useMemo(() => {
-    return invoices
-      .filter((i) => i.visit_date >= dateFrom && i.visit_date <= dateTo)
-      .filter((i) => filterClinic === 'all' || i.clinic_id === filterClinic)
-      .filter((i) => filterStatus === 'all' || i.status === filterStatus)
-      .filter((i) => !search || i.patient_name.includes(search) || i.invoice_number.includes(search))
-      .sort((a, b) => b.visit_date.localeCompare(a.visit_date) || b.created_at.localeCompare(a.created_at))
-  }, [invoices, dateFrom, dateTo, filterClinic, filterStatus, search])
-
-  const todaySales = accountingStore.getTodaySales()
-  const monthSales = accountingStore.getMonthSales()
-  const unpaidCount = accountingStore.getUnpaidCount()
+  const todaySales = stats.todaySales
+  const monthSales = stats.monthSales
+  const unpaidCount = stats.unpaidCount
 
   function openAdd() {
     setEditTarget(null)
@@ -70,20 +71,24 @@ export default function AccountingPage() {
 
   async function handleSave(data: InvoiceFormData) {
     try {
-      if (editTarget) await accountingStore.update(editTarget.id, data)
-      else await accountingStore.create(data)
+      const input = toApiInput(data)
+      if (editTarget) await apiPost('/api/v1/invoices/update', { id: editTarget.id, ...input }, { authenticated: true })
+      else await apiPost('/api/v1/invoices/create', input, { authenticated: true })
       toast.success('保存しました')
-    } catch {
-      toast.error('保存に失敗しました')
+      reload()
+    } catch (err) {
+      toast.error(err instanceof ApiError ? `${err.message}（${err.supportCode}）` : '保存に失敗しました')
     }
   }
 
   async function handlePaid(inv: Invoice) {
     try {
-      await accountingStore.update(inv.id, { status: 'paid' })
+      // 入金額が足りているかはサーバーが判定する
+      await apiPost('/api/v1/invoices/pay', { id: inv.id }, { authenticated: true })
       toast.success('支払済に更新しました')
-    } catch {
-      toast.error('更新に失敗しました')
+      reload()
+    } catch (err) {
+      toast.error(err instanceof ApiError ? `${err.message}（${err.supportCode}）` : '更新に失敗しました')
     }
   }
 
@@ -196,6 +201,13 @@ export default function AccountingPage() {
       </div>
 
       {/* 一覧テーブル */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm flex items-center justify-between gap-3">
+          <span>{error}</span>
+          <Button variant="outline" size="sm" className="h-7 text-xs" onClick={reload}>再試行</Button>
+        </div>
+      )}
+
       {filtered.length === 0 ? (
         <EmptyState
           icon={Receipt}
@@ -285,7 +297,7 @@ export default function AccountingPage() {
               <tfoot>
                 <tr className="border-t bg-green-50/60">
                   <td colSpan={5} className="px-4 py-3 text-xs font-semibold text-muted-foreground">
-                    {filtered.length}件
+                    {total}件
                   </td>
                   <td className="px-4 py-3 text-right font-bold text-green-900 whitespace-nowrap">
                     ¥{filtered.filter((i) => i.status === 'paid').reduce((s, i) => s + i.total_amount, 0).toLocaleString()}
@@ -313,6 +325,19 @@ export default function AccountingPage() {
         />
       )}
 
+      {/* ページ送り。全件をブラウザに載せないため、ページ単位で取得している */}
+      {total > perPage && (
+        <div className="flex items-center justify-center gap-3 pt-1">
+          <Button variant="outline" size="sm" className="h-8"
+            disabled={page <= 1 || loading} onClick={() => setPage(page - 1)}>前へ</Button>
+          <span className="text-xs text-muted-foreground tabular-nums">
+            {(page - 1) * perPage + 1}–{Math.min(page * perPage, total)} / {total}件
+          </span>
+          <Button variant="outline" size="sm" className="h-8"
+            disabled={!hasNext || loading} onClick={() => setPage(page + 1)}>次へ</Button>
+        </div>
+      )}
+
       <ConfirmDialog
         open={!!deleteId}
         onOpenChange={(o) => !o && setDeleteId(null)}
@@ -322,7 +347,8 @@ export default function AccountingPage() {
         onConfirm={async () => {
           if (deleteId) {
             try {
-              await accountingStore.delete(deleteId)
+              await apiPost('/api/v1/invoices/delete', { id: deleteId }, { authenticated: true })
+              reload()
               toast.success('削除しました')
             } catch {
               toast.error('削除に失敗しました')
