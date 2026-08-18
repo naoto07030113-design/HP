@@ -39,6 +39,13 @@ function setState(updater: (prev: StoreState) => StoreState) {
 
 // ── Data loading ──────────────────────────────────────────
 
+/**
+ * 患者向けページでは予約一覧を取得しない。
+ * 空き枠は /api/v1/appointments/availability がサーバー側で算出するため、
+ * ブラウザが他の患者の氏名・電話番号を受け取る必要がない。
+ */
+let _scope: 'admin' | 'public' = 'admin'
+
 async function loadFromSupabase(): Promise<void> {
   const supabase = getSupabaseClient()
 
@@ -57,7 +64,9 @@ async function loadFromSupabase(): Promise<void> {
     supabase.from('menus').select('*').order('sort_order'),
     supabase.from('shifts').select('*'),
     supabase.from('shift_blocks').select('*'),
-    supabase.from('reservations').select('*').order('start_at', { ascending: false }),
+    _scope === 'public'
+      ? Promise.resolve({ data: [], error: null })
+      : supabase.from('reservations').select('*').order('start_at', { ascending: false }),
   ])
 
   const errors = [
@@ -199,8 +208,9 @@ function setupRealtime() {
 }
 
 /** Called by StoreHydrationProvider on app startup. Safe to call multiple times. */
-export async function hydrateClinicStore(): Promise<void> {
+export async function hydrateClinicStore(scope: 'admin' | 'public' = 'admin'): Promise<void> {
   if (typeof window === 'undefined') return
+  _scope = scope
   if (!_loadPromise) {
     _loadPromise = loadFromSupabase().then(() => {
       setupRealtime()

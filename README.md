@@ -33,7 +33,7 @@ Vercel（または `.env.local`）に設定:
 |---|---|---|
 | `NEXT_PUBLIC_CLINIC_SUPABASE_URL` | ✓ | Supabase プロジェクトURL |
 | `NEXT_PUBLIC_CLINIC_SUPABASE_ANON_KEY` | ✓ | anon (publishable) キー |
-| `CLINIC_SERVICE_ROLE_KEY` | 推奨 | service_role キー（初診予約APIで使用。未設定でも動作） |
+| `CLINIC_SERVICE_ROLE_KEY` | ✓ | service_role キー。予約API全般が使用する。**未設定だと予約機能が動作しない** |
 | `LINE_CHANNEL_TOKENS` | 任意 | 新規予約のLINE通知。`{"<clinicのUUID>": "<チャネルトークン>"}` 形式のJSON |
 
 ### 3. ローカル起動 / デプロイ
@@ -72,3 +72,13 @@ Vercel には main ブランチを接続してデプロイします。
 ## LINE通知
 
 新規予約が入ると、院ごとに設定したLINE公式アカウントへブロードキャスト通知します。`LINE_CHANNEL_TOKENS` を設定し、通知を受けたいスタッフがその公式アカウントを友だち追加してください。未設定の場合は通知なしで正常動作します。
+
+## ドキュメント
+
+| ファイル | 内容 |
+|---|---|
+| `PROJECT_STATE.md` | 現在の作業状況と次に行うこと（**まずこれを読む**） |
+| `ARCHITECTURE.md` | 構成と各層の責務、APIの約束ごと |
+| `SECURITY.md` | 権限設計、患者データの保護方針、ユーザーの作り方 |
+| `RUNBOOK.md` | 障害対応手順（リクエストIDからの追跡方法） |
+| `BACKUP.md` | バックアップと復旧手順 |

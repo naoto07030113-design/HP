@@ -518,21 +518,25 @@ CREATE POLICY "staff_all_monthly_reports"      ON monthly_reports      FOR ALL T
 CREATE POLICY "public_select_clinics"       ON clinics       FOR SELECT TO anon USING (is_active = true);
 CREATE POLICY "public_select_staff"         ON staff         FOR SELECT TO anon USING (is_active = true AND is_bookable = true);
 CREATE POLICY "public_select_menus"         ON menus         FOR SELECT TO anon USING (is_active = true);
-CREATE POLICY "public_select_shifts"        ON shifts        FOR SELECT TO anon USING (true);
-CREATE POLICY "public_select_shift_blocks"  ON shift_blocks  FOR SELECT TO anon USING (true);
 CREATE POLICY "public_select_announcements" ON announcements FOR SELECT TO anon USING (is_active = true);
 CREATE POLICY "public_select_closed_days"   ON closed_days   FOR SELECT TO anon USING (true);
 CREATE POLICY "public_select_app_settings"  ON app_settings  FOR SELECT TO anon USING (true);
 CREATE POLICY "public_select_merchandise"   ON merchandise   FOR SELECT TO anon USING (is_active = true);
 
--- 予約: 空き枠計算・キャンセル検索に閲覧が、Web予約に作成が、
--- キャンセル・日時変更に更新が必要（削除は不可）
-CREATE POLICY "public_select_reservations" ON reservations FOR SELECT TO anon USING (true);
-CREATE POLICY "public_insert_reservations" ON reservations FOR INSERT TO anon WITH CHECK (true);
-CREATE POLICY "public_update_reservations" ON reservations FOR UPDATE TO anon USING (true) WITH CHECK (true);
-
--- 患者情報: 問診票の登録のみ（閲覧・変更・削除は不可）
-CREATE POLICY "public_insert_patients" ON patients FOR INSERT TO anon WITH CHECK (true);
+-- 予約・患者情報: anon からは一切触れさせない。
+--
+-- 以前はここで anon に SELECT / INSERT / UPDATE を許していたため、
+--   ・公開キーを持つ誰でも全院の予約（患者氏名・電話番号）を取得できた
+--   ・第三者が他人の予約をキャンセル・日時変更できた
+-- という状態だった。
+--
+-- 現在は次の API がサーバー側で本人確認・権限判定・入力検証を行う:
+--   POST /api/v1/appointments/availability  空き枠の算出（予約そのものは返さない）
+--   POST /api/v1/appointments/lookup        予約の照会（電話番号が一致するものだけ）
+--   POST /api/v1/appointments/cancel        キャンセル（予約ID＋電話番号で本人確認）
+--   POST /api/v1/appointments/reschedule    日時変更（同上＋空き枠を再確認）
+--   POST /api/intake                        Web予約の登録
+-- これらは service_role で動作するため、anon 向けのポリシーは不要。
 
 -- 物販予約: 作成のみ（他の患者の予約は見えない）
 CREATE POLICY "public_insert_merch_bookings" ON merchandise_bookings FOR INSERT TO anon WITH CHECK (true);

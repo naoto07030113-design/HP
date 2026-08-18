@@ -14,17 +14,26 @@ export interface CurrentUser {
   displayName: string
 }
 
+/**
+ * ロールと所属院は app_metadata からのみ読む。
+ *
+ * user_metadata は利用者本人が auth.updateUser() で書き換えられるため、
+ * そこを見ていると受付スタッフが自分を管理者に昇格できてしまう。
+ * 未設定は最小権限（receptionist）に倒す。以前は admin 扱いだった。
+ *
+ * ここでの判定はあくまで画面の出し分け用。実際のアクセス制御は
+ * サーバー側（src/server/permissions/policy.ts）が行う。
+ */
 function roleFromUser(user: User): UserRole {
-  const meta = user.user_metadata ?? {}
-  const appMeta = user.app_metadata ?? {}
-  const raw = meta.role ?? appMeta.role
+  const raw = (user.app_metadata ?? {}).role
+  if (raw === 'admin') return 'admin'
   if (raw === 'staff') return 'staff'
-  if (raw === 'receptionist') return 'receptionist'
-  return 'admin'
+  return 'receptionist'
 }
 
 function clinicIdFromUser(user: User): string | undefined {
-  return user.user_metadata?.clinic_id ?? user.app_metadata?.clinic_id ?? undefined
+  const raw = (user.app_metadata ?? {}).clinic_id
+  return typeof raw === 'string' && raw.length > 0 ? raw : undefined
 }
 
 function nameFromUser(user: User): string {

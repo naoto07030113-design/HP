@@ -1,18 +1,32 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { format, parseISO, isSameDay, addDays, differenceInHours } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import Link from 'next/link'
 import { Input } from '@/components/ui/input'
 import { ArrowLeft, Phone, CalendarCheck, X, Pencil, ChevronLeft, ChevronRight } from 'lucide-react'
-import { getSupabaseClient } from '@/lib/supabase'
+import { apiPost, ApiError } from '@/lib/api-client'
 import { useClinicStore } from '@/lib/clinic-store'
 import { useClosedDaysStore, closedDaysStore } from '@/lib/closed-days-store'
 import { useSettingsStore } from '@/lib/settings-store'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
-import { cn, normalizePhone } from '@/lib/utils'
-import type { Reservation } from '@/types/clinic'
+import { cn } from '@/lib/utils'
+
+/** API が返す患者向けの予約。他の患者の情報は一切含まれない */
+type MyAppointment = {
+  id: string
+  clinicId: string
+  clinicName: string
+  menuId: string | null
+  patientName: string
+  staffName: string | null
+  menuName: string | null
+  menuDurationMin: number | null
+  startAt: string
+  endAt: string
+  cancellable: boolean
+}
 
 function timeToMinutes(t: string) {
   const [h, m] = t.split(':').map(Number)
@@ -35,7 +49,7 @@ export default function CancelPage() {
   const settings = useSettingsStore()
 
   const [phone, setPhone] = useState('')
-  const [reservations, setReservations] = useState<Reservation[]>([])
+  const [reservations, setReservations] = useState<MyAppointment[]>([])
   const [searched, setSearched] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -43,7 +57,9 @@ export default function CancelPage() {
   const [cancelId, setCancelId] = useState<string | null>(null)
   const [cancelling, setCancelling] = useState(false)
 
-  const [changeTarget, setChangeTarget] = useState<Reservation | null>(null)
+  const [changeTarget, setChangeTarget] = useState<MyAppointment | null>(null)
+  const [slots, setSlots] = useState<string[]>([])
+  const [slotsLoading, setSlotsLoading] = useState(false)
   const [changeDate, setChangeDate] = useState<Date | null>(null)
   const [changeTime, setChangeTime] = useState<string | null>(null)
   const [calendarOffset, setCalendarOffset] = useState(0)
@@ -64,42 +80,36 @@ export default function CancelPage() {
   }, [calendarOffset])
 
   const changeClinic = changeTarget
-    ? store.clinics.find((c) => c.id === changeTarget.clinic_id)
-    : null
-  const changeMenu = changeTarget
-    ? store.menus.find((m) => m.id === changeTarget.menu_id)
+    ? store.clinics.find((c) => c.id === changeTarget.clinicId)
     : null
   function isDayClosed(day: Date): boolean {
     if (!changeTarget) return false
-    const closure = closedDaysStore.getClosureForDate(day, changeTarget.clinic_id)
+    const closure = closedDaysStore.getClosureForDate(day, changeTarget.clinicId)
     return closure?.allDay === true
   }
 
-  const availableSlots = useMemo(() => {
-    if (!changeTarget || !changeClinic || !changeMenu || !changeDate) return []
-    const date = format(changeDate, 'yyyy-MM-dd')
-    const duration = changeMenu.duration_min
-    const slots = generateSlots(changeClinic.open_time, changeClinic.close_time, duration)
-    const closure = closedDaysStore.getClosureForDate(changeDate, changeTarget.clinic_id)
-    return slots.filter((t) => {
-      const startMin = timeToMinutes(t)
-      const endMin = startMin + duration
-      if (closure && !closure.allDay && closure.closedFrom && closure.closedTo) {
-        if (startMin >= timeToMinutes(closure.closedFrom) && startMin < timeToMinutes(closure.closedTo)) return false
-      }
-      return !store.reservations.some((r) => {
-        if (r.id === changeTarget.id) return false
-        if (r.status === 'cancelled' || r.status === 'no_show') return false
-        if (changeTarget.staff_id && r.staff_id !== changeTarget.staff_id) return false
-        if (format(parseISO(r.start_at), 'yyyy-MM-dd') !== date) return false
-        const rStart = parseISO(r.start_at)
-        const rEnd = parseISO(r.end_at)
-        const rStartMin = rStart.getHours() * 60 + rStart.getMinutes()
-        const rEndMin = rEnd.getHours() * 60 + rEnd.getMinutes()
-        return startMin < rEndMin && endMin > rStartMin
+  // 空き枠はサーバーで算出する。以前はブラウザが全予約を受け取って計算していたため、
+  // 空きを知るためだけに他の患者の氏名と電話番号まで配信されていた。
+  useEffect(() => {
+    if (!changeTarget || !changeDate) { setSlots([]); return }
+    const controller = new AbortController()
+    setSlotsLoading(true)
+    apiPost<{ slots: string[] }>('/api/v1/appointments/availability', {
+      clinicId: changeTarget.clinicId,
+      menuId: changeTarget.menuId,
+      date: format(changeDate, 'yyyy-MM-dd'),
+      excludeReservationId: changeTarget.id,
+    }, { signal: controller.signal })
+      .then((res) => setSlots(res.slots))
+      .catch((err) => {
+        if (err instanceof ApiError) setError(err.message)
+        setSlots([])
       })
-    })
-  }, [changeTarget, changeClinic, changeMenu, changeDate, store.reservations])
+      .finally(() => setSlotsLoading(false))
+    return () => controller.abort()
+  }, [changeTarget, changeDate])
+
+  const availableSlots = slots
 
   async function handleSearch() {
     if (!phone.trim()) return
@@ -108,21 +118,14 @@ export default function CancelPage() {
     setSearched(false)
     setChangeTarget(null)
     try {
-      const supabase = getSupabaseClient()
-      // ハイフン有無などの表記ゆれに対応するため、今後の予約を取得して正規化比較で絞り込む
-      const { data, error: err } = await supabase
-        .from('reservations')
-        .select('*')
-        .eq('status', 'confirmed')
-        .not('patient_phone', 'is', null)
-        .gte('start_at', new Date().toISOString())
-        .order('start_at')
-      if (err) throw err
-      const target = normalizePhone(phone.trim())
-      setReservations((data ?? []).filter((r) => normalizePhone(r.patient_phone ?? '') === target))
+      const res = await apiPost<{ appointments: MyAppointment[] }>(
+        '/api/v1/appointments/lookup', { phone: phone.trim() },
+      )
+      setReservations(res.appointments)
       setSearched(true)
-    } catch {
-      setError('検索に失敗しました。しばらくしてから再試行してください。')
+    } catch (err) {
+      // サーバーは利用者向けの文言だけを返す。問い合わせ用に識別子も添える
+      setError(err instanceof ApiError ? `${err.message}（${err.supportCode}）` : '検索に失敗しました。しばらくしてから再試行してください。')
     } finally {
       setLoading(false)
     }
@@ -132,16 +135,12 @@ export default function CancelPage() {
     if (!cancelId) return
     setCancelling(true)
     try {
-      const supabase = getSupabaseClient()
-      const { error: err } = await supabase
-        .from('reservations')
-        .update({ status: 'cancelled', updated_at: new Date().toISOString() })
-        .eq('id', cancelId)
-      if (err) throw err
+      // 本人確認（予約ID＋電話番号）と期限判定はサーバー側で行う
+      await apiPost('/api/v1/appointments/cancel', { reservationId: cancelId, phone: phone.trim() })
       setReservations((prev) => prev.filter((r) => r.id !== cancelId))
       setCancelId(null)
-    } catch {
-      setError('キャンセルに失敗しました。院に直接ご連絡ください。')
+    } catch (err) {
+      setError(err instanceof ApiError ? `${err.message}（${err.supportCode}）` : 'キャンセルに失敗しました。院に直接ご連絡ください。')
       setCancelId(null)
     } finally {
       setCancelling(false)
@@ -149,38 +148,39 @@ export default function CancelPage() {
   }
 
   async function handleChange() {
-    if (!changeTarget || !changeDate || !changeTime || !changeMenu) return
+    if (!changeTarget || !changeDate || !changeTime) return
+    const duration = changeTarget.menuDurationMin ?? 60
     setChanging(true)
     try {
       const date = format(changeDate, 'yyyy-MM-dd')
-      const newStart = new Date(`${date}T${changeTime}:00`).toISOString()
-      const newEnd = new Date(
-        new Date(`${date}T${changeTime}:00`).getTime() + changeMenu.duration_min * 60 * 1000,
-      ).toISOString()
-      const supabase = getSupabaseClient()
-      const { error: err } = await supabase
-        .from('reservations')
-        .update({ start_at: newStart, end_at: newEnd, updated_at: new Date().toISOString() })
-        .eq('id', changeTarget.id)
-      if (err) throw err
+      const startLocal = new Date(`${date}T${changeTime}:00`)
+      const newStart = startLocal.toISOString()
+      const newEnd = new Date(startLocal.getTime() + duration * 60 * 1000).toISOString()
+
+      // 本人確認と枠の空き確認はサーバー側で再度行われる
+      await apiPost('/api/v1/appointments/reschedule', {
+        reservationId: changeTarget.id,
+        phone: phone.trim(),
+        startAt: newStart,
+        endAt: newEnd,
+      })
+
       setReservations((prev) =>
-        prev.map((r) =>
-          r.id === changeTarget.id ? { ...r, start_at: newStart, end_at: newEnd } : r,
-        ),
+        prev.map((r) => (r.id === changeTarget.id ? { ...r, startAt: newStart, endAt: newEnd } : r)),
       )
       setChangeTarget(null)
       setChangeDate(null)
       setChangeTime(null)
       setConfirmChangeOpen(false)
-    } catch {
-      setError('変更に失敗しました。院に直接ご連絡ください。')
+    } catch (err) {
+      setError(err instanceof ApiError ? `${err.message}（${err.supportCode}）` : '変更に失敗しました。院に直接ご連絡ください。')
       setConfirmChangeOpen(false)
     } finally {
       setChanging(false)
     }
   }
 
-  function openChange(r: Reservation) {
+  function openChange(r: MyAppointment) {
     setChangeTarget(r)
     setChangeDate(null)
     setChangeTime(null)
@@ -252,7 +252,7 @@ export default function CancelPage() {
                 <p className="text-xs text-stone-400 px-1">{reservations.length}件の予約が見つかりました</p>
                 {reservations.map((r) => {
                   const isChanging = changeTarget?.id === r.id
-                  const hoursUntil = differenceInHours(parseISO(r.start_at), new Date())
+                  const hoursUntil = differenceInHours(parseISO(r.startAt), new Date())
                   const withinDeadline = hoursUntil < settings.minCancellationHours
                   return (
                     <div key={r.id} className={cn(
@@ -265,9 +265,9 @@ export default function CancelPage() {
                         <div className="flex items-start justify-between gap-3">
                           <div>
                             <p className="font-bold text-emerald-950">
-                              {format(parseISO(r.start_at), 'M月d日（E） HH:mm', { locale: ja })}
+                              {format(parseISO(r.startAt), 'M月d日（E） HH:mm', { locale: ja })}
                             </p>
-                            <p className="text-sm text-stone-500 mt-0.5">{r.patient_name}</p>
+                            <p className="text-sm text-stone-500 mt-0.5">{r.patientName}</p>
                           </div>
                           <div className="flex gap-2 flex-shrink-0">
                             {!isChanging && !withinDeadline && (

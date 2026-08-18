@@ -29,13 +29,18 @@ function setState(updater: (prev: StoreState) => StoreState) {
   notify()
 }
 
+// 物販予約には他の患者の氏名・電話番号が含まれるため、患者向けでは取得しない
+let _scope: 'admin' | 'public' = 'admin'
+
 async function loadFromSupabase(): Promise<void> {
   const supabase = getSupabaseClient()
   setState((s) => ({ ...s, loading: true, error: null }))
 
   const [mercRes, bookRes] = await Promise.all([
     supabase.from('merchandise').select('*').order('sort_order'),
-    supabase.from('merchandise_bookings').select('*, merchandise(*)').order('booked_at', { ascending: false }),
+    _scope === 'public'
+      ? Promise.resolve({ data: [], error: null })
+      : supabase.from('merchandise_bookings').select('*, merchandise(*)').order('booked_at', { ascending: false }),
   ])
 
   // 予約一覧はスタッフ専用（患者側の匿名アクセスでは読めない）ため、
@@ -81,8 +86,9 @@ function setupRealtime() {
     .subscribe()
 }
 
-export async function hydrateMerchandiseStore(): Promise<void> {
+export async function hydrateMerchandiseStore(scope: 'admin' | 'public' = 'admin'): Promise<void> {
   if (typeof window === 'undefined') return
+  _scope = scope
   if (!_loadPromise) {
     _loadPromise = loadFromSupabase().then(() => {
       setupRealtime()

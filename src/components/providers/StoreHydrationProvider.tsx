@@ -21,11 +21,11 @@ export function StoreHydrationProvider({
 }) {
   useEffect(() => {
     const tasks = [
-      hydrateClinicStore(),
+      hydrateClinicStore(scope),
       hydrateAnnouncementsStore(),
       hydrateSettingsStore(),
       hydrateClosedDaysStore(),
-      hydrateMerchandiseStore(),
+      hydrateMerchandiseStore(scope),
     ]
     if (scope === 'admin') {
       tasks.push(

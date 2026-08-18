@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { format, isSameDay, parseISO, addDays } from 'date-fns'
 import { ja } from 'date-fns/locale'
@@ -16,6 +16,7 @@ import { useAnnouncementsStore, announcementsStore } from '@/lib/announcement-st
 import { useClosedDaysStore, closedDaysStore } from '@/lib/closed-days-store'
 import { useSettingsStore } from '@/lib/settings-store'
 import { getSupabaseClient } from '@/lib/supabase'
+import { apiPost, ApiError } from '@/lib/api-client'
 import { AnnouncementBanners } from '@/components/common/AnnouncementBanner'
 import { SelfCareGuide } from '@/components/reserve/SelfCareGuide'
 import { cn, normalizePhone } from '@/lib/utils'
@@ -149,43 +150,33 @@ export default function ReserveClinicPage() {
     return { cells, firstOfMonth }
   }, [calendarOffset])
 
-  // 利用可能時間帯（休診時間帯・担当者のシフト/予約不可ブロックを除外）
-  const availableSlots = useMemo(() => {
-    if (!clinic || !selectedMenu || !selectedDate) return []
-    const date = format(selectedDate, 'yyyy-MM-dd')
-    const slots = generateTimeSlots(clinic.open_time, clinic.close_time, selectedMenu.duration_min)
-    const closure = closedDaysStore.getClosureForDate(selectedDate, clinicId)
+  // 空き枠はサーバーで算出する。
+  // 以前はブラウザが全予約を受け取って計算していたため、空きを知るためだけに
+  // 他の患者の氏名と電話番号まで配信されていた。
+  const [availableSlots, setAvailableSlots] = useState<string[]>([])
+  const [slotsLoading, setSlotsLoading] = useState(false)
+  const [slotsError, setSlotsError] = useState<string | null>(null)
 
-    // 指名ありの場合: その日のシフトを参照（シフト登録が無い日は院の営業時間で受付）
-    const staffShift = selectedStaff
-      ? store.shifts.find((sh) => sh.staff_id === selectedStaff.id && sh.work_date === date)
-      : null
-    if (selectedStaff && staffShift && staffShift.shift_type !== 'work') return []
-    const staffBlocks = selectedStaff
-      ? store.shiftBlocks.filter((b) => b.staff_id === selectedStaff.id && b.block_date === date)
-      : []
-
-    return slots.filter((t) => {
-      const slotStart = timeToMinutes(t)
-      const slotEnd = slotStart + selectedMenu.duration_min
-      if (!isSlotAvailable(date, t, selectedStaff?.id ?? null, selectedMenu.duration_min, store.reservations)) {
-        return false
-      }
-      if (closure && !closure.allDay && closure.closedFrom && closure.closedTo) {
-        if (slotStart >= timeToMinutes(closure.closedFrom) && slotStart < timeToMinutes(closure.closedTo)) return false
-      }
-      if (staffShift && staffShift.shift_type === 'work') {
-        if (slotStart < timeToMinutes(staffShift.start_time) || slotEnd > timeToMinutes(staffShift.end_time)) return false
-        if (staffShift.break_start && staffShift.break_end) {
-          if (slotStart < timeToMinutes(staffShift.break_end) && slotEnd > timeToMinutes(staffShift.break_start)) return false
-        }
-      }
-      if (staffBlocks.some((b) => slotStart < timeToMinutes(b.end_time) && slotEnd > timeToMinutes(b.start_time))) {
-        return false
-      }
-      return true
-    })
-  }, [clinic, clinicId, selectedMenu, selectedStaff, selectedDate, store.reservations, store.shifts, store.shiftBlocks])
+  useEffect(() => {
+    if (!clinic || !selectedMenu || !selectedDate) { setAvailableSlots([]); return }
+    const controller = new AbortController()
+    setSlotsLoading(true)
+    setSlotsError(null)
+    apiPost<{ slots: string[] }>('/api/v1/appointments/availability', {
+      clinicId,
+      menuId: selectedMenu.id,
+      staffId: selectedStaff?.id ?? null,
+      date: format(selectedDate, 'yyyy-MM-dd'),
+    }, { signal: controller.signal })
+      .then((res) => setAvailableSlots(res.slots))
+      .catch((err) => {
+        if (controller.signal.aborted) return
+        setAvailableSlots([])
+        setSlotsError(err instanceof ApiError ? err.message : '空き時間を取得できませんでした。')
+      })
+      .finally(() => { if (!controller.signal.aborted) setSlotsLoading(false) })
+    return () => controller.abort()
+  }, [clinic, clinicId, selectedMenu, selectedStaff, selectedDate])
 
   function goNext() {
     const idx = STEPS.indexOf(step)
@@ -574,7 +565,26 @@ export default function ReserveClinicPage() {
                   {t}
                 </button>
               ))}
-              {availableSlots.length === 0 && (
+              {/* 空き枠はサーバーへ問い合わせる。取得中に「空きなし」と出さない */}
+              {slotsLoading && (
+                <div className="col-span-3 py-10 text-center text-stone-400 text-sm flex items-center justify-center gap-2">
+                  <span className="inline-block w-4 h-4 border-2 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
+                  空き時間を確認しています
+                </div>
+              )}
+              {!slotsLoading && slotsError && (
+                <div className="col-span-3 py-8 text-center space-y-3">
+                  <p className="text-sm text-red-600">{slotsError}</p>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDate(selectedDate ? new Date(selectedDate) : null)}
+                    className="rs-press text-sm font-semibold text-emerald-800 underline underline-offset-2"
+                  >
+                    もう一度試す
+                  </button>
+                </div>
+              )}
+              {!slotsLoading && !slotsError && availableSlots.length === 0 && (
                 <div className="col-span-3 py-10 text-center text-stone-400 text-sm">
                   この日は空き枠がありません
                 </div>
