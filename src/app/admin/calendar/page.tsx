@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { format, addDays, subDays, startOfWeek, addWeeks, subWeeks, addMonths, subMonths, parseISO } from 'date-fns'
+import { useState, useEffect, useMemo } from 'react'
+import { format, addDays, subDays, startOfWeek, addWeeks, subWeeks, addMonths, subMonths, startOfMonth, endOfMonth, parseISO } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -12,7 +12,10 @@ import { WeekCalendar } from '@/features/reservations/components/calendar/WeekCa
 import { MonthCalendar } from '@/features/reservations/components/calendar/MonthCalendar'
 import { ReservationForm } from '@/features/reservations/components/ReservationForm'
 import { useClinicStore } from '@/lib/clinic-store'
-import { reservationsStore, clinicsStore } from '@/lib/clinic-store'
+import { clinicsStore } from '@/lib/clinic-store'
+import { useReservationList, toApiInput } from '@/features/reservations/hooks/useReservationList'
+import { apiPost, ApiError } from '@/lib/api-client'
+import { toast } from 'sonner'
 import type { Reservation } from '@/types/clinic'
 import { StatusBadge } from '@/components/common/StatusBadge'
 import { RESERVATION_STATUS_LABELS } from '@/types/clinic'
@@ -37,6 +40,31 @@ export default function CalendarPage() {
 
   const clinic = store.clinics.find((c) => c.id === selectedClinicId)
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 })
+
+  // 表示している期間の予約だけをサーバーから取得する。
+  // 以前は全期間・全院の予約をブラウザに載せていた。
+  const range = useMemo(() => {
+    if (view === 'day') {
+      const d = format(currentDate, 'yyyy-MM-dd')
+      return { from: d, to: d }
+    }
+    if (view === 'week') {
+      return { from: format(weekStart, 'yyyy-MM-dd'), to: format(addDays(weekStart, 6), 'yyyy-MM-dd') }
+    }
+    const first = startOfMonth(currentDate)
+    return { from: format(first, 'yyyy-MM-dd'), to: format(endOfMonth(first), 'yyyy-MM-dd') }
+  }, [view, currentDate, weekStart])
+
+  const {
+    items: reservations, loading: resLoading, error: resError, reload,
+  } = useReservationList({
+    clinicId: selectedClinicId || null,
+    status: null,
+    search: '',
+    from: range.from,
+    to: range.to,
+    perPage: 500,
+  })
 
   // 院の読み込み完了後（または選択中の院が無効化された場合）に有効な院を選び直す
   useEffect(() => {
@@ -71,26 +99,55 @@ export default function CalendarPage() {
     setDetailOpen(true)
   }
 
-  function handleMoveReservation(id: string, staffId: string, start: string, end: string) {
-    reservationsStore.update(id, { staff_id: staffId, start_at: start, end_at: end }).catch(() => {})
+  // 以前はいずれも .catch(() => {}) で失敗を握りつぶしており、
+  // 保存できていないことがスタッフに伝わらなかった
+  function reportError(err: unknown, fallback: string) {
+    toast.error(err instanceof ApiError ? `${err.message}（${err.supportCode}）` : fallback)
+    reload()
   }
 
-  function handleFormSubmit(data: Parameters<typeof reservationsStore.create>[0]) {
-    if (editTarget) {
-      reservationsStore.update(editTarget.id, data).catch(() => {})
-    } else {
-      reservationsStore.create(data).catch(() => {})
+  async function handleMoveReservation(id: string, staffId: string, start: string, end: string) {
+    try {
+      // 移動先の枠が空いているかはサーバーが判定する
+      await apiPost('/api/v1/reservations/update',
+        { id, staffId, startAt: start, endAt: end }, { authenticated: true })
+      reload()
+    } catch (err) {
+      reportError(err, '予約の移動に失敗しました')
     }
   }
 
-  function handleStatusChange(id: string, status: Reservation['status']) {
-    reservationsStore.update(id, { status }).catch(() => {})
-    setDetailOpen(false)
+  async function handleFormSubmit(data: Partial<Reservation>) {
+    try {
+      const input = toApiInput(data)
+      if (editTarget) await apiPost('/api/v1/reservations/update', { id: editTarget.id, ...input }, { authenticated: true })
+      else await apiPost('/api/v1/reservations/create', input, { authenticated: true })
+      toast.success('保存しました')
+      reload()
+    } catch (err) {
+      reportError(err, '保存に失敗しました')
+    }
   }
 
-  function handleDelete(id: string) {
-    reservationsStore.delete(id).catch(() => {})
+  async function handleStatusChange(id: string, status: Reservation['status']) {
     setDetailOpen(false)
+    try {
+      await apiPost('/api/v1/reservations/status', { id, status }, { authenticated: true })
+      reload()
+    } catch (err) {
+      reportError(err, '状態の変更に失敗しました')
+    }
+  }
+
+  async function handleDelete(id: string) {
+    setDetailOpen(false)
+    try {
+      await apiPost('/api/v1/reservations/delete', { id }, { authenticated: true })
+      toast.success('削除しました')
+      reload()
+    } catch (err) {
+      reportError(err, '削除に失敗しました')
+    }
   }
 
   const activeClinics = store.clinics.filter((c) => c.is_active)
@@ -158,7 +215,7 @@ export default function CalendarPage() {
           <MonthCalendar
             month={currentDate}
             clinicId={selectedClinicId}
-            reservations={store.reservations}
+            reservations={reservations}
             onDateClick={(date) => { setCurrentDate(new Date(date + 'T00:00:00')); setView('day') }}
             onPrevMonth={goBack}
             onNextMonth={goForward}
@@ -170,7 +227,7 @@ export default function CalendarPage() {
             date={format(currentDate, 'yyyy-MM-dd')}
             clinic={clinic}
             staff={store.staff}
-            reservations={store.reservations}
+            reservations={reservations}
             menus={store.menus}
             onReservationClick={openEditForm}
             onSlotClick={(staffId, time) => openAddForm(staffId, time)}
@@ -183,7 +240,7 @@ export default function CalendarPage() {
             weekStart={weekStart}
             clinic={clinic}
             staff={store.staff}
-            reservations={store.reservations}
+            reservations={reservations}
             menus={store.menus}
             onDateClick={(date) => { setCurrentDate(new Date(date)); setView('day') }}
             onReservationClick={openEditForm}

@@ -42,3 +42,46 @@ export const rescheduleAppointmentSchema = z.object({
   endAt: z.string().datetime({ offset: true, message: '日時の形式が正しくありません' }),
 })
 export type RescheduleAppointmentInput = z.infer<typeof rescheduleAppointmentSchema>
+
+// ── 管理画面（スタッフ）向け ────────────────────────────
+
+export const reservationStatusSchema = z.enum(['confirmed', 'visited', 'cancelled', 'no_show'])
+
+export const adminReservationWriteSchema = z.object({
+  clinicId: uuidSchema,
+  staffId: uuidSchema.nullable().optional().transform((v) => v ?? null),
+  menuId: uuidSchema.nullable().optional().transform((v) => v ?? null),
+  patientId: uuidSchema.nullable().optional().transform((v) => v ?? null),
+  patientName: z.string().trim().min(1, '患者名を入力してください').max(100),
+  patientPhone: z.string().trim().max(20).optional().or(z.literal('')).transform((v) => (v ? v : null)),
+  referralName: z.string().trim().max(100).optional().or(z.literal('')).transform((v) => (v ? v : null)),
+  startAt: z.string().datetime({ offset: true, message: '開始日時の形式が正しくありません' }),
+  endAt: z.string().datetime({ offset: true, message: '終了日時の形式が正しくありません' }),
+  status: reservationStatusSchema.default('confirmed'),
+  memo: z.string().trim().max(2000).optional().or(z.literal('')).transform((v) => (v ? v : null)),
+})
+export type AdminReservationWriteInput = z.infer<typeof adminReservationWriteSchema>
+
+export const adminReservationCreateSchema = adminReservationWriteSchema
+export const adminReservationUpdateSchema = adminReservationWriteSchema.partial().extend({ id: uuidSchema })
+
+export const adminReservationListSchema = z.object({
+  clinicId: uuidSchema.nullable().optional(),
+  staffId: uuidSchema.nullable().optional(),
+  patientId: uuidSchema.nullable().optional(),
+  status: reservationStatusSchema.nullable().optional(),
+  search: z.string().trim().max(100).optional(),
+  /** 予約カレンダーは日付範囲で引く。一覧は指定なしでも使える */
+  from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  page: z.number().int().min(1).max(10000).default(1),
+  perPage: z.number().int().min(1).max(500).default(100),
+})
+export type AdminReservationListInput = z.infer<typeof adminReservationListSchema>
+
+export const reservationIdSchema = z.object({ id: uuidSchema })
+
+export const reservationStatusUpdateSchema = z.object({
+  id: uuidSchema,
+  status: reservationStatusSchema,
+})

@@ -5,7 +5,10 @@ import { format, parseISO } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { useClinicStore, reservationsStore } from '@/lib/clinic-store'
+import { useClinicStore } from '@/lib/clinic-store'
+import { useReservationList } from '@/features/reservations/hooks/useReservationList'
+import { apiPost, ApiError } from '@/lib/api-client'
+import { toast } from 'sonner'
 import { StatusBadge } from '@/components/common/StatusBadge'
 
 export default function TodayPage() {
@@ -21,15 +24,17 @@ export default function TodayPage() {
 
   const todayStr = format(now, 'yyyy-MM-dd')
 
-  const todayReservations = useMemo(() => {
-    return store.reservations
-      .filter((r) => {
-        if (!r.start_at.startsWith(todayStr)) return false
-        if (filterClinic !== 'all' && r.clinic_id !== filterClinic) return false
-        return true
-      })
-      .sort((a, b) => (a.start_at < b.start_at ? -1 : 1))
-  }, [store.reservations, todayStr, filterClinic])
+  // 本日分だけをサーバーから取得する（以前は全期間の予約をブラウザに載せていた）
+  const {
+    items: todayReservations, error: resError, reload,
+  } = useReservationList({
+    clinicId: filterClinic === 'all' ? null : filterClinic,
+    status: null,
+    search: '',
+    from: todayStr,
+    to: todayStr,
+    perPage: 500,
+  })
 
   // Summary counts
   const totalCount = todayReservations.length
@@ -47,12 +52,23 @@ export default function TodayPage() {
     return d.getHours() * 60 + d.getMinutes()
   }
 
+  async function changeStatus(id: string, status: 'visited' | 'cancelled', okMessage: string) {
+    try {
+      await apiPost('/api/v1/reservations/status', { id, status }, { authenticated: true })
+      toast.success(okMessage)
+      reload()
+    } catch (err) {
+      toast.error(err instanceof ApiError ? `${err.message}（${err.supportCode}）` : '更新に失敗しました')
+      reload()
+    }
+  }
+
   async function handleArrive(id: string) {
-    await reservationsStore.update(id, { status: 'visited' })
+    await changeStatus(id, 'visited', '来院として記録しました')
   }
 
   async function handleCancel(id: string) {
-    await reservationsStore.update(id, { status: 'cancelled' })
+    await changeStatus(id, 'cancelled', 'キャンセルしました')
   }
 
   // Find insertion index for the current-time indicator

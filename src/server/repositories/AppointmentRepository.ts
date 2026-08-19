@@ -22,8 +22,27 @@ export type ReservationRow = {
   end_at: string
   status: 'confirmed' | 'visited' | 'cancelled' | 'no_show'
   memo: string | null
+  referral_name: string | null
   created_at: string
   updated_at: string
+  created_by?: string | null
+  updated_by?: string | null
+  deleted_at?: string | null
+  deleted_by?: string | null
+}
+
+export type AdminReservationListQuery = {
+  /** null なら全院（admin のみ）。値があればその院に限定する */
+  clinicScope: string | null
+  clinicFilter?: string | null
+  staffId?: string | null
+  patientId?: string | null
+  status?: string | null
+  search?: string
+  from?: string
+  to?: string
+  page: number
+  perPage: number
 }
 
 function db() {
@@ -45,7 +64,83 @@ export function normalizePhoneForMatch(value: string | null | undefined): string
     .replace(/[^0-9]/g, '')
 }
 
+/** 一覧と件数で同じ絞り込みを使う */
+function applyAdminFilters<T extends { eq: Function; is: Function; gte: Function; lt: Function; or: Function }>(
+  builder: T, q: AdminReservationListQuery,
+): T {
+  let b = builder.is('deleted_at', null) as T
+  if (q.clinicScope) b = b.eq('clinic_id', q.clinicScope) as T
+  else if (q.clinicFilter) b = b.eq('clinic_id', q.clinicFilter) as T
+  if (q.staffId) b = b.eq('staff_id', q.staffId) as T
+  if (q.patientId) b = b.eq('patient_id', q.patientId) as T
+  if (q.status) b = b.eq('status', q.status) as T
+  if (q.from) b = b.gte('start_at', `${q.from}T00:00:00+09:00`) as T
+  if (q.to) b = b.lt('start_at', `${q.to}T23:59:59+09:00`) as T
+  if (q.search) {
+    const safe = q.search.replace(/[%_]/g, (c) => `\\${c}`)
+    b = b.or(`patient_name.ilike.%${safe}%,patient_phone.ilike.%${safe}%`) as T
+  }
+  return b
+}
+
 export const appointmentRepository = {
+  /** 管理画面向けの一覧。所属院の外は返さない */
+  async listForAdmin(query: AdminReservationListQuery): Promise<{ rows: ReservationRow[]; total: number }> {
+    const from = (query.page - 1) * query.perPage
+
+    const countQuery = applyAdminFilters(
+      db().from('reservations').select('id', { count: 'exact', head: true }) as never, query,
+    ) as unknown as PromiseLike<{ count: number | null; error: { message: string } | null }>
+
+    const rowsQuery = applyAdminFilters(
+      db().from('reservations').select('*') as never, query,
+    ) as unknown as { order: Function }
+
+    const [countRes, rowsRes] = await Promise.all([
+      countQuery,
+      (rowsQuery.order('start_at', { ascending: false }) as { range: Function })
+        .range(from, from + query.perPage - 1),
+    ])
+
+    wrap(countRes.error, '予約件数の取得')
+    wrap((rowsRes as { error: { message: string } | null }).error, '予約一覧の取得')
+
+    return {
+      rows: ((rowsRes as { data: ReservationRow[] | null }).data ?? []) as ReservationRow[],
+      total: countRes.count ?? 0,
+    }
+  },
+
+  async insert(values: Record<string, unknown>, actorId: string): Promise<ReservationRow> {
+    const now = new Date().toISOString()
+    const { data, error } = await db()
+      .from('reservations')
+      .insert({ ...values, created_by: actorId, updated_by: actorId, created_at: now, updated_at: now })
+      .select('*')
+      .single()
+    wrap(error, '予約の作成')
+    return data as ReservationRow
+  },
+
+  async updateFields(id: string, values: Record<string, unknown>, actorId: string): Promise<ReservationRow> {
+    const { data, error } = await db()
+      .from('reservations')
+      .update({ ...values, updated_by: actorId, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select('*')
+      .single()
+    wrap(error, '予約の更新')
+    return data as ReservationRow
+  },
+
+  async softDelete(id: string, actorId: string): Promise<void> {
+    const { error } = await db()
+      .from('reservations')
+      .update({ deleted_at: new Date().toISOString(), deleted_by: actorId })
+      .eq('id', id)
+    wrap(error, '予約の削除')
+  },
+
   /**
    * 電話番号に一致する今後の予約だけを返す。
    * 以前はブラウザが全予約を取得して絞り込んでいたため、
@@ -59,6 +154,7 @@ export const appointmentRepository = {
       .from('reservations')
       .select('*')
       .eq('status', 'confirmed')
+      .is('deleted_at', null)
       .gte('start_at', now.toISOString())
       .not('patient_phone', 'is', null)
       .order('start_at')
@@ -72,7 +168,8 @@ export const appointmentRepository = {
   },
 
   async findById(id: string): Promise<ReservationRow | null> {
-    const { data, error } = await db().from('reservations').select('*').eq('id', id).maybeSingle()
+    const { data, error } = await db()
+      .from('reservations').select('*').eq('id', id).is('deleted_at', null).maybeSingle()
     wrap(error, '予約の取得')
     return (data as ReservationRow | null) ?? null
   },
@@ -89,6 +186,7 @@ export const appointmentRepository = {
       .from('reservations')
       .select('*')
       .eq('clinic_id', clinicId)
+      .is('deleted_at', null)
       .in('status', ['confirmed', 'visited'])
       .neq('id', excludeId)
       .lt('start_at', endAt)

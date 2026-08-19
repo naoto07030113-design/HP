@@ -7,10 +7,12 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Plus, Search, Receipt, Trash2 } from 'lucide-react'
-import { useClinicStore, reservationsStore } from '@/lib/clinic-store'
+import { useClinicStore } from '@/lib/clinic-store'
+import { useReservationList, toApiInput } from '@/features/reservations/hooks/useReservationList'
+import { toApiInput as toInvoiceInput } from '@/features/accounting/hooks/useInvoiceList'
+import { apiPost, ApiError } from '@/lib/api-client'
 import { ReservationForm } from '@/features/reservations/components/ReservationForm'
 import { InvoiceForm } from '@/features/accounting/components/InvoiceForm'
-import { accountingStore } from '@/lib/accounting-store'
 import { StatusBadge } from '@/components/common/StatusBadge'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { TableSkeleton } from '@/components/common/PageSkeleton'
@@ -20,7 +22,6 @@ import type { InvoiceFormData } from '@/types/accounting'
 
 export default function ReservationsPage() {
   const store = useClinicStore()
-  const { loading } = store
   const [formOpen, setFormOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<Reservation | null>(null)
   const [invoiceOpen, setInvoiceOpen] = useState(false)
@@ -31,20 +32,17 @@ export default function ReservationsPage() {
   const [filterStatus, setFilterStatus] = useState('all')
   const [filterDate, setFilterDate] = useState('')
 
-  const filtered = useMemo(() => {
-    return store.reservations
-      .filter((r) => {
-        if (filterClinic !== 'all' && r.clinic_id !== filterClinic) return false
-        if (filterStatus !== 'all' && r.status !== filterStatus) return false
-        if (filterDate && !r.start_at.startsWith(filterDate)) return false
-        if (search) {
-          const q = search.toLowerCase()
-          return r.patient_name.toLowerCase().includes(q) || (r.patient_phone ?? '').includes(q)
-        }
-        return true
-      })
-      .sort((a, b) => a.start_at < b.start_at ? 1 : -1)
-  }, [store.reservations, filterClinic, filterStatus, filterDate, search])
+  // 検索・絞り込み・ページングはサーバー側で行う。
+  // 全予約をブラウザに載せると他院の予約まで端末に残り、件数上限で取りこぼす。
+  const {
+    items: filtered, total, page, setPage, hasNext, loading, error, reload, perPage,
+  } = useReservationList({
+    clinicId: filterClinic === 'all' ? null : filterClinic,
+    status: filterStatus === 'all' ? null : (filterStatus as Reservation['status']),
+    search,
+    from: filterDate || undefined,
+    to: filterDate || undefined,
+  })
 
   function openEdit(r: Reservation) {
     setEditTarget(r)
@@ -56,23 +54,26 @@ export default function ReservationsPage() {
     setInvoiceOpen(true)
   }
 
-  async function handleSubmit(data: Parameters<typeof reservationsStore.create>[0]) {
+  async function handleSubmit(data: Partial<Reservation>) {
     try {
-      if (editTarget) await reservationsStore.update(editTarget.id, data)
-      else await reservationsStore.create(data)
+      // 枠の重複はサーバーが判定する
+      const input = toApiInput(data)
+      if (editTarget) await apiPost('/api/v1/reservations/update', { id: editTarget.id, ...input }, { authenticated: true })
+      else await apiPost('/api/v1/reservations/create', input, { authenticated: true })
       toast.success('保存しました')
-    } catch {
-      toast.error('保存に失敗しました')
+      reload()
+    } catch (err) {
+      toast.error(err instanceof ApiError ? `${err.message}（${err.supportCode}）` : '保存に失敗しました')
     }
     setEditTarget(null)
   }
 
   async function handleInvoiceSave(data: InvoiceFormData) {
     try {
-      await accountingStore.create(data)
+      await apiPost('/api/v1/invoices/create', toInvoiceInput(data), { authenticated: true })
       toast.success('会計を作成しました')
-    } catch {
-      toast.error('会計の作成に失敗しました')
+    } catch (err) {
+      toast.error(err instanceof ApiError ? `${err.message}（${err.supportCode}）` : '会計の作成に失敗しました')
     }
   }
 
@@ -154,6 +155,12 @@ export default function ReservationsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-green-50">
+              {error && (
+                <div className="col-span-full bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm flex items-center justify-between gap-3">
+                  <span>{error}</span>
+                  <Button variant="outline" size="sm" className="h-7 text-xs" onClick={reload}>再試行</Button>
+                </div>
+              )}
               {filtered.length === 0 ? (
                 <tr><td colSpan={7} className="py-12 text-center text-muted-foreground">予約が見つかりません</td></tr>
               ) : filtered.map((r) => {
@@ -204,7 +211,7 @@ export default function ReservationsPage() {
         </div>
         {filtered.length > 0 && (
           <div className="px-4 py-2 border-t border-green-50 text-xs text-muted-foreground bg-green-50/30">
-            {filtered.length}件表示
+            {total}件
           </div>
         )}
       </div>
@@ -217,13 +224,27 @@ export default function ReservationsPage() {
         onSubmit={handleSubmit}
       />
 
+      {/* ページ送り。全件をブラウザに載せないため、ページ単位で取得している */}
+      {total > perPage && (
+        <div className="flex items-center justify-center gap-3 pt-1">
+          <Button variant="outline" size="sm" className="h-8"
+            disabled={page <= 1 || loading} onClick={() => setPage(page - 1)}>前へ</Button>
+          <span className="text-xs text-muted-foreground tabular-nums">
+            {(page - 1) * perPage + 1}–{Math.min(page * perPage, total)} / {total}件
+          </span>
+          <Button variant="outline" size="sm" className="h-8"
+            disabled={!hasNext || loading} onClick={() => setPage(page + 1)}>次へ</Button>
+        </div>
+      )}
+
       <ConfirmDialog
         open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}
         title="予約を削除しますか？" confirmLabel="削除" variant="destructive"
         onConfirm={async () => {
           if (deleteId) {
             try {
-              await reservationsStore.delete(deleteId)
+              await apiPost('/api/v1/reservations/delete', { id: deleteId }, { authenticated: true })
+              reload()
               toast.success('削除しました')
             } catch {
               toast.error('削除に失敗しました')
