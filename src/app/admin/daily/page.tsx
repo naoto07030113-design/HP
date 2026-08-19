@@ -6,15 +6,13 @@ import { ja } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { useAccountingStore, accountingStore } from '@/lib/accounting-store'
 import { useClinicStore } from '@/lib/clinic-store'
+import { useDailyReport } from '@/features/reports/hooks/useDailyReport'
 import { PAYMENT_METHOD_LABELS } from '@/types/accounting'
 import type { PaymentMethod } from '@/types/accounting'
 import { cn } from '@/lib/utils'
 
 const TODAY = format(new Date(), 'yyyy-MM-dd')
-
-const PAYMENT_METHODS: PaymentMethod[] = ['cash', 'card', 'paypay', 'line_pay', 'insurance', 'other']
 
 const PAYMENT_METHOD_COLORS: Record<PaymentMethod, string> = {
   cash:      'bg-green-500',
@@ -26,12 +24,16 @@ const PAYMENT_METHOD_COLORS: Record<PaymentMethod, string> = {
 }
 
 export default function DailyLedgerPage() {
-  // 会計データは非同期で遅れて届く。useMemo 依存に含めないと到着後に再集計されない
-  const invoices = useAccountingStore()
   const store = useClinicStore()
 
   const [selectedDate, setSelectedDate] = useState(TODAY)
   const [filterClinic, setFilterClinic] = useState('all')
+
+  // 集計はサーバー側で行う（画面に届くのは結果だけ）
+  const { report, loading, error } = useDailyReport({
+    date: selectedDate,
+    clinicId: filterClinic === 'all' ? null : filterClinic,
+  })
 
   function goToPrev() {
     setSelectedDate((d) => format(subDays(parseISO(d), 1), 'yyyy-MM-dd'))
@@ -45,89 +47,31 @@ export default function DailyLedgerPage() {
     setSelectedDate(TODAY)
   }
 
-  // All invoices for the selected date, filtered by clinic
-  const dayInvoices = useMemo(() => {
-    return accountingStore
-      .getByDate(selectedDate)
-      .filter((inv) => filterClinic === 'all' || inv.clinic_id === filterClinic)
-      .filter((inv) => inv.status === 'paid')
-  }, [selectedDate, filterClinic, invoices])
+  const kpi = report.kpi
+  const hasData = report.transactions.length > 0
 
-  // KPI calculations
-  const kpi = useMemo(() => {
-    const totalRevenue = dayInvoices.reduce((sum, inv) => sum + inv.total_amount, 0)
-    const count = dayInvoices.length
-    const avgPerPatient = count > 0 ? Math.round(totalRevenue / count) : 0
-    const cashTotal = dayInvoices
-      .filter((inv) => inv.payment_method === 'cash')
-      .reduce((sum, inv) => sum + inv.total_amount, 0)
-    return { totalRevenue, count, avgPerPatient, cashTotal }
-  }, [dayInvoices])
-
-  // Payment method breakdown
+  // 支払方法の棒グラフは最大値を基準に伸ばす
   const paymentBreakdown = useMemo(() => {
-    const map = new Map<PaymentMethod, { amount: number; count: number }>()
-    for (const method of PAYMENT_METHODS) {
-      map.set(method, { amount: 0, count: 0 })
-    }
-    for (const inv of dayInvoices) {
-      const entry = map.get(inv.payment_method)!
-      map.set(inv.payment_method, {
-        amount: entry.amount + inv.total_amount,
-        count: entry.count + 1,
-      })
-    }
-    const maxAmount = Math.max(...Array.from(map.values()).map((v) => v.amount), 1)
-    return PAYMENT_METHODS.map((method) => {
-      const { amount, count } = map.get(method)!
-      return { method, label: PAYMENT_METHOD_LABELS[method], amount, count, pct: (amount / maxAmount) * 100 }
-    })
-  }, [dayInvoices])
+    const maxAmount = Math.max(...report.paymentBreakdown.map((p) => p.amount), 1)
+    return report.paymentBreakdown.map((p) => ({
+      ...p,
+      label: PAYMENT_METHOD_LABELS[p.method],
+      pct: (p.amount / maxAmount) * 100,
+    }))
+  }, [report.paymentBreakdown])
 
-  // Staff breakdown
-  const staffBreakdown = useMemo(() => {
-    const map = new Map<string, { name: string; count: number; revenue: number }>()
-    for (const inv of dayInvoices) {
-      const staffId = inv.staff_id ?? '__unknown__'
-      const staffMember = store.staff.find((s) => s.id === inv.staff_id)
-      const name = staffMember?.name ?? '担当不明'
-      const existing = map.get(staffId) ?? { name, count: 0, revenue: 0 }
-      map.set(staffId, {
-        name,
-        count: existing.count + 1,
-        revenue: existing.revenue + inv.total_amount,
-      })
-    }
-    return Array.from(map.values()).sort((a, b) => b.revenue - a.revenue)
-  }, [dayInvoices, store.staff])
-
-  // Hourly distribution (0-23 hours)
-  const hourlyData = useMemo(() => {
-    const counts = new Array<number>(24).fill(0)
-    for (const inv of dayInvoices) {
-      if (!inv.reservation_id) continue
-      const reservation = store.reservations.find((r) => r.id === inv.reservation_id)
-      if (!reservation) continue
-      try {
-        const hour = parseISO(reservation.start_at).getHours()
-        counts[hour] = (counts[hour] ?? 0) + 1
-      } catch {
-        // ignore parse errors
-      }
-    }
-    // Only show hours 7-21 for clinic context
-    return Array.from({ length: 15 }, (_, i) => {
-      const hour = i + 7
-      return { hour, label: `${hour}時`, count: counts[hour] ?? 0 }
-    })
-  }, [dayInvoices, store.reservations])
+  const staffBreakdown = report.staffBreakdown
+  const hourlyData = useMemo(
+    () => report.hourly.map((h) => ({ ...h, label: `${h.hour}時` })),
+    [report.hourly],
+  )
 
   const maxHourCount = Math.max(...hourlyData.map((d) => d.count), 1)
 
   const formattedDate = format(parseISO(selectedDate), 'yyyy年M月d日(E)', { locale: ja })
 
   return (
-    <div className="p-4 lg:p-6 space-y-5">
+    <div className={cn('p-4 lg:p-6 space-y-5 transition-opacity', loading && 'opacity-60')}>
 
       {/* ヘッダー */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -184,6 +128,12 @@ export default function DailyLedgerPage() {
         </div>
       </div>
 
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
       {/* KPI カード */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-white rounded-xl border border-green-100 shadow-sm p-4">
@@ -223,7 +173,7 @@ export default function DailyLedgerPage() {
         {/* 支払方法内訳 */}
         <div className="bg-white rounded-xl border shadow-sm p-4">
           <h2 className="text-sm font-semibold text-green-900 mb-4">支払方法内訳</h2>
-          {dayInvoices.length === 0 ? (
+          {!hasData ? (
             <p className="text-sm text-muted-foreground">データなし</p>
           ) : (
             <div className="space-y-3">
@@ -266,7 +216,7 @@ export default function DailyLedgerPage() {
               </thead>
               <tbody className="divide-y divide-green-50">
                 {staffBreakdown.map((row) => (
-                  <tr key={row.name}>
+                  <tr key={row.staffId ?? '__unknown__'}>
                     <td className="py-2.5 font-medium text-green-900">{row.name}</td>
                     <td className="py-2.5 text-right text-muted-foreground">{row.count}件</td>
                     <td className="py-2.5 text-right font-semibold text-green-800">
@@ -296,7 +246,7 @@ export default function DailyLedgerPage() {
       {/* 時間帯別分布 */}
       <div className="bg-white rounded-xl border shadow-sm p-4">
         <h2 className="text-sm font-semibold text-green-900 mb-4">時間帯別会計件数</h2>
-        {dayInvoices.length === 0 ? (
+        {!hasData ? (
           <p className="text-sm text-muted-foreground">データなし</p>
         ) : (
           <div className="flex items-end gap-1 h-28 w-full">
@@ -328,7 +278,7 @@ export default function DailyLedgerPage() {
           <h2 className="text-sm font-semibold text-green-900">取引一覧</h2>
         </div>
 
-        {dayInvoices.length === 0 ? (
+        {!hasData ? (
           <div className="py-16 text-center text-muted-foreground text-sm">
             {selectedDate} の会計データがありません
           </div>
@@ -358,40 +308,30 @@ export default function DailyLedgerPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {dayInvoices
-                  .slice()
-                  .sort((a, b) => a.created_at.localeCompare(b.created_at))
-                  .map((inv) => {
-                    const staffMember = store.staff.find((s) => s.id === inv.staff_id)
-                    const itemsSummary =
-                      inv.items.length > 0
-                        ? inv.items.map((item) => item.name).join('、')
-                        : '-'
-                    return (
-                      <tr key={inv.id} className="hover:bg-green-50/30 transition-colors">
-                        <td className="px-4 py-3">
-                          <span className="text-xs text-muted-foreground font-mono">
-                            {inv.invoice_number}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 font-medium text-green-900 whitespace-nowrap">
-                          {inv.patient_name}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-muted-foreground whitespace-nowrap">
-                          {staffMember?.name ?? '-'}
-                        </td>
-                        <td className="px-4 py-3 text-xs text-muted-foreground hidden md:table-cell max-w-[16rem] truncate">
-                          {itemsSummary}
-                        </td>
-                        <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
-                          {PAYMENT_METHOD_LABELS[inv.payment_method]}
-                        </td>
-                        <td className="px-4 py-3 text-right font-semibold whitespace-nowrap text-green-900">
-                          &yen;{inv.total_amount.toLocaleString()}
-                        </td>
-                      </tr>
-                    )
-                  })}
+                {report.transactions.map((inv) => (
+                  <tr key={inv.id} className="hover:bg-green-50/30 transition-colors">
+                    <td className="px-4 py-3">
+                      <span className="text-xs text-muted-foreground font-mono">
+                        {inv.invoiceNumber}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 font-medium text-green-900 whitespace-nowrap">
+                      {inv.patientName}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground whitespace-nowrap">
+                      {inv.staffName ?? '-'}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground hidden md:table-cell max-w-[16rem] truncate">
+                      {inv.items.length > 0 ? inv.items.join('、') : '-'}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
+                      {PAYMENT_METHOD_LABELS[inv.paymentMethod]}
+                    </td>
+                    <td className="px-4 py-3 text-right font-semibold whitespace-nowrap text-green-900">
+                      &yen;{inv.totalAmount.toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
               <tfoot>
                 <tr className="border-t-2 border-green-200 bg-green-50">
