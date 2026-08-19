@@ -12,3 +12,27 @@ export const dailyReportSchema = z.object({
   clinicId: uuidSchema.nullable().optional(),
 })
 export type DailyReportInput = z.infer<typeof dailyReportSchema>
+
+export const periodFilterSchema = z.enum(['today', 'week', 'month', 'lastMonth', 'year', 'custom'])
+
+export const dashboardSchema = z.object({
+  period: periodFilterSchema.default('month'),
+  clinicId: uuidSchema.nullable().optional(),
+  /** period='custom' のときだけ使う */
+  from: ymd('開始日').nullable().optional(),
+  to: ymd('終了日').nullable().optional(),
+})
+export type DashboardInput = z.infer<typeof dashboardSchema>
+
+export const clinicDetailSchema = z.object({
+  clinicId: uuidSchema,
+  period: periodFilterSchema.default('month'),
+  from: ymd('開始日').nullable().optional(),
+  to: ymd('終了日').nullable().optional(),
+})
+export type ClinicDetailInput = z.infer<typeof clinicDetailSchema>
+
+export const staffDetailSchema = z.object({
+  staffId: uuidSchema,
+})
+export type StaffDetailInput = z.infer<typeof staffDetailSchema>

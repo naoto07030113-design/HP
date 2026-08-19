@@ -1,14 +1,11 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { format, subMonths, startOfMonth, endOfMonth, parseISO } from 'date-fns'
-import { ja } from 'date-fns/locale'
 import { TrendingUp, TrendingDown, Receipt, Users, CalendarCheck, Repeat2, AlertCircle, Award } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useClinicStore } from '@/lib/clinic-store'
-import { useAccountingStore } from '@/lib/accounting-store'
-import { usePatientStore } from '@/lib/patient-store'
-import { buildDashboard, changeRate, getPeriodRange } from '@/lib/dashboard-utils'
+import { changeRate } from '@/lib/dashboard-utils'
+import { useDashboard, useStaffDetail } from '@/features/reports/hooks/useDashboard'
 import type { PeriodFilter, StaffKPI } from '@/types/dashboard'
 import { PermissionGuard } from '@/components/common/PermissionGuard'
 import { cn } from '@/lib/utils'
@@ -41,10 +38,6 @@ function ChangeBadge({ current, prev }: { current: number; prev: number }) {
 type SortKey = keyof Pick<StaffKPI, 'sales' | 'visits' | 'newPatients' | 'repeatRate' | 'cancellations' | 'averageSpend'>
 
 export default function StaffDashboardPage() {
-  // 会計・患者データは非同期で遅れて届く。集計の useMemo 依存に含めないと
-  // 到着後に再計算されず、売上¥0のまま表示され続けるため戻り値を保持する
-  const invoices = useAccountingStore()
-  const patients = usePatientStore()
   const store = useClinicStore()
 
   const [period, setPeriod] = useState<PeriodFilter>('month')
@@ -53,15 +46,9 @@ export default function StaffDashboardPage() {
   const [sortKey, setSortKey] = useState<SortKey>('sales')
   const [sortAsc, setSortAsc] = useState(false)
 
-  const data = useMemo(
-    () => buildDashboard(period, store.reservations, store.staff, store.clinics, undefined, clinicFilter),
-    [period, store.reservations, store.staff, store.clinics, clinicFilter, invoices, patients],
-  )
-
-  const prevData = useMemo(
-    () => buildDashboard('lastMonth', store.reservations, store.staff, store.clinics, undefined, clinicFilter),
-    [store.reservations, store.staff, store.clinics, clinicFilter, invoices, patients],
-  )
+  // 集計はサーバー側で行う（画面に届くのは結果だけ）
+  const { data, loading, error } = useDashboard({ period, clinicId: clinicFilter })
+  const { data: prevData } = useDashboard({ period: 'lastMonth', clinicId: clinicFilter })
 
   const sortedStaff = useMemo(() => {
     return [...data.staff].sort((a, b) => {
@@ -74,28 +61,8 @@ export default function StaffDashboardPage() {
   const staffKPI = data.staff.find((s) => s.staffId === selectedStaff)
   const prevStaffKPI = prevData.staff.find((s) => s.staffId === selectedStaff)
 
-  // Month-by-month for selected staff (last 6 months)
-  const range = getPeriodRange(period)
-  const monthHistory = useMemo(() => {
-    if (!selectedStaff) return []
-    return Array.from({ length: 6 }, (_, i) => {
-      const d = subMonths(new Date(), 5 - i)
-      const from = format(startOfMonth(d), 'yyyy-MM-dd')
-      const to = format(endOfMonth(d), 'yyyy-MM-dd')
-      const monthRes = store.reservations.filter((r) =>
-        r.staff_id === selectedStaff &&
-        r.start_at.slice(0, 10) >= from &&
-        r.start_at.slice(0, 10) <= to,
-      )
-      const visits = monthRes.filter((r) => r.status === 'visited').length
-      const cancelled = monthRes.filter((r) => r.status === 'cancelled' || r.status === 'no_show').length
-      return {
-        label: format(d, 'M月', { locale: ja }),
-        visits,
-        cancelled,
-      }
-    })
-  }, [selectedStaff, store.reservations])
+  // 選択したスタッフの直近6か月（サーバー集計）
+  const monthHistory = useStaffDetail(selectedStaff)
 
   function handleSort(key: SortKey) {
     if (sortKey === key) {
@@ -120,12 +87,18 @@ export default function StaffDashboardPage() {
 
   return (
     <PermissionGuard allowedRoles={['admin', 'staff']}>
-      <div className="p-4 lg:p-6 space-y-5">
+      <div className={cn('p-4 lg:p-6 space-y-5 transition-opacity', loading && 'opacity-60')}>
         {/* ヘッダー */}
         <div>
           <h1 className="page-title">スタッフ別ダッシュボード</h1>
           <p className="text-sm text-muted-foreground mt-0.5">スタッフごとの実績を比較・分析します</p>
         </div>
+
+        {error && (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {error}
+          </div>
+        )}
 
         {/* フィルター */}
         <div className="flex flex-wrap items-center gap-3">

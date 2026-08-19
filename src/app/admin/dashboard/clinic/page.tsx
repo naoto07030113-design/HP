@@ -1,7 +1,7 @@
 'use client'
 
-import { useMemo, useState, useEffect } from 'react'
-import { format, parseISO, subMonths, startOfMonth, endOfMonth } from 'date-fns'
+import { useState, useEffect } from 'react'
+import { format, parseISO } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import {
   TrendingUp,
@@ -17,9 +17,8 @@ import {
   Award,
 } from 'lucide-react'
 import { useClinicStore } from '@/lib/clinic-store'
-import { useAccountingStore, accountingStore } from '@/lib/accounting-store'
-import { usePatientStore } from '@/lib/patient-store'
-import { buildDashboard, changeRate } from '@/lib/dashboard-utils'
+import { changeRate } from '@/lib/dashboard-utils'
+import { useDashboard, useClinicDetail } from '@/features/reports/hooks/useDashboard'
 import type { PeriodFilter, DateRange } from '@/types/dashboard'
 import { PermissionGuard } from '@/components/common/PermissionGuard'
 import {
@@ -100,10 +99,6 @@ const PERIOD_OPTIONS: { value: PeriodFilter; label: string }[] = [
 
 // ── Main page ───────────────────────────────────────────────────────────
 export default function ClinicDashboardPage() {
-  // 会計・患者データは非同期で遅れて届く。集計の useMemo 依存に含めないと
-  // 到着後に再計算されず、売上¥0のまま表示され続けるため戻り値を保持する
-  const invoices = useAccountingStore()
-  const patients = usePatientStore()
   const store = useClinicStore()
 
   const [period, setPeriod] = useState<PeriodFilter>('month')
@@ -118,89 +113,16 @@ export default function ClinicDashboardPage() {
     setSelectedClinic(activeClinics[0].id)
   }, [activeClinics, selectedClinic])
 
-  // Build dashboard for the selected clinic
-  const data = useMemo(
-    () =>
-      buildDashboard(
-        period,
-        store.reservations,
-        store.staff,
-        store.clinics,
-        customRange,
-        selectedClinic || 'all',
-      ),
-    [period, store.reservations, store.staff, store.clinics, customRange, selectedClinic, invoices, patients],
-  )
-
-  // Build overall dashboard (all clinics) for comparison
-  const allData = useMemo(
-    () =>
-      buildDashboard(
-        period,
-        store.reservations,
-        store.staff,
-        store.clinics,
-        customRange,
-        'all',
-      ),
-    [period, store.reservations, store.staff, store.clinics, customRange, invoices, patients],
-  )
-
-  // Menu ranking for selected clinic
-  const menuRanking = useMemo(() => {
-    if (!selectedClinic) return []
-    const invoices = accountingStore
-      .getAll()
-      .filter(
-        (i) =>
-          i.status === 'paid' &&
-          i.visit_date >= data.period.from &&
-          i.visit_date <= data.period.to &&
-          i.clinic_id === selectedClinic,
-      )
-    const map = new Map<string, { count: number; revenue: number }>()
-    invoices.forEach((inv) =>
-      inv.items.forEach((item) => {
-        const e = map.get(item.name) ?? { count: 0, revenue: 0 }
-        map.set(item.name, {
-          count: e.count + item.quantity,
-          revenue: e.revenue + item.subtotal,
-        })
-      }),
-    )
-    return Array.from(map.entries())
-      .map(([name, d]) => ({ name, ...d }))
-      .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 8)
-  }, [selectedClinic, data.period.from, data.period.to, invoices])
-
-  // Last 6 months trend for this clinic
-  const monthlyTrend = useMemo(() => {
-    return Array.from({ length: 6 }, (_, i) => {
-      const date = subMonths(new Date(), 5 - i)
-      const from = format(startOfMonth(date), 'yyyy-MM-dd')
-      const to = format(endOfMonth(date), 'yyyy-MM-dd')
-      const monthLabel = format(date, 'M月', { locale: ja })
-      const invoices = accountingStore
-        .getAll()
-        .filter(
-          (inv) =>
-            inv.status === 'paid' &&
-            inv.visit_date >= from &&
-            inv.visit_date <= to &&
-            (!selectedClinic || inv.clinic_id === selectedClinic),
-        )
-      const sales = invoices.reduce((s, inv) => s + inv.total_amount, 0)
-      const visits = store.reservations.filter(
-        (r) =>
-          r.status === 'visited' &&
-          r.start_at.slice(0, 10) >= from &&
-          r.start_at.slice(0, 10) <= to &&
-          (!selectedClinic || r.clinic_id === selectedClinic),
-      ).length
-      return { label: monthLabel, sales, visits }
-    })
-  }, [selectedClinic, store.reservations, invoices])
+  // 集計はサーバー側で行う（画面に届くのは結果だけ）
+  const { data, loading, error } = useDashboard({
+    period, clinicId: selectedClinic || 'all', customRange,
+  })
+  // 全院との比較用
+  const { data: allData } = useDashboard({ period, clinicId: 'all', customRange })
+  // メニュー別ランキングと直近6か月の推移
+  const { menuRanking, monthlyTrend } = useClinicDetail({
+    clinicId: selectedClinic, period, customRange,
+  })
 
   const clinicKPI = data.overall
   const prevKPI = data.prevOverall
@@ -268,7 +190,13 @@ export default function ClinicDashboardPage() {
           </div>
         </div>
 
-        <div className="px-4 lg:px-8 py-6 space-y-6">
+        <div className={cn('px-4 lg:px-8 py-6 space-y-6 transition-opacity', loading && 'opacity-60')}>
+          {error && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+
           {/* Clinic selector */}
           <div className="flex items-center gap-3 flex-wrap">
             <Building2 className="w-4 h-4 text-green-700" />

@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { format, parseISO } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import {
@@ -17,9 +17,8 @@ import {
   Award,
 } from 'lucide-react'
 import { useClinicStore } from '@/lib/clinic-store'
-import { useAccountingStore } from '@/lib/accounting-store'
-import { usePatientStore } from '@/lib/patient-store'
-import { buildDashboard, changeRate } from '@/lib/dashboard-utils'
+import { changeRate } from '@/lib/dashboard-utils'
+import { useDashboard } from '@/features/reports/hooks/useDashboard'
 import type { PeriodFilter, DateRange } from '@/types/dashboard'
 import { PermissionGuard } from '@/components/common/PermissionGuard'
 import {
@@ -100,28 +99,14 @@ const PERIOD_OPTIONS: { value: PeriodFilter; label: string }[] = [
 
 // ── Main page ───────────────────────────────────────────────────────────
 export default function ExecutiveDashboardPage() {
-  // 会計・患者データは非同期で遅れて届く。集計の useMemo 依存に含めないと
-  // 到着後に再計算されず、売上¥0・新患0名のまま表示され続けるため戻り値を保持する
-  const invoices = useAccountingStore()
-  const patients = usePatientStore()
   const store = useClinicStore()
 
   const [period, setPeriod] = useState<PeriodFilter>('month')
   const [clinicFilter, setClinicFilter] = useState('all')
   const [customRange] = useState<DateRange | undefined>()
 
-  const data = useMemo(
-    () =>
-      buildDashboard(
-        period,
-        store.reservations,
-        store.staff,
-        store.clinics,
-        customRange,
-        clinicFilter,
-      ),
-    [period, store.reservations, store.staff, store.clinics, customRange, clinicFilter, invoices, patients],
-  )
+  // 集計はサーバー側で行う（画面に届くのは結果だけ）
+  const { data, loading, error } = useDashboard({ period, clinicId: clinicFilter, customRange })
 
   const now = new Date()
   const lastUpdated = format(now, 'HH:mm', { locale: ja })
@@ -167,7 +152,13 @@ export default function ExecutiveDashboardPage() {
           </div>
         </div>
 
-        <div className="px-4 lg:px-8 py-6 space-y-6">
+        <div className={cn('px-4 lg:px-8 py-6 space-y-6 transition-opacity', loading && 'opacity-60')}>
+          {error && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+
           {/* Clinic filter */}
           <div className="flex items-center gap-3 flex-wrap">
             <span className="text-sm font-medium text-green-900">院フィルター</span>
