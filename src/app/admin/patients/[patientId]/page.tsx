@@ -10,9 +10,12 @@ import {
   ArrowLeft, Pencil, Phone, Mail, MapPin, Calendar,
   User, Shield, AlertTriangle, FileText, Clock,
 } from 'lucide-react'
-import { usePatientStore, patientStore } from '@/lib/patient-store'
+import { toast } from 'sonner'
 import { useClinicStore } from '@/lib/clinic-store'
-import { useAccountingStore } from '@/lib/accounting-store'
+import { apiPost, ApiError } from '@/lib/api-client'
+import { usePatient, toApiInput } from '@/features/patients/hooks/usePatientList'
+import { useInvoiceList } from '@/features/accounting/hooks/useInvoiceList'
+import { useReservationList } from '@/features/reservations/hooks/useReservationList'
 import { PatientForm } from '@/features/patients/components/PatientForm'
 import { PatientReservationHistory } from '@/features/patients/components/PatientReservationHistory'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
@@ -40,18 +43,28 @@ export default function PatientDetailPage() {
   const patientId = String(params.patientId)
   const router = useRouter()
 
-  const patients = usePatientStore()
   const store = useClinicStore()
-  const invoices = useAccountingStore()
 
-  const patient = patients.find((p) => p.id === patientId)
+  // 患者・来院履歴・会計履歴はいずれもこの患者の分だけをサーバーから引く
+  const { patient, loading, error, reload } = usePatient(patientId)
+  const { items: patientReservations } = useReservationList({
+    clinicId: null, status: null, search: '', patientId, perPage: 200,
+  })
+  const { items: patientInvoices } = useInvoiceList({
+    clinicId: null, status: null, search: '', patientId, perPage: 200,
+  })
+
   const [formOpen, setFormOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
+
+  if (loading) {
+    return <div className="p-8 text-center text-sm text-muted-foreground">読み込んでいます...</div>
+  }
 
   if (!patient) {
     return (
       <div className="p-8 text-center space-y-4">
-        <p className="text-muted-foreground">患者が見つかりません</p>
+        <p className="text-muted-foreground">{error ?? '患者が見つかりません'}</p>
         <Link href="/admin/patients">
           <Button variant="outline" size="sm">患者一覧に戻る</Button>
         </Link>
@@ -63,30 +76,37 @@ export default function PatientDetailPage() {
   const primaryStaff = store.staff.find((s) => s.id === patient.primary_staff_id)
   const age = calcAge(patient.birth_date)
 
-  // この患者の予約（patient_idで紐付け）
-  const patientReservations = store.reservations.filter((r) => r.patient_id === patient.id)
   const visitedCount = patientReservations.filter((r) => r.status === 'visited').length
   const lastVisit = patientReservations
     .filter((r) => r.status === 'visited')
     .sort((a, b) => (a.start_at > b.start_at ? -1 : 1))[0]
 
-  // この患者の会計履歴（patient_id を優先し、未紐付けの旧データは名前で照合）
-  const patientInvoices = invoices
-    .filter((inv) => inv.patient_id === patient.id || (!inv.patient_id && inv.patient_name === patient.name))
-    .sort((a, b) => (a.visit_date > b.visit_date ? -1 : 1))
   const totalPaid = patientInvoices
     .filter((inv) => inv.status === 'paid')
     .reduce((sum, inv) => sum + inv.total_amount, 0)
 
-  function handleSubmit(data: PatientFormData) {
+  // 保存・削除の失敗を握りつぶさず、必ず画面に出す
+  async function handleSubmit(data: PatientFormData) {
     if (!patient) return
-    patientStore.update(patient.id, data).catch(() => {})
+    try {
+      await apiPost('/api/v1/patients/update', { id: patient.id, ...toApiInput(data) }, { authenticated: true })
+      reload()
+      setFormOpen(false)
+      toast.success('患者情報を保存しました')
+    } catch (err) {
+      toast.error(err instanceof ApiError ? `${err.message}（${err.supportCode}）` : '患者情報を保存できませんでした')
+    }
   }
 
-  function handleDelete() {
+  async function handleDelete() {
     if (!patient) return
-    patientStore.delete(patient.id).catch(() => {})
-    router.push('/admin/patients')
+    try {
+      await apiPost('/api/v1/patients/delete', { id: patient.id }, { authenticated: true })
+      toast.success('患者を削除しました')
+      router.push('/admin/patients')
+    } catch (err) {
+      toast.error(err instanceof ApiError ? `${err.message}（${err.supportCode}）` : '患者を削除できませんでした')
+    }
   }
 
   return (
@@ -234,7 +254,7 @@ export default function PatientDetailPage() {
             <PatientReservationHistory
               patientId={patient.id}
               patientName={patient.name}
-              reservations={store.reservations}
+              reservations={patientReservations}
               staff={store.staff}
               menus={store.menus}
             />

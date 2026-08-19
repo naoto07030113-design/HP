@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -213,7 +214,11 @@ export default function AnnouncementsPage() {
                 <div className="flex items-center gap-1 flex-shrink-0">
                   <Switch
                     checked={a.is_active}
-                    onCheckedChange={(v) => announcementsStore.update(a.id, { is_active: v }).catch(() => {})}
+                    onCheckedChange={(v) => {
+                      announcementsStore.update(a.id, { is_active: v }).catch(() => {
+                        toast.error('お知らせの表示切替を保存できませんでした')
+                      })
+                    }}
                   />
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(a)}>
                     <Pencil className="w-3.5 h-3.5" />
@@ -397,7 +402,14 @@ export default function AnnouncementsPage() {
       <ConfirmDialog
         open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}
         title="お知らせを削除しますか？" confirmLabel="削除" variant="destructive"
-        onConfirm={() => { if (deleteId) announcementsStore.delete(deleteId).catch(() => {}); setDeleteId(null) }}
+        onConfirm={() => {
+          if (deleteId) {
+            announcementsStore.delete(deleteId).catch(() => {
+              toast.error('お知らせを削除できませんでした')
+            })
+          }
+          setDeleteId(null)
+        }}
       />
     </div>
   )

@@ -49,7 +49,7 @@ type Response = {
 const PER_PAGE = 50
 
 /** API(camelCase) → 画面で使っている型(snake_case) */
-function toPatient(d: PatientListItem): Patient {
+export function toPatient(d: PatientListItem): Patient {
   return {
     id: d.id,
     clinic_id: d.clinicId ?? '',
@@ -153,4 +153,34 @@ export function usePatientList(options: { search: string; clinicId: string | nul
   const reload = useCallback(() => setReloadToken((n) => n + 1), [])
 
   return { items, stats, total, page, setPage, hasNext, loading, error, reload, perPage: PER_PAGE }
+}
+
+
+/** 患者1件。詳細画面で使う */
+export function usePatient(patientId: string) {
+  const [patient, setPatient] = useState<Patient | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [reloadToken, setReloadToken] = useState(0)
+
+  useEffect(() => {
+    if (!patientId) { setPatient(null); setLoading(false); return }
+    const controller = new AbortController()
+    setLoading(true)
+    setError(null)
+
+    apiPost<{ patient: PatientListItem }>('/api/v1/patients/get', { id: patientId },
+      { authenticated: true, signal: controller.signal })
+      .then((res) => setPatient(toPatient(res.patient)))
+      .catch((err) => {
+        if (controller.signal.aborted) return
+        setPatient(null)
+        setError(err instanceof ApiError ? `${err.message}（${err.supportCode}）` : '患者情報を取得できませんでした。')
+      })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false) })
+
+    return () => controller.abort()
+  }, [patientId, reloadToken])
+
+  return { patient, loading, error, reload: () => setReloadToken((n) => n + 1) }
 }

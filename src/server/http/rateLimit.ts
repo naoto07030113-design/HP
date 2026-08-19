@@ -42,16 +42,17 @@ export function enforceRateLimit(rule: RateLimitRule, identifier: string | null)
   const key = `${rule.scope}:${identifier ?? 'unknown'}`
   const bucket = buckets.get(key)
 
-  if (!bucket || bucket.resetAt <= now) {
-    buckets.set(key, { count: 1, resetAt: now + rule.windowMs })
-    return
-  }
+  const fresh = !bucket || bucket.resetAt <= now
+  const next = fresh
+    ? { count: 1, resetAt: now + rule.windowMs }
+    : { count: bucket!.count + 1, resetAt: bucket!.resetAt }
+  buckets.set(key, next)
 
-  bucket.count += 1
-  if (bucket.count > rule.max) {
-    const retryAfterSec = Math.ceil((bucket.resetAt - now) / 1000)
+  // 新しい窓の1回目も max と比べる（max=0 を「無制限」と取り違えないため）
+  if (next.count > rule.max) {
+    const retryAfterSec = Math.ceil((next.resetAt - now) / 1000)
     throw new AppError(ERROR_CODES.RATE_LIMITED, {
-      detail: `scope=${rule.scope} identifier=${identifier ?? 'unknown'} count=${bucket.count} retryAfter=${retryAfterSec}s`,
+      detail: `scope=${rule.scope} identifier=${identifier ?? 'unknown'} count=${next.count} retryAfter=${retryAfterSec}s`,
     })
   }
 }

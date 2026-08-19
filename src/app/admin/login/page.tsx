@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { getSupabaseClient } from '@/lib/supabase'
+import { apiPost, ApiError } from '@/lib/api-client'
 import { LogIn, Eye, EyeOff } from 'lucide-react'
 
 export default function AdminLoginPage() {
@@ -21,11 +22,21 @@ export default function AdminLoginPage() {
     setLoading(true)
     setError(null)
 
-    const supabase = getSupabaseClient()
-    const { error: authError } = await supabase.auth.signInWithPassword({ email, password })
-
-    if (authError) {
-      setError('メールアドレスまたはパスワードが正しくありません')
+    // ログインはサーバー経由。失敗の連続を数えて制限し、監査ログにも残す
+    try {
+      const session = await apiPost<{ accessToken: string; refreshToken: string }>(
+        '/api/v1/auth/login', { email, password },
+      )
+      await getSupabaseClient().auth.setSession({
+        access_token: session.accessToken,
+        refresh_token: session.refreshToken,
+      })
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : 'ログインできませんでした。時間をおいて再度お試しください。',
+      )
       setLoading(false)
       return
     }

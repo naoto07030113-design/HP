@@ -118,8 +118,11 @@ export type InvoiceFilters = {
   clinicId: string | null
   status: InvoiceStatus | null
   search: string
-  from: string
-  to: string
+  from?: string
+  to?: string
+  /** 患者詳細から、その患者の会計だけを引くときに使う */
+  patientId?: string | null
+  perPage?: number
 }
 
 export function useInvoiceList(filters: InvoiceFilters) {
@@ -133,9 +136,10 @@ export function useInvoiceList(filters: InvoiceFilters) {
   const [reloadToken, setReloadToken] = useState(0)
   const abortRef = useRef<AbortController | null>(null)
 
-  const { clinicId, status, search, from, to } = filters
+  const { clinicId, status, search, from, to, patientId } = filters
+  const perPage = filters.perPage ?? PER_PAGE
 
-  useEffect(() => { setPage(1) }, [clinicId, status, search, from, to])
+  useEffect(() => { setPage(1) }, [clinicId, status, search, from, to, patientId])
 
   useEffect(() => {
     const delay = search ? 300 : 0
@@ -152,8 +156,9 @@ export function useInvoiceList(filters: InvoiceFilters) {
         search: search || undefined,
         from: from || undefined,
         to: to || undefined,
+        patientId: patientId ?? undefined,
         page,
-        perPage: PER_PAGE,
+        perPage,
       }, { authenticated: true, signal: controller.signal })
         .then((res) => {
           setItems(res.invoices.map(toInvoice))
@@ -170,9 +175,9 @@ export function useInvoiceList(filters: InvoiceFilters) {
     }, delay)
 
     return () => clearTimeout(timer)
-  }, [clinicId, status, search, from, to, page, reloadToken])
+  }, [clinicId, status, search, from, to, patientId, page, perPage, reloadToken])
 
   const reload = useCallback(() => setReloadToken((n) => n + 1), [])
 
-  return { items, stats, total, page, setPage, hasNext, loading, error, reload, perPage: PER_PAGE }
+  return { items, stats, total, page, setPage, hasNext, loading, error, reload, perPage }
 }

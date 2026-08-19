@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -32,7 +33,10 @@ export default function SettingsPage() {
   const [resetOpen, setResetOpen] = useState(false)
 
   function setS<K extends keyof typeof settings>(k: K, v: typeof settings[K]) {
-    settingsStore.update({ [k]: v }).catch(() => {})
+    // 保存失敗を握りつぶすと、設定が変わったように見えて実際は戻っている状態になる
+    settingsStore.update({ [k]: v }).catch(() => {
+      toast.error('設定を保存できませんでした。通信状況を確認してください')
+    })
   }
 
   function handleSave() {

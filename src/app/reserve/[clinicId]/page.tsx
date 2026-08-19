@@ -10,12 +10,11 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { ChevronLeft, ChevronRight, Check, ArrowLeft, ShoppingBag } from 'lucide-react'
 import Link from 'next/link'
-import { useClinicStore, reservationsStore } from '@/lib/clinic-store'
+import { useClinicStore } from '@/lib/clinic-store'
 import { useMerchandiseStore } from '@/lib/merchandise-store'
 import { useAnnouncementsStore, announcementsStore } from '@/lib/announcement-store'
 import { useClosedDaysStore, closedDaysStore } from '@/lib/closed-days-store'
 import { useSettingsStore } from '@/lib/settings-store'
-import { getSupabaseClient } from '@/lib/supabase'
 import { apiPost, ApiError } from '@/lib/api-client'
 import { AnnouncementBanners } from '@/components/common/AnnouncementBanner'
 import { SelfCareGuide } from '@/components/reserve/SelfCareGuide'
@@ -69,28 +68,6 @@ function generateTimeSlots(openTime: string, closeTime: string, durationMin: num
     slots.push(minutesToTime(t))
   }
   return slots
-}
-
-function isSlotAvailable(
-  date: string,
-  time: string,
-  staffId: string | null,
-  durationMin: number,
-  reservations: ReturnType<typeof reservationsStore.getAll>,
-): boolean {
-  const startMin = timeToMinutes(time)
-  const endMin = startMin + durationMin
-  return !reservations.some((r) => {
-    if (r.status === 'cancelled' || r.status === 'no_show') return false
-    if (staffId && r.staff_id !== staffId) return false
-    // Compare in local time to avoid UTC-vs-JST mismatch
-    const rStartDate = parseISO(r.start_at)
-    const rEndDate = parseISO(r.end_at)
-    if (format(rStartDate, 'yyyy-MM-dd') !== date) return false
-    const rStart = rStartDate.getHours() * 60 + rStartDate.getMinutes()
-    const rEnd = rEndDate.getHours() * 60 + rEndDate.getMinutes()
-    return startMin < rEnd && endMin > rStart
-  })
 }
 
 export default function ReserveClinicPage() {
@@ -197,98 +174,57 @@ export default function ReserveClinicPage() {
       new Date(`${date}T${selectedTime}:00`).getTime() + selectedMenu.duration_min * 60 * 1000,
     ).toISOString()
 
-    // 直前の重複チェック（指名ありの場合のみ）: 画面表示後に他の患者が同枠を取った場合を検知
-    if (selectedStaff) {
-      const { data: conflicts } = await getSupabaseClient()
-        .from('reservations')
-        .select('id')
-        .eq('staff_id', selectedStaff.id)
-        .in('status', ['confirmed', 'visited'])
-        .lt('start_at', endAt)
-        .gt('end_at', startAt)
-        .limit(1)
-      if (conflicts && conflicts.length > 0) {
-        setSubmitting(false)
-        toast.error('申し訳ありません、この時間はたった今埋まってしまいました。別の時間をお選びください。')
-        setSelectedTime(null)
-        setStep('time')
-        return
-      }
-    }
-
     const reservationData = {
       clinic_id: clinicId,
       staff_id: selectedStaff?.id ?? null,
       menu_id: selectedMenu.id,
       patient_name: patientName,
-      patient_phone: patientPhone ? normalizePhone(patientPhone) : null,
+      patient_phone: normalizePhone(patientPhone),
       start_at: startAt,
       end_at: endAt,
       memo: memo || null,
+      referral_name: referralSource === '紹介' ? referralName || null : null,
     }
 
-    if (visitType === 'first') {
-      const patientData = {
-        name: patientName,
-        name_kana: patientNameKana,
-        gender: patientGender,
-        birth_date: patientBirthDate || undefined,
-        phone: patientPhone ? normalizePhone(patientPhone) : '',
-        email: patientEmail,
-        postal_code: patientPostalCode,
-        address: patientAddress,
-        chief_complaint: chiefComplaint,
-        medical_history: medicalHistory,
-        current_medications: currentMedications,
-        allergies: allergies,
-        referral_source: referralSource,
-        referral_name: referralSource === '紹介' ? referralName || null : null,
-      }
-      try {
-        const res = await fetch('/api/intake', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ patient: patientData, reservation: reservationData }),
-        })
-        if (!res.ok) {
-          const body = await res.json().catch(() => null)
-          throw new Error(body?.error ?? '送信エラー')
-        }
-      } catch (err) {
-        setSubmitting(false)
-        const msg = err instanceof Error ? err.message : ''
-        toast.error(msg ? `予約の送信に失敗しました: ${msg}` : '予約の送信に失敗しました。時間をおいて再度お試しください。')
-        return
-      }
-    } else {
-      try {
-        await reservationsStore.create({
-          ...reservationData,
-          patient_id: null,
+    // 初診は問診内容もあわせて送る。再来は予約だけ
+    const patientData = visitType === 'first'
+      ? {
+          name: patientName,
+          name_kana: patientNameKana,
+          gender: patientGender,
+          birth_date: patientBirthDate || undefined,
+          phone: normalizePhone(patientPhone),
+          email: patientEmail,
+          postal_code: patientPostalCode,
+          address: patientAddress,
+          chief_complaint: chiefComplaint,
+          medical_history: medicalHistory,
+          current_medications: currentMedications,
+          allergies: allergies,
+          referral_source: referralSource,
           referral_name: referralSource === '紹介' ? referralName || null : null,
-          status: 'confirmed',
-        })
-      } catch (err) {
-        setSubmitting(false)
-        const msg = (err as { message?: string })?.message
-        toast.error(msg ? `予約の送信に失敗しました: ${msg}` : '予約の送信に失敗しました。時間をおいて再度お試しください。')
+        }
+      : undefined
+
+    // 枠が空いているかはサーバーで再確認される。
+    // 画面に空きが出てから送信するまでの間に埋まった場合もここで弾かれる
+    try {
+      await apiPost('/api/intake', { patient: patientData, reservation: reservationData })
+    } catch (err) {
+      setSubmitting(false)
+      if (err instanceof ApiError && err.code === 'APPOINTMENT_CONFLICT') {
+        toast.error(err.message)
+        setSelectedTime(null)
+        setStep('time')
         return
       }
+      toast.error(
+        err instanceof ApiError
+          ? `${err.message}（${err.supportCode}）`
+          : '予約の送信に失敗しました。時間をおいて再度お試しください。',
+      )
+      return
     }
-
-    // スタッフへのLINE通知（fire and forget）
-    fetch('/api/line/notify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        clinicId,
-        clinicName: clinic?.name ?? '',
-        patientName,
-        startAt: new Date(`${format(selectedDate!, 'yyyy-MM-dd')}T${selectedTime}:00`).toISOString(),
-        menuName: selectedMenu?.name ?? null,
-        staffName: selectedStaff?.name ?? null,
-      }),
-    }).catch(() => {})
 
     setSubmitting(false)
     setStep('complete')
@@ -297,6 +233,13 @@ export default function ReserveClinicPage() {
   if (!clinic) {
     return <div className="p-8 text-center text-muted-foreground">院が見つかりません</div>
   }
+
+  // 「次へ進む」が押せない理由。初診は主訴も必須
+  const missingField =
+    !patientName.trim() ? 'お名前'
+    : !patientPhone.trim() ? '電話番号'
+    : (visitType === 'first' && !chiefComplaint.trim()) ? '気になる症状'
+    : null
 
   const currentStepIdx = STEPS.indexOf(step)
   const progress = Math.round((currentStepIdx / (STEPS.length - 2)) * 100)
@@ -792,14 +735,18 @@ export default function ReserveClinicPage() {
                 </>
               )}
             </div>
+            {/* 押せない理由を出さないと、何が足りないのか分からないまま止まってしまう */}
+            {missingField && (
+              <p className="text-center text-sm text-stone-500">{missingField}をご入力ください</p>
+            )}
             <button
               className={cn(
                 'w-full h-12 rounded-2xl text-base font-bold transition-all',
-                (!patientName.trim() || !patientPhone.trim() || (visitType === 'first' && !chiefComplaint.trim()))
+                missingField
                   ? 'bg-stone-200 text-stone-400 cursor-not-allowed'
                   : 'bg-emerald-800 text-white hover:bg-emerald-700 active:scale-[0.99]',
               )}
-              disabled={!patientName.trim() || !patientPhone.trim() || (visitType === 'first' && !chiefComplaint.trim())}
+              disabled={!!missingField}
               onClick={goNext}
             >
               次へ進む

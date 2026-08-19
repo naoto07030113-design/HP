@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import { getSupabaseClient } from '@/lib/supabase'
 import { AppShell } from '@/components/layout/AppShell'
 import { StoreHydrationProvider } from '@/components/providers/StoreHydrationProvider'
+import { SessionTimeout } from '@/components/providers/SessionTimeout'
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -46,6 +47,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <StoreHydrationProvider>
+      <SessionTimeout />
       <AppShell>{children}</AppShell>
     </StoreHydrationProvider>
   )

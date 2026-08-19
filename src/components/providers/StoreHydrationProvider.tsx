@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import { toast } from 'sonner'
 import { hydrateClinicStore } from '@/lib/clinic-store'
 import { hydratePatientStore } from '@/lib/patient-store'
 import { hydrateMedicalRecordStore } from '@/lib/medical-record-store'
@@ -34,7 +35,11 @@ export function StoreHydrationProvider({
         hydrateAccountingStore(),
       )
     }
-    Promise.all(tasks).catch(() => {})
+    // 共有データの読み込み失敗を黙って捨てると、画面が「データ0件」に見えてしまう
+    Promise.all(tasks).catch((err) => {
+      console.error('共有データの読み込みに失敗しました', err)
+      toast.error('データの読み込みに失敗しました。画面を再読み込みしてください')
+    })
   }, [scope])
 
   return <>{children}</>

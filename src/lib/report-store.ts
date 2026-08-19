@@ -139,7 +139,10 @@ export const reportStore = {
     }
     _reports = [report, ..._reports]
     notify()
-    persist(report).catch(() => {})
+    persist(report).catch((err) => {
+      // 画面はストア経由なので、ここでは残せる情報を必ずログに出す
+      console.error('月次レポートの保存に失敗しました', err)
+    })
     return report
   },
 
@@ -149,7 +152,11 @@ export const reportStore = {
     )
     notify()
     const updated = _reports.find((r) => r.id === id)
-    if (updated) persist(updated).catch(() => {})
+    if (updated) {
+      persist(updated).catch((err) => {
+        console.error('月次レポートの保存に失敗しました', err)
+      })
+    }
   },
 
   updateActionPlan: (reportId: string, planId: string, status: ActionPlan['status']): void => {

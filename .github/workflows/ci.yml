@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: 依存関係をインストール
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: 型チェック
+        run: npm run typecheck
+
+      - name: テスト
+        run: npm test
+
+      # ビルドは環境変数が無いと落ちる箇所があるため、CI 用のダミー値を渡す。
+      # 実際の値は Vercel の環境変数で設定する（Secret を CI に置かない）
+      - name: ビルド
+        run: npm run build
+        env:
+          NEXT_PUBLIC_CLINIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_CLINIC_SUPABASE_ANON_KEY: ci-dummy-anon-key
+          CLINIC_SERVICE_ROLE_KEY: ci-dummy-service-key

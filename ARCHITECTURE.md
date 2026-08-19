@@ -71,6 +71,23 @@ Supabase (PostgreSQL)
 | `errors/` | 例外とエラーコード、外部へ返す形 |
 | `http/` | 共通ハンドラ、レート制限 |
 
+### 未認証で叩けるエンドポイント
+
+患者向けの以下だけが未認証で動く。いずれもレート制限と入力検証を必ず通す。
+
+| エンドポイント | 用途 |
+|---|---|
+| `POST /api/v1/appointments/availability` | 空き時刻の取得 |
+| `POST /api/v1/appointments/lookup` | 予約の照会（電話番号で本人確認） |
+| `POST /api/v1/appointments/cancel` | キャンセル（予約ID＋電話番号） |
+| `POST /api/v1/appointments/reschedule` | 日時変更（予約ID＋電話番号） |
+| `POST /api/intake` | Web予約の登録 |
+| `POST /api/v1/auth/login` | ログイン |
+
+`/api/intake` は初診・再来のどちらもここを通る。院・メニュー・担当者の実在と
+有効性を確認し、**枠が本当に空いているか**を空き枠算出と同じ経路で再確認してから
+登録する。予約の状態・患者ID・金額に関わる値は受け取らない。
+
 ### API の約束ごと
 
 **成功時**
@@ -193,6 +210,23 @@ medical_record_revisions     更新・削除のたびに、変更前の全内容
 
 キャンセルと無断キャンセルは枠を占有しないため重複を見ない。
 担当者未指定の予約も枠の取り合いが起きないため対象外とする。
+
+## 通知
+
+新規予約時のスタッフ向け LINE 通知は、予約が成立したあとに
+`src/server/notifications/lineNotifier.ts` からのみ送る。
+
+以前は `/api/line/notify` という未認証のエンドポイントがあり、誰でも任意の本文を
+院の LINE 公式アカウントから一斉配信できた。通知用の公開エンドポイントは持たない。
+
+通知の失敗で予約は失敗させない。失敗はエラーログに残す。
+
+## テスト
+
+`npm test`（vitest）。DB へは接続せず、DB に触る層はモックへ差し替える。
+対象は「壊れると業務が壊れる」判断だけに絞っている（詳細は `tests/README.md`）。
+
+CI（`.github/workflows/ci.yml`）で lint → 型チェック → テスト → ビルドを通す。
 
 ## 関連ドキュメント
 

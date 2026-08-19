@@ -77,6 +77,8 @@ export function toApiInput(form: Partial<Reservation>) {
 export type ReservationFilters = {
   clinicId: string | null
   staffId?: string | null
+  /** 患者詳細から、その患者の予約だけを引くときに使う */
+  patientId?: string | null
   status: Reservation['status'] | null
   search: string
   /** yyyy-MM-dd */
@@ -95,10 +97,10 @@ export function useReservationList(filters: ReservationFilters) {
   const [reloadToken, setReloadToken] = useState(0)
   const abortRef = useRef<AbortController | null>(null)
 
-  const { clinicId, staffId, status, search, from, to } = filters
+  const { clinicId, staffId, patientId, status, search, from, to } = filters
   const perPage = filters.perPage ?? 100
 
-  useEffect(() => { setPage(1) }, [clinicId, staffId, status, search, from, to])
+  useEffect(() => { setPage(1) }, [clinicId, staffId, patientId, status, search, from, to])
 
   useEffect(() => {
     const delay = search ? 300 : 0
@@ -112,6 +114,7 @@ export function useReservationList(filters: ReservationFilters) {
       apiPost<Response>('/api/v1/reservations/list', {
         clinicId: clinicId ?? undefined,
         staffId: staffId ?? undefined,
+        patientId: patientId ?? undefined,
         status: status ?? undefined,
         search: search || undefined,
         from: from || undefined,
@@ -133,7 +136,7 @@ export function useReservationList(filters: ReservationFilters) {
     }, delay)
 
     return () => clearTimeout(timer)
-  }, [clinicId, staffId, status, search, from, to, page, perPage, reloadToken])
+  }, [clinicId, staffId, patientId, status, search, from, to, page, perPage, reloadToken])
 
   const reload = useCallback(() => setReloadToken((n) => n + 1), [])
 
