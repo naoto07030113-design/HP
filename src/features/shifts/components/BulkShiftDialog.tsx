@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { format, addDays } from 'date-fns'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -31,9 +31,14 @@ export function BulkShiftDialog({ open, onOpenChange, weekStart, staff, clinicId
   const [breakStart, setBreakStart] = useState('13:00')
   const [breakEnd, setBreakEnd] = useState('14:00')
   const [selectedDays, setSelectedDays] = useState(DEFAULT_DAYS)
-  const [selectedStaff, setSelectedStaff] = useState<Set<string>>(
-    new Set(clinicStaff.map((s) => s.id)),
-  )
+  const [selectedStaff, setSelectedStaff] = useState<Set<string>>(new Set())
+
+  // ダイアログは常にマウントされているため、初期値だけでは院の読み込み前の空のままになる。
+  // 開いたとき（および院が変わったとき）に対象スタッフを選び直す
+  useEffect(() => {
+    if (!open) return
+    setSelectedStaff(new Set(staff.filter((s) => s.clinic_id === clinicId && s.is_active).map((s) => s.id)))
+  }, [open, clinicId, staff])
 
   function toggleDay(idx: number) {
     setSelectedDays((prev) => prev.map((v, i) => i === idx ? !v : v))
@@ -163,7 +168,12 @@ export function BulkShiftDialog({ open, onOpenChange, weekStart, staff, clinicId
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="items-center">
+          {(selectedStaff.size === 0 || !selectedDays.some(Boolean)) && (
+            <span className="mr-auto text-xs text-muted-foreground">
+              {selectedStaff.size === 0 ? 'スタッフを1名以上選んでください' : '曜日を1つ以上選んでください'}
+            </span>
+          )}
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>キャンセル</Button>
           <Button
             type="button"

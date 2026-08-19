@@ -1,15 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import type { Clinic, Staff, Menu, Shift, ShiftBlock, Reservation } from '@/types/clinic'
+import type { Clinic, Staff, Menu, Reservation } from '@/types/clinic'
 import { getSupabaseClient } from './supabase'
 
 type StoreState = {
   clinics: Clinic[]
   staff: Staff[]
   menus: Menu[]
-  shifts: Shift[]
-  shiftBlocks: ShiftBlock[]
   reservations: Reservation[]
   loading: boolean
   error: string | null
@@ -19,8 +17,6 @@ let _state: StoreState = {
   clinics: [],
   staff: [],
   menus: [],
-  shifts: [],
-  shiftBlocks: [],
   reservations: [],
   loading: true,
   error: null,
@@ -55,15 +51,11 @@ async function loadFromSupabase(): Promise<void> {
     clinicsRes,
     staffRes,
     menusRes,
-    shiftsRes,
-    shiftBlocksRes,
     reservationsRes,
   ] = await Promise.all([
     supabase.from('clinics').select('*').order('sort_order'),
     supabase.from('staff').select('*').order('sort_order'),
     supabase.from('menus').select('*').order('sort_order'),
-    supabase.from('shifts').select('*'),
-    supabase.from('shift_blocks').select('*'),
     _scope === 'public'
       ? Promise.resolve({ data: [], error: null })
       : supabase.from('reservations').select('*').order('start_at', { ascending: false }),
@@ -73,8 +65,6 @@ async function loadFromSupabase(): Promise<void> {
     clinicsRes.error,
     staffRes.error,
     menusRes.error,
-    shiftsRes.error,
-    shiftBlocksRes.error,
     reservationsRes.error,
   ].filter(Boolean)
 
@@ -88,8 +78,6 @@ async function loadFromSupabase(): Promise<void> {
     clinics: (clinicsRes.data ?? []) as Clinic[],
     staff: (staffRes.data ?? []) as Staff[],
     menus: (menusRes.data ?? []) as Menu[],
-    shifts: (shiftsRes.data ?? []) as Shift[],
-    shiftBlocks: (shiftBlocksRes.data ?? []) as ShiftBlock[],
     reservations: (reservationsRes.data ?? []) as Reservation[],
     loading: false,
     error: null,
@@ -145,38 +133,6 @@ function setupRealtime() {
         }))
       } else if (payload.eventType === 'DELETE') {
         setState((s) => ({ ...s, menus: s.menus.filter((m) => m.id !== payload.old.id) }))
-      }
-    })
-    .subscribe()
-
-  supabase
-    .channel('clinic-store-shifts')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'shifts' }, (payload) => {
-      if (payload.eventType === 'INSERT') {
-        setState((s) => ({ ...s, shifts: [...s.shifts, payload.new as Shift] }))
-      } else if (payload.eventType === 'UPDATE') {
-        setState((s) => ({
-          ...s,
-          shifts: s.shifts.map((sh) => sh.id === payload.new.id ? (payload.new as Shift) : sh),
-        }))
-      } else if (payload.eventType === 'DELETE') {
-        setState((s) => ({ ...s, shifts: s.shifts.filter((sh) => sh.id !== payload.old.id) }))
-      }
-    })
-    .subscribe()
-
-  supabase
-    .channel('clinic-store-shift-blocks')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'shift_blocks' }, (payload) => {
-      if (payload.eventType === 'INSERT') {
-        setState((s) => ({ ...s, shiftBlocks: [...s.shiftBlocks, payload.new as ShiftBlock] }))
-      } else if (payload.eventType === 'UPDATE') {
-        setState((s) => ({
-          ...s,
-          shiftBlocks: s.shiftBlocks.map((b) => b.id === payload.new.id ? (payload.new as ShiftBlock) : b),
-        }))
-      } else if (payload.eventType === 'DELETE') {
-        setState((s) => ({ ...s, shiftBlocks: s.shiftBlocks.filter((b) => b.id !== payload.old.id) }))
       }
     })
     .subscribe()
@@ -358,91 +314,6 @@ export const menusStore = {
     const supabase = getSupabaseClient()
     setState((s) => ({ ...s, menus: s.menus.filter((m) => m.id !== id) }))
     const { error } = await supabase.from('menus').delete().eq('id', id)
-    if (error) throw error
-  },
-}
-
-// ── Shifts ──────────────────────────────────────────
-
-export const shiftsStore = {
-  getAll: () => _state.shifts,
-  getByStaffAndDate: (staffId: string, date: string): Shift | null =>
-    _state.shifts.find((s) => s.staff_id === staffId && s.work_date === date) ?? null,
-
-  upsert: async (data: Omit<Shift, 'id' | 'created_at' | 'updated_at' | 'staff'>): Promise<void> => {
-    const supabase = getSupabaseClient()
-    const now = new Date().toISOString()
-    const existing = _state.shifts.find(
-      (s) => s.staff_id === data.staff_id && s.work_date === data.work_date,
-    )
-
-    if (existing) {
-      setState((s) => ({
-        ...s,
-        shifts: s.shifts.map((sh) =>
-          sh.id === existing.id ? { ...sh, ...data, updated_at: now } : sh,
-        ),
-      }))
-    } else {
-      const optimistic: Shift = { ...data, id: `opt-${Date.now()}`, created_at: now, updated_at: now }
-      setState((s) => ({ ...s, shifts: [...s.shifts, optimistic] }))
-    }
-
-    const { error } = await supabase
-      .from('shifts')
-      .upsert({ ...data, updated_at: now }, { onConflict: 'staff_id,work_date' })
-
-    if (error) throw error
-  },
-
-  delete: async (staffId: string, date: string): Promise<void> => {
-    const supabase = getSupabaseClient()
-    setState((s) => ({
-      ...s,
-      shifts: s.shifts.filter((sh) => !(sh.staff_id === staffId && sh.work_date === date)),
-    }))
-    const { error } = await supabase
-      .from('shifts')
-      .delete()
-      .eq('staff_id', staffId)
-      .eq('work_date', date)
-    if (error) throw error
-  },
-}
-
-// ── ShiftBlocks ──────────────────────────────────────────
-
-export const shiftBlocksStore = {
-  getAll: () => _state.shiftBlocks,
-  getByDate: (date: string) => _state.shiftBlocks.filter((b) => b.block_date === date),
-
-  create: async (data: Omit<ShiftBlock, 'id' | 'created_at' | 'staff'>): Promise<ShiftBlock> => {
-    const supabase = getSupabaseClient()
-    const now = new Date().toISOString()
-    const optimistic: ShiftBlock = { ...data, id: `opt-${Date.now()}`, created_at: now }
-    setState((s) => ({ ...s, shiftBlocks: [...s.shiftBlocks, optimistic] }))
-
-    const { data: created, error } = await supabase
-      .from('shift_blocks')
-      .insert(data)
-      .select()
-      .single()
-
-    if (error) {
-      setState((s) => ({ ...s, shiftBlocks: s.shiftBlocks.filter((b) => b.id !== optimistic.id) }))
-      throw error
-    }
-    setState((s) => ({
-      ...s,
-      shiftBlocks: s.shiftBlocks.map((b) => b.id === optimistic.id ? (created as ShiftBlock) : b),
-    }))
-    return created as ShiftBlock
-  },
-
-  delete: async (id: string): Promise<void> => {
-    const supabase = getSupabaseClient()
-    setState((s) => ({ ...s, shiftBlocks: s.shiftBlocks.filter((b) => b.id !== id) }))
-    const { error } = await supabase.from('shift_blocks').delete().eq('id', id)
     if (error) throw error
   },
 }

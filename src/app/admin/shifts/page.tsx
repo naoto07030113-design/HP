@@ -1,15 +1,18 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   format, addWeeks, subWeeks, startOfWeek, addDays,
-  addMonths, subMonths, startOfMonth,
+  addMonths, subMonths, startOfMonth, endOfMonth,
 } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ChevronLeft, ChevronRight, Copy, LayoutGrid } from 'lucide-react'
-import { useClinicStore, shiftsStore } from '@/lib/clinic-store'
+import { toast } from 'sonner'
+import { useClinicStore } from '@/lib/clinic-store'
+import { apiPost, ApiError } from '@/lib/api-client'
+import { useShiftList, toApiShift } from '@/features/shifts/hooks/useShiftList'
 import { ShiftWeekGrid } from '@/features/shifts/components/ShiftWeekGrid'
 import { ShiftMonthView } from '@/features/shifts/components/ShiftMonthView'
 import { BulkShiftDialog } from '@/features/shifts/components/BulkShiftDialog'
@@ -26,6 +29,7 @@ export default function ShiftsPage() {
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
   const [monthStart, setMonthStart] = useState(() => startOfMonth(new Date()))
   const [bulkOpen, setBulkOpen] = useState(false)
+  const [saving, setSaving] = useState(false)
 
   // 院の読み込み完了後（または選択中の院が無効化された場合）に有効な院を選び直す
   useEffect(() => {
@@ -36,35 +40,76 @@ export default function ShiftsPage() {
   }, [store.clinics, clinicId])
 
   const weekEnd = addDays(weekStart, 6)
+
+  // 表示中の期間だけを取得する。週次では前週コピーのために1週前から引く
+  const range = useMemo(() => (
+    viewMode === 'week'
+      ? { from: format(subWeeks(weekStart, 1), 'yyyy-MM-dd'), to: format(weekEnd, 'yyyy-MM-dd') }
+      : { from: format(monthStart, 'yyyy-MM-dd'), to: format(endOfMonth(monthStart), 'yyyy-MM-dd') }
+  ), [viewMode, weekStart, weekEnd, monthStart])
+
+  const { shifts, loading, error, reload } = useShiftList({
+    clinicId, from: range.from, to: range.to,
+  })
+
+  /** 保存はすべてここを通す。失敗を握りつぶさず、必ず画面に出す */
+  async function saveShifts(rows: ShiftFormData[]) {
+    if (rows.length === 0) return
+    setSaving(true)
+    try {
+      await apiPost('/api/v1/shifts/upsert', { shifts: rows.map(toApiShift) }, { authenticated: true })
+      reload()
+      toast.success(rows.length === 1 ? 'シフトを保存しました' : `${rows.length}件のシフトを保存しました`)
+    } catch (err) {
+      toast.error(err instanceof ApiError ? `${err.message}（${err.supportCode}）` : 'シフトを保存できませんでした')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function deleteShift(staffId: string, workDate: string) {
+    setSaving(true)
+    try {
+      await apiPost('/api/v1/shifts/delete', { staffId, workDate }, { authenticated: true })
+      reload()
+    } catch (err) {
+      toast.error(err instanceof ApiError ? `${err.message}（${err.supportCode}）` : 'シフトを削除できませんでした')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const weekLabel = `${format(weekStart, 'yyyy年M月d日', { locale: ja })} 〜 ${format(weekEnd, 'M月d日（E）', { locale: ja })}`
   const monthLabel = format(monthStart, 'yyyy年M月', { locale: ja })
 
-  function copyPreviousWeek() {
+  async function copyPreviousWeek() {
     const prevStart = subWeeks(weekStart, 1)
-    const prevEnd = addDays(prevStart, 6)
     const prevFrom = format(prevStart, 'yyyy-MM-dd')
-    const prevTo = format(prevEnd, 'yyyy-MM-dd')
+    const prevTo = format(addDays(prevStart, 6), 'yyyy-MM-dd')
 
-    const prevShifts = store.shifts.filter(
+    const prevShifts = shifts.filter(
       (s) => s.clinic_id === clinicId && s.work_date >= prevFrom && s.work_date <= prevTo,
     )
-    prevShifts.forEach((shift) => {
-      const newDate = format(addDays(new Date(shift.work_date), 7), 'yyyy-MM-dd')
-      shiftsStore.upsert({
-        staff_id: shift.staff_id,
-        clinic_id: shift.clinic_id,
-        work_date: newDate,
-        shift_type: shift.shift_type ?? 'work',
-        start_time: shift.start_time,
-        end_time: shift.end_time,
-        break_start: shift.break_start,
-        break_end: shift.break_end,
-      })
-    })
+    if (prevShifts.length === 0) {
+      toast.info('前週にコピーできるシフトがありません')
+      return
+    }
+
+    // 1件ずつ投げると途中で失敗したときに中途半端に入るため、まとめて送る
+    await saveShifts(prevShifts.map((shift) => ({
+      staff_id: shift.staff_id,
+      clinic_id: shift.clinic_id,
+      work_date: format(addDays(new Date(shift.work_date), 7), 'yyyy-MM-dd'),
+      shift_type: shift.shift_type ?? 'work',
+      start_time: shift.start_time,
+      end_time: shift.end_time,
+      break_start: shift.break_start,
+      break_end: shift.break_end,
+    })))
   }
 
-  function handleBulkApply(shifts: ShiftFormData[]) {
-    shifts.forEach((s) => shiftsStore.upsert(s))
+  function handleBulkApply(rows: ShiftFormData[]) {
+    void saveShifts(rows)
   }
 
   // 月次ビューでセルクリック → 該当週の週次ビューへ
@@ -155,7 +200,7 @@ export default function ShiftsPage() {
 
         <div className="ml-auto flex gap-2">
           {viewMode === 'week' && (
-            <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5" onClick={copyPreviousWeek}>
+            <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5" disabled={saving || loading} onClick={() => { void copyPreviousWeek() }}>
               <Copy className="w-3.5 h-3.5" />
               前週コピー
             </Button>
@@ -167,22 +212,33 @@ export default function ShiftsPage() {
         </div>
       </div>
 
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
       {/* グリッド */}
-      <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
+      <div className="relative bg-white rounded-xl border border-border shadow-sm overflow-hidden">
+        {loading && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 text-sm text-muted-foreground">
+            シフトを読み込んでいます...
+          </div>
+        )}
         {viewMode === 'week' ? (
           <ShiftWeekGrid
             weekStart={weekStart}
             staff={store.staff}
-            shifts={store.shifts}
+            shifts={shifts}
             clinicId={clinicId}
-            onUpsert={(data: ShiftFormData) => shiftsStore.upsert(data)}
-            onDelete={(staffId, date) => shiftsStore.delete(staffId, date)}
+            onUpsert={(data: ShiftFormData) => { void saveShifts([data]) }}
+            onDelete={(staffId, date) => { void deleteShift(staffId, date) }}
           />
         ) : (
           <ShiftMonthView
             month={monthStart}
             staff={store.staff}
-            shifts={store.shifts}
+            shifts={shifts}
             clinicId={clinicId}
             onClickDay={handleMonthDayClick}
           />

@@ -18,6 +18,7 @@ export type AuditAction =
   | 'medical_record.view' | 'medical_record.create' | 'medical_record.update' | 'medical_record.delete'
   | 'invoice.create' | 'invoice.update' | 'invoice.cancel' | 'invoice.delete'
   | 'staff.create' | 'staff.update' | 'role.update'
+  | 'shift.upsert' | 'shift.delete'
   | 'settings.update'
 
 export type AuditEntry = {
