@@ -11,7 +11,6 @@ import { toApiInput, toRecord, type MedicalRecordDto } from '@/features/records/
 import { toast } from 'sonner'
 import type { MedicalRecord } from '@/types/medical-record'
 import { useClinicStore } from '@/lib/clinic-store'
-import { usePatientStore } from '@/lib/patient-store'
 import { RecordForm } from '@/features/records/components/RecordForm'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import type { MedicalRecordFormData } from '@/types/medical-record'
@@ -46,7 +45,6 @@ export default function RecordDetailPage() {
   const recordId = String(params.recordId)
   const router = useRouter()
   const store = useClinicStore()
-  const patients = usePatientStore()
 
   const [formOpen, setFormOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -92,7 +90,8 @@ export default function RecordDetailPage() {
 
   const staff = store.staff.find((s) => s.id === record.staff_id)
   const clinic = store.clinics.find((c) => c.id === record.clinic_id)
-  const patient = patients.find((p) => p.id === record.patient_id)
+  // カルテが患者IDを持っているので、患者一覧を読み込まなくてもリンクを張れる
+  const patientId = record.patient_id
 
   // 以前は失敗を握りつぶしていたため、保存できていないことに気づけなかった
   async function handleSubmit(data: MedicalRecordFormData) {
@@ -140,8 +139,8 @@ export default function RecordDetailPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {patient && (
-            <Link href={`/admin/patients/${patient.id}`}>
+          {patientId && (
+            <Link href={`/admin/patients/${patientId}`}>
               <Button variant="outline" size="sm" className="gap-1.5">
                 <User className="w-3.5 h-3.5" />
                 患者情報

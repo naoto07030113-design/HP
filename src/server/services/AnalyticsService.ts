@@ -20,7 +20,9 @@ import { AppError, ERROR_CODES } from '../errors/AppError'
 import { shiftRepository } from '../repositories/ShiftRepository'
 import { assertClinicAccess, clinicScope, requireCapability } from '../permissions/policy'
 import type { Actor } from '../auth/session'
-import type { ClinicDetailInput, DashboardInput, StaffDetailInput } from '../validators/report'
+import type {
+  AnalyticsReportInput, ClinicDetailInput, DashboardInput, StaffDetailInput,
+} from '../validators/report'
 import type {
   AlertItem, ClinicKPI, DashboardData, DateRange, KPISnapshot, PeriodFilter, StaffKPI, TrendPoint,
 } from '@/types/dashboard'
@@ -87,13 +89,13 @@ export function getPrevPeriodRange(current: DateRange): DateRange {
 
 // ── 集計 ──
 
-type Dataset = {
+export type Dataset = {
   reservations: AnalyticsReservation[]
   invoices: AnalyticsInvoice[]
   patients: AnalyticsPatient[]
 }
 
-function computeKPIs(
+export function computeKPIs(
   data: Dataset,
   range: DateRange,
   clinicId: string | 'all',
@@ -277,6 +279,23 @@ export type StaffDetail = {
   monthHistory: Array<{ label: string; visits: number; cancelled: number }>
 }
 
+export type AnalyticsReport = {
+  month: string
+  kpi: {
+    thisMonthRev: number; lastMonthRev: number
+    thisMonthVisits: number; lastMonthVisits: number
+    newPatients: number; repeatRate: number
+  }
+  days30: Array<{ date: string; label: string; revenue: number; visits: number }>
+  staffStats: Array<{ id: string; name: string; role: string | null; clinicId: string; visits: number; revenue: number }>
+  menuRanking: Array<{ name: string; count: number; revenue: number }>
+  statusBreakdown: Array<{ status: string; count: number }>
+  inactivePatients: Array<{
+    id: string; name: string; nameKana: string | null; phone: string | null
+    clinicId: string; lastVisitDate: string | null; daysSince: number | null
+  }>
+}
+
 export type ClinicDetail = {
   menuRanking: Array<{ name: string; count: number; revenue: number }>
   monthlyTrend: Array<{ label: string; sales: number; visits: number }>
@@ -452,6 +471,139 @@ export const analyticsService = {
           cancelled: inMonth.filter((r) => r.status === 'cancelled' || r.status === 'no_show').length,
         }
       }),
+    }
+  },
+
+  /**
+   * 分析レポート画面。
+   * 以前はブラウザが全会計・全患者・全予約を読み込んで集計していた。
+   */
+  async report(actor: Actor, input: AnalyticsReportInput): Promise<AnalyticsReport> {
+    requireCapability(actor, 'analytics.read')
+
+    const scope = clinicScope(actor)
+    if (input.clinicId) assertClinicAccess(actor, input.clinicId)
+    const clinicId = scope ?? input.clinicId ?? null
+
+    const today = new Date()
+    const thisMonth = { from: ymd(new Date(today.getFullYear(), today.getMonth(), 1)),
+                        to: ymd(new Date(today.getFullYear(), today.getMonth() + 1, 0)) }
+    const lastMonth = { from: ymd(new Date(today.getFullYear(), today.getMonth() - 1, 1)),
+                        to: ymd(new Date(today.getFullYear(), today.getMonth(), 0)) }
+    // 未再診の判定に必要なぶんだけ遡る
+    const historyFrom = shift(ymd(today), -Math.max(HISTORY_DAYS, input.inactiveDays))
+    const from = [lastMonth.from, shift(ymd(today), -29), historyFrom].sort()[0]
+    const to = [thisMonth.to, ymd(today)].sort().slice(-1)[0]
+
+    const [reservations, invoices, patients, items, staffRows] = await Promise.all([
+      reportRepository.analyticsReservations(from, to, clinicId),
+      reportRepository.analyticsInvoices(from, to, clinicId),
+      reportRepository.analyticsPatients(clinicId),
+      reportRepository.invoiceItemsForRange(thisMonth.from, thisMonth.to, clinicId),
+      reportRepository.staffList(clinicId),
+    ])
+
+    const inClinic = (cid: string) => !clinicId || cid === clinicId
+    const inMonth = (d: string, m: { from: string; to: string }) => d >= m.from && d <= m.to
+
+    const paid = invoices.filter((i) => inClinic(i.clinic_id))
+    const visited = reservations.filter((r) => r.status === 'visited' && inClinic(r.clinic_id))
+
+    const sum = (rows: AnalyticsInvoice[]) => rows.reduce((s, i) => s + (i.total_amount ?? 0), 0)
+
+    const visitCount = new Map<string, number>()
+    visited.forEach((r) => {
+      const key = r.patient_id ?? r.patient_name
+      visitCount.set(key, (visitCount.get(key) ?? 0) + 1)
+    })
+    const uniquePatients = visitCount.size
+    const repeat = Array.from(visitCount.values()).filter((c) => c >= 2).length
+
+    const days30 = Array.from({ length: 30 }, (_, i) => {
+      const date = shift(ymd(today), -(29 - i))
+      const [, m, d] = date.split('-')
+      return {
+        date,
+        label: i % 5 === 0 || i === 29 ? `${Number(m)}/${Number(d)}` : '',
+        revenue: sum(paid.filter((inv) => inv.visit_date === date)),
+        visits: visited.filter((r) => r.start_at.slice(0, 10) === date).length,
+      }
+    })
+
+    const staffStats = staffRows
+      .filter((s) => s.is_active && inClinic(s.clinic_id))
+      .map((s) => ({
+        id: s.id, name: s.name, role: s.role, clinicId: s.clinic_id,
+        visits: visited.filter((r) => r.staff_id === s.id && inMonth(r.start_at.slice(0, 10), thisMonth)).length,
+        revenue: sum(paid.filter((i) => i.staff_id === s.id && inMonth(i.visit_date, thisMonth))),
+      }))
+      .sort((a, b) => b.visits - a.visits)
+
+    const menuMap = new Map<string, { count: number; revenue: number }>()
+    items.forEach((it) => {
+      const e = menuMap.get(it.name) ?? { count: 0, revenue: 0 }
+      menuMap.set(it.name, { count: e.count + (it.quantity ?? 0), revenue: e.revenue + (it.subtotal ?? 0) })
+    })
+    const menuRanking = Array.from(menuMap.entries())
+      .map(([name, d]) => ({ name, ...d }))
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 8)
+
+    const monthly = reservations.filter(
+      (r) => inClinic(r.clinic_id) && inMonth(r.start_at.slice(0, 10), thisMonth),
+    )
+    const statusBreakdown = ['visited', 'confirmed', 'cancelled', 'no_show'].map((status) => ({
+      status, count: monthly.filter((r) => r.status === status).length,
+    }))
+
+    const threshold = shift(ymd(today), -input.inactiveDays)
+    const lastVisit = new Map<string, string>()
+    visited.forEach((r) => {
+      const key = r.patient_id ?? r.patient_name
+      const d = r.start_at.slice(0, 10)
+      const prev = lastVisit.get(key)
+      if (!prev || d > prev) lastVisit.set(key, d)
+    })
+    const inactivePatients = patients
+      .filter((p) => {
+        if (!p.is_active || !inClinic(p.clinic_id)) return false
+        const last = lastVisit.get(p.id)
+        return !last || last < threshold
+      })
+      .map((p) => {
+        const last = lastVisit.get(p.id) ?? null
+        return {
+          id: p.id, name: p.name, nameKana: p.name_kana, phone: p.phone, clinicId: p.clinic_id,
+          lastVisitDate: last,
+          daysSince: last
+            ? Math.round((parse(ymd(today)).getTime() - parse(last).getTime()) / DAY)
+            : null,
+        }
+      })
+      .sort((a, b) => {
+        if (a.lastVisitDate === null) return -1
+        if (b.lastVisitDate === null) return 1
+        return a.lastVisitDate < b.lastVisitDate ? -1 : 1
+      })
+      .slice(0, 50)
+
+    return {
+      month: thisMonth.from.slice(0, 7),
+      kpi: {
+        thisMonthRev: sum(paid.filter((i) => inMonth(i.visit_date, thisMonth))),
+        lastMonthRev: sum(paid.filter((i) => inMonth(i.visit_date, lastMonth))),
+        thisMonthVisits: visited.filter((r) => inMonth(r.start_at.slice(0, 10), thisMonth)).length,
+        lastMonthVisits: visited.filter((r) => inMonth(r.start_at.slice(0, 10), lastMonth)).length,
+        newPatients: patients.filter(
+          (p) => inClinic(p.clinic_id) && inMonth(p.first_visit_date ?? '', thisMonth),
+        ).length,
+        repeatRate: uniquePatients > 0 ? Math.round((repeat / uniquePatients) * 100) : 0,
+      },
+      days30,
+      staffStats,
+      menuRanking,
+      statusBreakdown,
+      inactivePatients,
     }
   },
 }

@@ -19,6 +19,7 @@ export type AuditAction =
   | 'invoice.create' | 'invoice.update' | 'invoice.cancel' | 'invoice.delete'
   | 'staff.create' | 'staff.update' | 'role.update'
   | 'shift.upsert' | 'shift.delete'
+  | 'merchandise_booking.create' | 'merchandise_booking.update' | 'merchandise_booking.delete'
   | 'settings.update'
 
 export type AuditEntry = {

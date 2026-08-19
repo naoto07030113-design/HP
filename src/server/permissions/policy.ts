@@ -14,6 +14,7 @@ export type Capability =
   | 'medicalRecords.read' | 'medicalRecords.write' | 'medicalRecords.delete'
   | 'billing.read' | 'billing.write' | 'billing.delete'
   | 'shifts.read' | 'shifts.manage'
+  | 'merchandise.read' | 'merchandise.manage'
   | 'staff.manage' | 'clinics.manage' | 'settings.manage'
   | 'analytics.read' | 'analytics.readAllClinics'
   | 'auditLogs.read'
@@ -26,6 +27,7 @@ const MATRIX: Record<Role, Capability[]> = {
     'medicalRecords.read', 'medicalRecords.write', 'medicalRecords.delete',
     'billing.read', 'billing.write', 'billing.delete',
     'shifts.read', 'shifts.manage',
+    'merchandise.read', 'merchandise.manage',
     'staff.manage', 'clinics.manage', 'settings.manage',
     'analytics.read', 'analytics.readAllClinics',
     'auditLogs.read',
@@ -36,6 +38,7 @@ const MATRIX: Record<Role, Capability[]> = {
     'medicalRecords.read', 'medicalRecords.write',
     'billing.read', 'billing.write',
     'shifts.read', 'shifts.manage',
+    'merchandise.read', 'merchandise.manage',
     'analytics.read',
   ],
   receptionist: [
@@ -43,6 +46,7 @@ const MATRIX: Record<Role, Capability[]> = {
     'appointments.read', 'appointments.write',
     'billing.read',
     'shifts.read',
+    'merchandise.read',
   ],
 }
 

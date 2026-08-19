@@ -10,7 +10,8 @@ import {
   BrainCircuit, CalendarOff, ShoppingBag, ChevronRight,
 } from 'lucide-react'
 import { useClinicStore } from '@/lib/clinic-store'
-import { usePatientStore } from '@/lib/patient-store'
+import { useReservationList } from '@/features/reservations/hooks/useReservationList'
+import { usePatientList } from '@/features/patients/hooks/usePatientList'
 import { useCurrentUser, PERMISSIONS, ROLE_LABELS } from '@/lib/auth-store'
 import { cn } from '@/lib/utils'
 
@@ -86,11 +87,16 @@ const SECTIONS: Section[] = [
 export default function AdminHomePage() {
   const currentUser = useCurrentUser()
   const store = useClinicStore()
-  const patients = usePatientStore()
 
   const isAdmin = currentUser?.role === 'admin'
   const todayStr = format(new Date(), 'yyyy-MM-dd')
-  const todayReservations = store.reservations.filter((r) => r.start_at.startsWith(todayStr))
+
+  // 本日分と患者数だけをサーバーから引く（以前は全予約・全患者を読み込んでいた）
+  const { items: todayReservations } = useReservationList({
+    clinicId: null, status: null, search: '', from: todayStr, to: todayStr, perPage: 500,
+  })
+  const { total: patientTotal } = usePatientList({ search: '', clinicId: null })
+
   const activeClinics = store.clinics.filter((c) => c.is_active)
 
   const visibleSections = SECTIONS.filter((s) => !s.adminOnly || isAdmin)
@@ -128,7 +134,7 @@ export default function AdminHomePage() {
       <div className="grid grid-cols-3 gap-3">
         {[
           { label: '本日の予約', value: todayReservations.length, unit: '件' },
-          { label: '患者数',     value: patients.length, unit: '名' },
+          { label: '患者数',     value: patientTotal, unit: '名' },
           { label: '稼働院数',   value: activeClinics.length, unit: '院' },
         ].map((stat) => (
           <div key={stat.label} className="bg-white rounded-xl border border-green-100 shadow-sm p-3 text-center">

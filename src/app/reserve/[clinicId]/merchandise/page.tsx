@@ -8,7 +8,8 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { ArrowLeft, Package, ShoppingCart, Check, Plus, Minus } from 'lucide-react'
 import { useClinicStore } from '@/lib/clinic-store'
-import { useMerchandiseStore, merchandiseBookingsStore } from '@/lib/merchandise-store'
+import { useMerchandiseStore } from '@/lib/merchandise-store'
+import { apiPost, ApiError } from '@/lib/api-client'
 import { cn } from '@/lib/utils'
 import type { Merchandise } from '@/types/merchandise'
 
@@ -53,24 +54,28 @@ export default function MerchandisePage() {
 
   async function handleSubmit() {
     if (!patientName.trim()) { setError('お名前を入力してください'); return }
+    if (!patientPhone.trim()) { setError('電話番号を入力してください'); return }
     setSubmitting(true)
     setError(null)
     try {
+      // 登録はサーバー経由。商品の実在と有効性はサーバーで確認される
       for (const { merchandise, quantity } of cartItems) {
-        await merchandiseBookingsStore.create({
-          merchandise_id: merchandise.id,
-          clinic_id: clinicId,
-          patient_name: patientName.trim(),
-          patient_phone: patientPhone.trim() || null,
-          patient_id: null,
+        await apiPost('/api/v1/merchandise/bookings/create', {
+          merchandiseId: merchandise.id,
+          clinicId,
+          patientName: patientName.trim(),
+          patientPhone: patientPhone.trim(),
           quantity,
-          status: 'pending',
           notes: notes.trim() || null,
         })
       }
       setStep('complete')
-    } catch {
-      setError('予約に失敗しました。もう一度お試しください。')
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : '予約に失敗しました。もう一度お試しください。',
+      )
     } finally {
       setSubmitting(false)
     }
@@ -223,13 +228,15 @@ export default function MerchandisePage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="patient-phone">電話番号（任意）</Label>
+                <Label htmlFor="patient-phone">電話番号</Label>
                 <Input
                   id="patient-phone"
                   type="tel"
+                  inputMode="tel"
                   value={patientPhone}
                   onChange={(e) => setPatientPhone(e.target.value)}
                   placeholder="090-0000-0000"
+                  required
                 />
               </div>
               <div className="space-y-1.5">
@@ -248,6 +255,8 @@ export default function MerchandisePage() {
               className="w-full h-12 text-base"
               onClick={() => {
                 if (!patientName.trim()) { setError('お名前を入力してください'); return }
+                // 商品のお渡し連絡に使うため電話番号も必須にする
+                if (!patientPhone.trim()) { setError('電話番号を入力してください'); return }
                 setError(null)
                 setStep('confirm')
               }}

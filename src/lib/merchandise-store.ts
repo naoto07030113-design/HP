@@ -1,19 +1,17 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import type { Merchandise, MerchandiseBooking, MerchandiseFormData, MerchandiseBookingFormData } from '@/types/merchandise'
+import type { Merchandise, MerchandiseFormData } from '@/types/merchandise'
 import { getSupabaseClient } from './supabase'
 
 type StoreState = {
   merchandise: Merchandise[]
-  bookings: MerchandiseBooking[]
   loading: boolean
   error: string | null
 }
 
 let _state: StoreState = {
   merchandise: [],
-  bookings: [],
   loading: true,
   error: null,
 }
@@ -29,31 +27,26 @@ function setState(updater: (prev: StoreState) => StoreState) {
   notify()
 }
 
-// 物販予約には他の患者の氏名・電話番号が含まれるため、患者向けでは取得しない
-let _scope: 'admin' | 'public' = 'admin'
-
+/**
+ * 商品一覧だけを読む。
+ *
+ * 物販予約には患者の氏名・電話番号が入るため、ここでは読まない。
+ * 管理画面は /api/v1/merchandise/bookings/* から所属院の分だけを引く。
+ */
 async function loadFromSupabase(): Promise<void> {
   const supabase = getSupabaseClient()
   setState((s) => ({ ...s, loading: true, error: null }))
 
-  const [mercRes, bookRes] = await Promise.all([
-    supabase.from('merchandise').select('*').order('sort_order'),
-    _scope === 'public'
-      ? Promise.resolve({ data: [], error: null })
-      : supabase.from('merchandise_bookings').select('*, merchandise(*)').order('booked_at', { ascending: false }),
-  ])
+  const { data, error } = await supabase.from('merchandise').select('*').order('sort_order')
 
-  // 予約一覧はスタッフ専用（患者側の匿名アクセスでは読めない）ため、
-  // 商品一覧と独立して処理し、片方の失敗でもう片方を壊さない
-  if (mercRes.error) {
-    setState((s) => ({ ...s, loading: false, error: mercRes.error!.message }))
+  if (error) {
+    setState((s) => ({ ...s, loading: false, error: error.message }))
     return
   }
 
   setState((s) => ({
     ...s,
-    merchandise: (mercRes.data ?? []) as Merchandise[],
-    bookings: bookRes.error ? s.bookings : ((bookRes.data ?? []) as MerchandiseBooking[]),
+    merchandise: (data ?? []) as Merchandise[],
     loading: false,
     error: null,
   }))
@@ -78,17 +71,10 @@ function setupRealtime() {
     })
     .subscribe()
 
-  supabase
-    .channel('merchandise-store-bookings')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'merchandise_bookings' }, () => {
-      loadFromSupabase()
-    })
-    .subscribe()
 }
 
-export async function hydrateMerchandiseStore(scope: 'admin' | 'public' = 'admin'): Promise<void> {
+export async function hydrateMerchandiseStore(_scope: 'admin' | 'public' = 'admin'): Promise<void> {
   if (typeof window === 'undefined') return
-  _scope = scope
   if (!_loadPromise) {
     _loadPromise = loadFromSupabase().then(() => {
       setupRealtime()
@@ -137,53 +123,6 @@ export const merchandiseStore = {
     const supabase = getSupabaseClient()
     setState((s) => ({ ...s, merchandise: s.merchandise.filter((m) => m.id !== id) }))
     const { error } = await supabase.from('merchandise').delete().eq('id', id)
-    if (error) throw error
-  },
-}
-
-// ── Bookings CRUD ──────────────────────────────────────────
-
-export const merchandiseBookingsStore = {
-  getAll: () => _state.bookings,
-  getByClinic: (clinicId: string) => _state.bookings.filter((b) => b.clinic_id === clinicId),
-  getByMerchandise: (mercId: string) => _state.bookings.filter((b) => b.merchandise_id === mercId),
-
-  create: async (data: MerchandiseBookingFormData): Promise<MerchandiseBooking> => {
-    const supabase = getSupabaseClient()
-    const now = new Date().toISOString()
-    // 患者(anon)は予約一覧の閲覧権限を持たないため、RETURNING(.select())を使わず
-    // IDをクライアント側で発行して挿入する
-    const id = crypto.randomUUID()
-    const { error } = await supabase
-      .from('merchandise_bookings')
-      .insert({ ...data, id, booked_at: now })
-    if (error) throw error
-    const booking: MerchandiseBooking = {
-      ...data,
-      id,
-      booked_at: now,
-      created_at: now,
-      updated_at: now,
-    } as MerchandiseBooking
-    setState((s) => ({ ...s, bookings: [booking, ...s.bookings] }))
-    return booking
-  },
-
-  updateStatus: async (id: string, status: MerchandiseBooking['status']): Promise<void> => {
-    const supabase = getSupabaseClient()
-    const now = new Date().toISOString()
-    setState((s) => ({
-      ...s,
-      bookings: s.bookings.map((b) => b.id === id ? { ...b, status, updated_at: now } : b),
-    }))
-    const { error } = await supabase.from('merchandise_bookings').update({ status, updated_at: now }).eq('id', id)
-    if (error) throw error
-  },
-
-  delete: async (id: string): Promise<void> => {
-    const supabase = getSupabaseClient()
-    setState((s) => ({ ...s, bookings: s.bookings.filter((b) => b.id !== id) }))
-    const { error } = await supabase.from('merchandise_bookings').delete().eq('id', id)
     if (error) throw error
   },
 }

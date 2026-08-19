@@ -36,3 +36,17 @@ export const staffDetailSchema = z.object({
   staffId: uuidSchema,
 })
 export type StaffDetailInput = z.infer<typeof staffDetailSchema>
+
+export const analyticsReportSchema = z.object({
+  clinicId: uuidSchema.nullable().optional(),
+  /** 何日来ていない患者を「未再診」とみなすか */
+  inactiveDays: z.number().int().min(7).max(365).default(60),
+})
+export type AnalyticsReportInput = z.infer<typeof analyticsReportSchema>
+
+export const monthlyReportSchema = z.object({
+  /** yyyy-MM */
+  month: z.string().regex(/^\d{4}-\d{2}$/, '対象月の形式が正しくありません'),
+  clinicId: uuidSchema.nullable().optional(),
+})
+export type MonthlyReportInput = z.infer<typeof monthlyReportSchema>

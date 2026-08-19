@@ -7,7 +7,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Download, FileText } from 'lucide-react'
+import { toast } from 'sonner'
 import { useClinicStore } from '@/lib/clinic-store'
+import { ApiError } from '@/lib/api-client'
+import { fetchAllReservations } from '@/features/reservations/hooks/useReservationList'
+import type { Reservation } from '@/types/clinic'
 import { PermissionGuard } from '@/components/common/PermissionGuard'
 import Papa from 'papaparse'
 
@@ -20,16 +24,10 @@ export default function ExportsPage() {
   const [staffId, setStaffId] = useState('all')
   const [dateFrom, setDateFrom] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'))
   const [dateTo, setDateTo] = useState(format(endOfMonth(new Date()), 'yyyy-MM-dd'))
+  const [exporting, setExporting] = useState(false)
 
-  function buildData() {
-    let reservations = store.reservations.filter((r) => {
-      const d = r.start_at.slice(0, 10)
-      if (dateFrom && d < dateFrom) return false
-      if (dateTo && d > dateTo) return false
-      if (clinicId !== 'all' && r.clinic_id !== clinicId) return false
-      if (staffId !== 'all' && r.staff_id !== staffId) return false
-      return true
-    }).sort((a, b) => a.start_at < b.start_at ? -1 : 1)
+  function buildData(source: Reservation[]) {
+    const reservations = [...source].sort((a, b) => (a.start_at < b.start_at ? -1 : 1))
 
     const STATUS_MAP: Record<string, string> = {
       confirmed: '予約確定', visited: '来院済', cancelled: 'キャンセル', no_show: '無断キャンセル',
@@ -96,10 +94,27 @@ export default function ExportsPage() {
     })
   }
 
-  function handleExport() {
-    const data = buildData()
+  async function handleExport() {
+    // 出力時にサーバーから期間分を引く（以前は全予約をブラウザに読み込んでいた）
+    setExporting(true)
+    let reservations: Reservation[]
+    try {
+      reservations = await fetchAllReservations({
+        clinicId: clinicId === 'all' ? null : clinicId,
+        staffId: staffId === 'all' ? null : staffId,
+        from: dateFrom,
+        to: dateTo,
+      })
+    } catch (err) {
+      setExporting(false)
+      toast.error(err instanceof ApiError ? `${err.message}（${err.supportCode}）` : 'データを取得できませんでした')
+      return
+    }
+    setExporting(false)
+
+    const data = buildData(reservations)
     if (data.length === 0) {
-      alert('出力対象のデータがありません')
+      toast.info('出力対象のデータがありません')
       return
     }
     const csv = Papa.unparse(data as Record<string, unknown>[])
@@ -193,9 +208,9 @@ export default function ExportsPage() {
           )}
         </div>
 
-        <Button className="w-full gap-2" onClick={handleExport}>
+        <Button className="w-full gap-2" disabled={exporting} onClick={() => { void handleExport() }}>
           <Download className="w-4 h-4" />
-          CSVダウンロード
+          {exporting ? '出力中...' : 'CSVダウンロード'}
         </Button>
       </div>
     </div>

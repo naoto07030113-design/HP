@@ -6,7 +6,11 @@ import { ja } from 'date-fns/locale'
 import type { Reservation, Staff, Menu } from '@/types/clinic'
 import { StatusBadge } from '@/components/common/StatusBadge'
 import { Calendar, FileText, Plus } from 'lucide-react'
-import { medicalRecordStore } from '@/lib/medical-record-store'
+import { toast } from 'sonner'
+import { apiPost, ApiError } from '@/lib/api-client'
+import {
+  useMedicalRecordList, toApiInput,
+} from '@/features/records/hooks/useMedicalRecordList'
 import { RecordForm } from '@/features/records/components/RecordForm'
 import type { MedicalRecordFormData } from '@/types/medical-record'
 import Link from 'next/link'
@@ -31,18 +35,30 @@ export function PatientReservationHistory({ patientId, patientName, reservations
     [patientId, reservations],
   )
 
-  const existingRecordIds = useMemo(() => {
-    const recs = medicalRecordStore.getByPatient(patientId)
-    return new Set(recs.map((r) => r.reservation_id).filter(Boolean))
-  }, [patientId])
+  // この患者のカルテだけをサーバーから引く（以前は全カルテを読み込んでいた）
+  const { items: patientRecords, reload: reloadRecords } = useMedicalRecordList({
+    search: '', clinicId: null, staffId: null, patientId, perPage: 200,
+  })
+
+  const recordByReservation = useMemo(() => {
+    const m = new Map<string, string>()
+    patientRecords.forEach((r) => { if (r.reservation_id) m.set(r.reservation_id, r.id) })
+    return m
+  }, [patientRecords])
 
   function openNewRecord(r: Reservation) {
     setSelectedReservation(r)
     setRecordFormOpen(true)
   }
 
-  function handleRecordSubmit(data: MedicalRecordFormData) {
-    medicalRecordStore.create(data)
+  async function handleRecordSubmit(data: MedicalRecordFormData) {
+    try {
+      await apiPost('/api/v1/medical-records/create', toApiInput(data), { authenticated: true })
+      reloadRecords()
+      toast.success('カルテを作成しました')
+    } catch (err) {
+      toast.error(err instanceof ApiError ? `${err.message}（${err.supportCode}）` : 'カルテを作成できませんでした')
+    }
   }
 
   if (history.length === 0) {
@@ -73,8 +89,7 @@ export function PatientReservationHistory({ patientId, patientName, reservations
         {history.map((r) => {
           const s = staff.find((st) => st.id === r.staff_id)
           const m = menus.find((mn) => mn.id === r.menu_id)
-          const hasRecord = existingRecordIds.has(r.id)
-          const existingRecord = medicalRecordStore.getByReservation(r.id)
+          const existingRecordId = recordByReservation.get(r.id) ?? null
           return (
             <div key={r.id} className="flex items-start gap-3 p-3 rounded-lg bg-green-50/60 border border-border">
               <div className="flex-shrink-0 text-center min-w-[52px]">
@@ -93,9 +108,9 @@ export function PatientReservationHistory({ patientId, patientName, reservations
               </div>
               {/* カルテボタン */}
               {r.status === 'visited' && (
-                hasRecord && existingRecord ? (
+                existingRecordId ? (
                   <Link
-                    href={`/admin/records/${existingRecord.id}`}
+                    href={`/admin/records/${existingRecordId}`}
                     className="flex items-center gap-1 text-xs text-green-700 hover:text-green-900 bg-green-50 hover:bg-green-100 border border-green-200 px-2 py-1 rounded transition-colors flex-shrink-0"
                   >
                     <FileText className="w-3 h-3" />

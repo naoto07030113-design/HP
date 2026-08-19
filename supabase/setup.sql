@@ -494,34 +494,100 @@ DROP POLICY IF EXISTS "public_update_reservations"     ON reservations;
 DROP POLICY IF EXISTS "public_insert_patients"         ON patients;
 DROP POLICY IF EXISTS "public_insert_merch_bookings"   ON merchandise_bookings;
 
--- ---- ログイン済みスタッフ: 全操作可 ----
+-- 010_rls_clinic_scope.sql が作るポリシー（再実行時の掃除）
+DROP POLICY IF EXISTS "read_clinics"              ON clinics;
+DROP POLICY IF EXISTS "read_staff"                ON staff;
+DROP POLICY IF EXISTS "read_menus"                ON menus;
+DROP POLICY IF EXISTS "read_announcements"        ON announcements;
+DROP POLICY IF EXISTS "read_app_settings"         ON app_settings;
+DROP POLICY IF EXISTS "read_closed_days"          ON closed_days;
+DROP POLICY IF EXISTS "read_merchandise"          ON merchandise;
+DROP POLICY IF EXISTS "admin_write_clinics"       ON clinics;
+DROP POLICY IF EXISTS "admin_write_staff"         ON staff;
+DROP POLICY IF EXISTS "admin_write_menus"         ON menus;
+DROP POLICY IF EXISTS "admin_write_announcements" ON announcements;
+DROP POLICY IF EXISTS "admin_write_app_settings"  ON app_settings;
+DROP POLICY IF EXISTS "staff_write_closed_days"   ON closed_days;
+DROP POLICY IF EXISTS "staff_write_merchandise"   ON merchandise;
+DROP POLICY IF EXISTS "admin_rw_monthly_reports"  ON monthly_reports;
 
-CREATE POLICY "staff_all_clinics"              ON clinics              FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "staff_all_staff"                ON staff                FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "staff_all_menus"                ON menus                FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "staff_all_shifts"               ON shifts               FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "staff_all_shift_blocks"         ON shift_blocks         FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "staff_all_patients"             ON patients             FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "staff_all_reservations"         ON reservations         FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "staff_all_medical_records"      ON medical_records      FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "staff_all_announcements"        ON announcements        FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "staff_all_invoices"             ON invoices             FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "staff_all_invoice_items"        ON invoice_items        FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "staff_all_app_settings"         ON app_settings         FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "staff_all_closed_days"          ON closed_days          FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "staff_all_merchandise"          ON merchandise          FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "staff_all_merchandise_bookings" ON merchandise_bookings FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "staff_all_monthly_reports"      ON monthly_reports      FOR ALL TO authenticated USING (true) WITH CHECK (true);
+-- ---- 判定用の関数（010_rls_clinic_scope.sql と同じ定義） ----
+--
+-- ロールと所属院は app_metadata からのみ読む。
+-- user_metadata は本人が書き換えられるため信頼しない。
 
--- ---- 患者(anon): 予約に必要な最小限 ----
+CREATE OR REPLACE FUNCTION public.auth_role()
+RETURNS text LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT COALESCE(NULLIF(auth.jwt() -> 'app_metadata' ->> 'role', ''), 'receptionist');
+$$;
 
-CREATE POLICY "public_select_clinics"       ON clinics       FOR SELECT TO anon USING (is_active = true);
-CREATE POLICY "public_select_staff"         ON staff         FOR SELECT TO anon USING (is_active = true AND is_bookable = true);
-CREATE POLICY "public_select_menus"         ON menus         FOR SELECT TO anon USING (is_active = true);
-CREATE POLICY "public_select_announcements" ON announcements FOR SELECT TO anon USING (is_active = true);
-CREATE POLICY "public_select_closed_days"   ON closed_days   FOR SELECT TO anon USING (true);
-CREATE POLICY "public_select_app_settings"  ON app_settings  FOR SELECT TO anon USING (true);
-CREATE POLICY "public_select_merchandise"   ON merchandise   FOR SELECT TO anon USING (is_active = true);
+CREATE OR REPLACE FUNCTION public.auth_clinic_id()
+RETURNS uuid LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT NULLIF(auth.jwt() -> 'app_metadata' ->> 'clinic_id', '')::uuid;
+$$;
+
+CREATE OR REPLACE FUNCTION public.can_access_clinic(target uuid)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT public.auth_role() = 'admin'
+      OR (target IS NOT NULL AND target = public.auth_clinic_id());
+$$;
+
+-- ---- 患者データ: ブラウザからは一切触れさせない ----
+--
+-- patients / medical_records / invoices / invoice_items / reservations /
+-- shifts / shift_blocks / merchandise_bookings / audit_logs /
+-- medical_record_revisions にはポリシーを作らない。
+-- = anon からも authenticated からも 0 行に見える。
+--
+-- これらは必ず /api/v1/* を通り、サーバーが認証・認可・所属院スコープを
+-- 判定したうえで service_role で読み書きする。
+-- 詳細は ARCHITECTURE.md と SECURITY.md を参照。
+
+-- ---- マスタ: 参照は誰でも可、変更はロールで制限 ----
+--
+-- 院・スタッフ・メニュー・お知らせ・休診日・物販は患者向け予約画面にも出る
+-- 公開情報。参照を絞ると予約サイトが動かなくなるため、絞るのは変更のみ。
+
+CREATE POLICY "read_clinics"       ON clinics       FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "read_staff"         ON staff         FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "read_menus"         ON menus         FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "read_announcements" ON announcements FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "read_app_settings"  ON app_settings  FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "read_closed_days"   ON closed_days   FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "read_merchandise"   ON merchandise   FOR SELECT TO anon, authenticated USING (true);
+
+CREATE POLICY "admin_write_clinics" ON clinics FOR ALL TO authenticated
+  USING (public.auth_role() = 'admin') WITH CHECK (public.auth_role() = 'admin');
+CREATE POLICY "admin_write_staff" ON staff FOR ALL TO authenticated
+  USING (public.auth_role() = 'admin') WITH CHECK (public.auth_role() = 'admin');
+CREATE POLICY "admin_write_menus" ON menus FOR ALL TO authenticated
+  USING (public.auth_role() = 'admin') WITH CHECK (public.auth_role() = 'admin');
+CREATE POLICY "admin_write_announcements" ON announcements FOR ALL TO authenticated
+  USING (public.auth_role() = 'admin') WITH CHECK (public.auth_role() = 'admin');
+
+-- システム設定は「システム設定」画面（管理者）と「コミュニケーション」画面
+-- （管理者・施術者）の両方から保存されるため、この2ロールに許す
+CREATE POLICY "admin_write_app_settings" ON app_settings FOR ALL TO authenticated
+  USING (public.auth_role() IN ('admin', 'staff'))
+  WITH CHECK (public.auth_role() IN ('admin', 'staff'));
+
+CREATE POLICY "staff_write_closed_days" ON closed_days FOR ALL TO authenticated
+  USING (
+    public.auth_role() IN ('admin', 'staff')
+    AND (clinic_id IS NULL OR public.can_access_clinic(clinic_id))
+  )
+  WITH CHECK (
+    public.auth_role() IN ('admin', 'staff')
+    AND (clinic_id IS NULL OR public.can_access_clinic(clinic_id))
+  );
+
+CREATE POLICY "staff_write_merchandise" ON merchandise FOR ALL TO authenticated
+  USING (public.auth_role() IN ('admin', 'staff') AND public.can_access_clinic(clinic_id))
+  WITH CHECK (public.auth_role() IN ('admin', 'staff') AND public.can_access_clinic(clinic_id));
+
+-- 月次レポートは経営数値のまとめ（患者個人の情報は含まない）。画面が管理者専用
+CREATE POLICY "admin_rw_monthly_reports" ON monthly_reports FOR ALL TO authenticated
+  USING (public.auth_role() = 'admin') WITH CHECK (public.auth_role() = 'admin');
 
 -- 予約・患者情報: anon からは一切触れさせない。
 --
@@ -538,8 +604,9 @@ CREATE POLICY "public_select_merchandise"   ON merchandise   FOR SELECT TO anon 
 --   POST /api/intake                        Web予約の登録
 -- これらは service_role で動作するため、anon 向けのポリシーは不要。
 
--- 物販予約: 作成のみ（他の患者の予約は見えない）
-CREATE POLICY "public_insert_merch_bookings" ON merchandise_bookings FOR INSERT TO anon WITH CHECK (true);
+-- 物販予約も同様。患者の氏名・電話番号を含むため anon / authenticated には
+-- ポリシーを作らない。登録は POST /api/v1/merchandise/bookings/create、
+-- 参照・状態変更は /api/v1/merchandise/bookings/* が service_role で行う。
 
 -- ================================================================
 -- 6. リアルタイム配信（既に追加済みのテーブルはスキップ）
@@ -549,11 +616,11 @@ DO $$
 DECLARE
   t TEXT;
 BEGIN
+  -- ブラウザが購読するのはマスタのみ。
+  -- 患者データはブラウザから読めないため配信する意味がない
   FOREACH t IN ARRAY ARRAY[
-    'clinics', 'staff', 'menus', 'shifts', 'shift_blocks', 'patients',
-    'reservations', 'medical_records', 'announcements', 'invoices',
-    'invoice_items', 'app_settings', 'closed_days', 'merchandise',
-    'merchandise_bookings', 'monthly_reports'
+    'clinics', 'staff', 'menus', 'announcements',
+    'app_settings', 'closed_days', 'merchandise'
   ] LOOP
     BEGIN
       EXECUTE format('ALTER PUBLICATION supabase_realtime ADD TABLE %I', t);

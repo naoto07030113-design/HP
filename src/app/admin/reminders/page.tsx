@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Bell, Copy, Check, Phone, Calendar } from 'lucide-react'
 import { useClinicStore } from '@/lib/clinic-store'
 import { useSettingsStore } from '@/lib/settings-store'
+import { useReservationList } from '@/features/reservations/hooks/useReservationList'
 import { StatusBadge } from '@/components/common/StatusBadge'
 import { cn } from '@/lib/utils'
 
@@ -69,15 +70,20 @@ export default function RemindersPage() {
     }
   }, [])
 
-  const filteredReservations = useMemo(() => {
-    return store.reservations
-      .filter((r) => {
-        if (!r.start_at.startsWith(selectedDate)) return false
-        if (filterClinic !== 'all' && r.clinic_id !== filterClinic) return false
-        return true
-      })
-      .sort((a, b) => (a.start_at < b.start_at ? -1 : 1))
-  }, [store.reservations, selectedDate, filterClinic])
+  // その日の予約だけをサーバーから引く（以前は全予約を読み込んで絞っていた）
+  const { items: dayReservations, loading, error } = useReservationList({
+    clinicId: filterClinic === 'all' ? null : filterClinic,
+    status: null,
+    search: '',
+    from: selectedDate,
+    to: selectedDate,
+    perPage: 500,
+  })
+
+  const filteredReservations = useMemo(
+    () => [...dayReservations].sort((a, b) => (a.start_at < b.start_at ? -1 : 1)),
+    [dayReservations],
+  )
 
   const reminderSentCount = filteredReservations.filter((r) => reminderSent[r.id]).length
 
@@ -135,7 +141,13 @@ export default function RemindersPage() {
   })()
 
   return (
-    <div className="p-4 lg:p-6 space-y-4">
+    <div className={cn('p-4 lg:p-6 space-y-4 transition-opacity', loading && 'opacity-60')}>
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
         <div>

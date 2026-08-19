@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { PermissionGuard } from '@/components/common/PermissionGuard'
 import { useClinicStore } from '@/lib/clinic-store'
 import { reportStore } from '@/lib/report-store'
-import { generateMonthlyReport } from '@/lib/ai-report-generator'
+import { apiPost, ApiError } from '@/lib/api-client'
 import { cn } from '@/lib/utils'
 import {
   ACTION_PRIORITY_LABELS,
@@ -43,17 +43,23 @@ export default function MeetingAIPage() {
     setGenerating(true)
     setPreview(null)
     setSaved(false)
-    const clinic = store.clinics.find((c) => c.id === clinicId)
-    const result = generateMonthlyReport(
-      month,
-      clinicId,
-      clinicId === 'all' ? '全院' : (clinic?.name ?? ''),
-      store.reservations,
-      store.staff,
-      store.clinics,
-    )
-    setPreview(result)
-    setGenerating(false)
+    try {
+      // 集計も本文もサーバーで作る（以前はブラウザが全データを読み込んでいた）
+      const res = await apiPost<{ report: NonNullable<typeof preview> }>(
+        '/api/v1/reports/monthly-ai',
+        { month, clinicId: clinicId === 'all' ? undefined : clinicId },
+        { authenticated: true },
+      )
+      setPreview(res.report)
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError
+          ? `${err.message}（${err.supportCode}）`
+          : 'レポートを生成できませんでした',
+      )
+    } finally {
+      setGenerating(false)
+    }
   }
 
   function handleSave() {

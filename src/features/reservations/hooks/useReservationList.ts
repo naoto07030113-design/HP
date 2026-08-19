@@ -142,3 +142,33 @@ export function useReservationList(filters: ReservationFilters) {
 
   return { items, total, page, setPage, hasNext, loading, error, reload, perPage }
 }
+
+
+/**
+ * CSV出力のように「その場で全件」が要るときだけ使う。
+ * 画面表示には使わない（1ページずつ引く useReservationList を使う）。
+ */
+export async function fetchAllReservations(filters: {
+  clinicId?: string | null
+  staffId?: string | null
+  from?: string
+  to?: string
+}, maxRows = 5000): Promise<Reservation[]> {
+  const perPage = 500
+  const out: Reservation[] = []
+
+  for (let page = 1; out.length < maxRows; page++) {
+    const res = await apiPost<Response>('/api/v1/reservations/list', {
+      clinicId: filters.clinicId ?? undefined,
+      staffId: filters.staffId ?? undefined,
+      from: filters.from || undefined,
+      to: filters.to || undefined,
+      page,
+      perPage,
+    }, { authenticated: true })
+
+    out.push(...res.reservations.map(toReservation))
+    if (!res.hasNext) break
+  }
+  return out
+}

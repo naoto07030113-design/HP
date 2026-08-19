@@ -1,14 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import type { Clinic, Staff, Menu, Reservation } from '@/types/clinic'
+import type { Clinic, Staff, Menu } from '@/types/clinic'
 import { getSupabaseClient } from './supabase'
 
 type StoreState = {
   clinics: Clinic[]
   staff: Staff[]
   menus: Menu[]
-  reservations: Reservation[]
   loading: boolean
   error: string | null
 }
@@ -17,7 +16,6 @@ let _state: StoreState = {
   clinics: [],
   staff: [],
   menus: [],
-  reservations: [],
   loading: true,
   error: null,
 }
@@ -35,13 +33,6 @@ function setState(updater: (prev: StoreState) => StoreState) {
 
 // ── Data loading ──────────────────────────────────────────
 
-/**
- * 患者向けページでは予約一覧を取得しない。
- * 空き枠は /api/v1/appointments/availability がサーバー側で算出するため、
- * ブラウザが他の患者の氏名・電話番号を受け取る必要がない。
- */
-let _scope: 'admin' | 'public' = 'admin'
-
 async function loadFromSupabase(): Promise<void> {
   const supabase = getSupabaseClient()
 
@@ -51,21 +42,16 @@ async function loadFromSupabase(): Promise<void> {
     clinicsRes,
     staffRes,
     menusRes,
-    reservationsRes,
   ] = await Promise.all([
     supabase.from('clinics').select('*').order('sort_order'),
     supabase.from('staff').select('*').order('sort_order'),
     supabase.from('menus').select('*').order('sort_order'),
-    _scope === 'public'
-      ? Promise.resolve({ data: [], error: null })
-      : supabase.from('reservations').select('*').order('start_at', { ascending: false }),
   ])
 
   const errors = [
     clinicsRes.error,
     staffRes.error,
     menusRes.error,
-    reservationsRes.error,
   ].filter(Boolean)
 
   if (errors.length > 0) {
@@ -78,7 +64,6 @@ async function loadFromSupabase(): Promise<void> {
     clinics: (clinicsRes.data ?? []) as Clinic[],
     staff: (staffRes.data ?? []) as Staff[],
     menus: (menusRes.data ?? []) as Menu[],
-    reservations: (reservationsRes.data ?? []) as Reservation[],
     loading: false,
     error: null,
   }))
@@ -137,36 +122,18 @@ function setupRealtime() {
     })
     .subscribe()
 
-  supabase
-    .channel('clinic-store-reservations')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'reservations' }, (payload) => {
-      if (payload.eventType === 'INSERT') {
-        setState((s) => ({
-          ...s,
-          reservations: [payload.new as Reservation, ...s.reservations],
-        }))
-      } else if (payload.eventType === 'UPDATE') {
-        setState((s) => ({
-          ...s,
-          reservations: s.reservations.map((r) =>
-            r.id === payload.new.id ? (payload.new as Reservation) : r,
-          ),
-        }))
-      } else if (payload.eventType === 'DELETE') {
-        setState((s) => ({
-          ...s,
-          reservations: s.reservations.filter((r) => r.id !== payload.old.id),
-        }))
-      }
-    })
-    .subscribe()
-
 }
 
-/** Called by StoreHydrationProvider on app startup. Safe to call multiple times. */
-export async function hydrateClinicStore(scope: 'admin' | 'public' = 'admin'): Promise<void> {
+/**
+ * 起動時に StoreHydrationProvider から呼ばれる。何度呼んでも安全。
+ *
+ * ここで読むのは院・スタッフ・メニューだけ。いずれも患者向けページにも出る公開情報で、
+ * 患者側と管理側で内容が変わらないため scope は受け取るだけで使っていない
+ * （呼び出し側の意図を残すために引数は残す）。
+ * 予約・シフトはここでは読まない。必要な画面が API から期間で引く。
+ */
+export async function hydrateClinicStore(_scope: 'admin' | 'public' = 'admin'): Promise<void> {
   if (typeof window === 'undefined') return
-  _scope = scope
   if (!_loadPromise) {
     _loadPromise = loadFromSupabase().then(() => {
       setupRealtime()
@@ -318,63 +285,6 @@ export const menusStore = {
   },
 }
 
-// ── Reservations ──────────────────────────────────────────
-
-export const reservationsStore = {
-  getAll: () => _state.reservations,
-  getByDate: (date: string) =>
-    _state.reservations.filter((r) => r.start_at.startsWith(date)),
-  getByDateRange: (from: string, to: string) =>
-    _state.reservations.filter((r) => r.start_at >= from && r.start_at <= to),
-
-  create: async (
-    data: Omit<Reservation, 'id' | 'created_at' | 'updated_at' | 'staff' | 'menu'>,
-  ): Promise<Reservation> => {
-    const supabase = getSupabaseClient()
-    const now = new Date().toISOString()
-    const optimistic: Reservation = { ...data, id: `opt-${Date.now()}`, created_at: now, updated_at: now }
-    setState((s) => ({ ...s, reservations: [optimistic, ...s.reservations] }))
-
-    const { data: created, error } = await supabase
-      .from('reservations')
-      .insert(data)
-      .select()
-      .single()
-
-    if (error) {
-      setState((s) => ({ ...s, reservations: s.reservations.filter((r) => r.id !== optimistic.id) }))
-      throw error
-    }
-    setState((s) => ({
-      ...s,
-      reservations: s.reservations.map((r) =>
-        r.id === optimistic.id ? (created as Reservation) : r,
-      ),
-    }))
-    return created as Reservation
-  },
-
-  update: async (id: string, data: Partial<Reservation>): Promise<void> => {
-    const supabase = getSupabaseClient()
-    const now = new Date().toISOString()
-    setState((s) => ({
-      ...s,
-      reservations: s.reservations.map((r) =>
-        r.id === id ? { ...r, ...data, updated_at: now } : r,
-      ),
-    }))
-    const { error } = await supabase.from('reservations').update({ ...data, updated_at: now }).eq('id', id)
-    if (error) throw error
-  },
-
-  delete: async (id: string): Promise<void> => {
-    const supabase = getSupabaseClient()
-    setState((s) => ({ ...s, reservations: s.reservations.filter((r) => r.id !== id) }))
-    const { error } = await supabase.from('reservations').delete().eq('id', id)
-    if (error) throw error
-  },
-}
-
 // ── React hook ──────────────────────────────────────────
 
 export function useClinicStore() {
@@ -398,9 +308,6 @@ export async function reloadFromServer(): Promise<void> {
     clinics: [],
     staff: [],
     menus: [],
-    shifts: [],
-    shiftBlocks: [],
-    reservations: [],
     loading: true,
     error: null,
   }))

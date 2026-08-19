@@ -108,8 +108,11 @@ export type RecordListFilters = {
   search: string
   clinicId: string | null
   staffId: string | null
-  from: string
-  to: string
+  from?: string
+  to?: string
+  /** 患者詳細から、その患者のカルテだけを引くときに使う */
+  patientId?: string | null
+  perPage?: number
 }
 
 export function useMedicalRecordList(filters: RecordListFilters) {
@@ -123,9 +126,10 @@ export function useMedicalRecordList(filters: RecordListFilters) {
   const [reloadToken, setReloadToken] = useState(0)
   const abortRef = useRef<AbortController | null>(null)
 
-  const { search, clinicId, staffId, from, to } = filters
+  const { search, clinicId, staffId, from, to, patientId } = filters
+  const perPage = filters.perPage ?? PER_PAGE
 
-  useEffect(() => { setPage(1) }, [search, clinicId, staffId, from, to])
+  useEffect(() => { setPage(1) }, [search, clinicId, staffId, from, to, patientId])
 
   useEffect(() => {
     const delay = search ? 300 : 0
@@ -143,7 +147,8 @@ export function useMedicalRecordList(filters: RecordListFilters) {
         from: from || undefined,
         to: to || undefined,
         page,
-        perPage: PER_PAGE,
+        patientId: patientId ?? undefined,
+        perPage,
       }, { authenticated: true, signal: controller.signal })
         .then((res) => {
           setItems(res.records.map(toRecord))
@@ -160,9 +165,9 @@ export function useMedicalRecordList(filters: RecordListFilters) {
     }, delay)
 
     return () => clearTimeout(timer)
-  }, [search, clinicId, staffId, from, to, page, reloadToken])
+  }, [search, clinicId, staffId, from, to, patientId, page, perPage, reloadToken])
 
   const reload = useCallback(() => setReloadToken((n) => n + 1), [])
 
-  return { items, stats, total, page, setPage, hasNext, loading, error, reload, perPage: PER_PAGE }
+  return { items, stats, total, page, setPage, hasNext, loading, error, reload, perPage }
 }

@@ -1,12 +1,28 @@
+/**
+ * 月次経営レポート（経営会議AI）の本文生成。
+ *
+ * 以前はブラウザ側で全予約・全会計・全患者を読み込んで組み立てていた。
+ * 他院の売上と患者情報が端末に載るうえ、取得上限に達すると静かに欠けた
+ * 数字で「それらしい」レポートができてしまう。集計と本文生成をここへ移した。
+ */
+
 import { format, subMonths, parseISO, startOfMonth, endOfMonth } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import type { MonthlyReport, ReportSection, ActionPlan } from '@/types/report'
-import { computeKPIs, changeRate } from './dashboard-utils'
-import { accountingStore } from './accounting-store'
-import { patientStore } from './patient-store'
 import type { DateRange } from '@/types/dashboard'
+import { computeKPIs, type Dataset } from './AnalyticsService'
+import { reportRepository } from '../repositories/ReportRepository'
+import { assertClinicAccess, clinicScope, requireCapability } from '../permissions/policy'
+import type { Actor } from '../auth/session'
+import type { MonthlyReportInput } from '../validators/report'
 
 // ── ユーティリティ ──────────────────────────────────────────────────
+
+/** 前期比（%）。前期が0なら比較できないので null */
+function changeRate(current: number, prev: number): number | null {
+  if (prev === 0) return null
+  return Math.round(((current - prev) / prev) * 100)
+}
 
 function sign(n: number): string {
   return n >= 0 ? `+${n}` : `${n}`
@@ -43,7 +59,7 @@ function buildSections(
   month: string,
   clinicId: string,
   clinicName: string,
-  reservations: Parameters<typeof computeKPIs>[1],
+  data: Dataset,
   staffList: { id: string; name: string; role: string | null; clinic_id: string }[],
   clinicList: { id: string; name: string }[],
 ): ReportSection[] {
@@ -51,17 +67,17 @@ function buildSections(
   const prevRange = getMonthRange(format(subMonths(parseISO(`${month}-01`), 1), 'yyyy-MM'))
   const prevYearRange = getMonthRange(format(subMonths(parseISO(`${month}-01`), 12), 'yyyy-MM'))
 
-  const kpi = computeKPIs(range, reservations, clinicId)
-  const prev = computeKPIs(prevRange, reservations, clinicId)
-  const prevYear = computeKPIs(prevYearRange, reservations, clinicId)
+  const kpi = computeKPIs(data, range, clinicId)
+  const prev = computeKPIs(data, prevRange, clinicId)
+  const prevYear = computeKPIs(data, prevYearRange, clinicId)
 
   const monthLabel = format(parseISO(`${month}-01`), 'yyyy年M月', { locale: ja })
-  const allInvoices = accountingStore.getAll()
+  const allInvoices = data.invoices
   const prevMonthLabel = format(subMonths(parseISO(`${month}-01`), 1), 'M月', { locale: ja })
 
-  // Payment breakdown
+  // 支払方法の内訳（取得時点で支払済みのみに絞られている）
   const monthInvoices = allInvoices.filter((i) =>
-    i.status === 'paid' && i.visit_date >= range.from && i.visit_date <= range.to &&
+    i.visit_date >= range.from && i.visit_date <= range.to &&
     (clinicId === 'all' || i.clinic_id === clinicId),
   )
   const cashAmount = monthInvoices.filter((i) => i.payment_method === 'cash').reduce((s, i) => s + i.total_amount, 0)
@@ -72,14 +88,14 @@ function buildSections(
   const staffKPIs = staffList
     .filter((s) => clinicId === 'all' || s.clinic_id === clinicId)
     .map((s) => {
-      const sk = computeKPIs(range, reservations, s.clinic_id, s.id)
+      const sk = computeKPIs(data, range, s.clinic_id, s.id)
       return { ...s, ...sk }
     })
     .filter((s) => s.visits > 0)
     .sort((a, b) => b.sales - a.sales)
 
   const topStaff = staffKPIs[0]
-  const referralBreakdown = patientStore.getAll()
+  const referralBreakdown = data.patients
     .filter((p) => (p.first_visit_date ?? '') >= range.from && (p.first_visit_date ?? '') <= range.to)
     .reduce((map, p) => {
       const src = p.referral_source ?? 'その他'
@@ -92,7 +108,7 @@ function buildSections(
   // Clinic breakdown (for 'all')
   const clinicKPIs = clinicList.map((c) => ({
     ...c,
-    ...computeKPIs(range, reservations, c.id),
+    ...computeKPIs(data, range, c.id),
   })).sort((a, b) => b.sales - a.sales)
 
   // ── セクション本文 ──────────────────────────────────────────────
@@ -312,22 +328,22 @@ function buildActionPlans(
 
 // ── メイン生成関数 ──────────────────────────────────────────────────
 
-export function generateMonthlyReport(
+function generateMonthlyReport(
   month: string,
   clinicId: string,
   clinicName: string,
-  reservations: Parameters<typeof computeKPIs>[1],
+  data: Dataset,
   staffList: { id: string; name: string; role: string | null; clinic_id: string }[],
   clinicList: { id: string; name: string }[],
 ): Omit<MonthlyReport, 'id' | 'createdAt' | 'updatedAt'> {
   const range = getMonthRange(month)
   const prevRange = getMonthRange(format(subMonths(parseISO(`${month}-01`), 1), 'yyyy-MM'))
 
-  const kpi = computeKPIs(range, reservations, clinicId)
-  const prev = computeKPIs(prevRange, reservations, clinicId)
+  const kpi = computeKPIs(data, range, clinicId)
+  const prev = computeKPIs(data, prevRange, clinicId)
 
   const monthLabel = format(parseISO(`${month}-01`), 'yyyy年M月', { locale: ja })
-  const sections = buildSections(month, clinicId, clinicName, reservations, staffList, clinicList)
+  const sections = buildSections(month, clinicId, clinicName, data, staffList, clinicList)
   const actionPlans = buildActionPlans(kpi, prev)
 
   const issues: string[] = []
@@ -362,4 +378,41 @@ export function generateMonthlyReport(
     decisions: [],
     kpiSnapshot,
   }
+}
+
+
+export const monthlyReportService = {
+  async generate(actor: Actor, input: MonthlyReportInput) {
+    requireCapability(actor, 'analytics.read')
+
+    const scope = clinicScope(actor)
+    if (input.clinicId) assertClinicAccess(actor, input.clinicId)
+    const clinicId = scope ?? input.clinicId ?? null
+
+    // 前年同月と比べるため13か月ぶん遡る
+    const range = getMonthRange(input.month)
+    const from = getMonthRange(format(subMonths(parseISO(`${input.month}-01`), 13), 'yyyy-MM')).from
+
+    const [reservations, invoices, patients, clinicRows, staffRows] = await Promise.all([
+      reportRepository.analyticsReservations(from, range.to, clinicId),
+      reportRepository.analyticsInvoices(from, range.to, clinicId),
+      reportRepository.analyticsPatients(clinicId),
+      reportRepository.clinics(),
+      reportRepository.staffList(clinicId),
+    ])
+
+    const filter: string = clinicId ?? 'all'
+    const clinicName = filter === 'all'
+      ? '全院'
+      : (clinicRows.find((c) => c.id === filter)?.name ?? '')
+
+    return generateMonthlyReport(
+      input.month,
+      filter,
+      clinicName,
+      { reservations, invoices, patients },
+      staffRows.map((s) => ({ id: s.id, name: s.name, role: s.role, clinic_id: s.clinic_id })),
+      filter === 'all' ? clinicRows : clinicRows.filter((c) => c.id === filter),
+    )
+  },
 }

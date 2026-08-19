@@ -19,7 +19,11 @@ import {
   Plus, Pencil, Trash2, ShoppingBag, Package, ChevronDown, ChevronUp,
   CheckCircle2, XCircle,
 } from 'lucide-react'
-import { useMerchandiseStore, merchandiseStore, merchandiseBookingsStore } from '@/lib/merchandise-store'
+import { useMerchandiseStore, merchandiseStore } from '@/lib/merchandise-store'
+import { apiPost, ApiError } from '@/lib/api-client'
+import {
+  useMerchandiseBookings, type MerchandiseBookingDto,
+} from '@/features/merchandise/hooks/useMerchandiseBookings'
 import { useClinicStore } from '@/lib/clinic-store'
 import { useClinicFilter } from '@/lib/auth-store'
 import { cn } from '@/lib/utils'
@@ -62,9 +66,11 @@ export default function MerchandisePage() {
     ? store.merchandise
     : store.merchandise.filter((m) => m.clinic_id === clinicId)
 
-  const displayedBookings = clinicId === '__all__'
-    ? store.bookings
-    : store.bookings.filter((b) => b.clinic_id === clinicId)
+  // 物販予約は患者の氏名・電話番号を含むため、サーバーから所属院の分だけ引く
+  const {
+    bookings, loading: bookingsLoading, error: bookingsError, reload: reloadBookings,
+  } = useMerchandiseBookings({ clinicId: clinicId === '__all__' ? null : clinicId })
+  const displayedBookings = bookings
 
   function openAdd() {
     setEditTarget(null)
@@ -116,12 +122,14 @@ export default function MerchandisePage() {
     }
   }
 
-  async function handleStatusChange(booking: MerchandiseBooking, status: MerchandiseBooking['status']) {
+  async function handleStatusChange(booking: MerchandiseBookingDto, status: MerchandiseBooking['status']) {
     try {
-      await merchandiseBookingsStore.updateStatus(booking.id, status)
+      await apiPost('/api/v1/merchandise/bookings/status',
+        { id: booking.id, status }, { authenticated: true })
+      reloadBookings()
       toast.success('ステータスを更新しました')
-    } catch {
-      toast.error('更新に失敗しました')
+    } catch (err) {
+      toast.error(err instanceof ApiError ? `${err.message}（${err.supportCode}）` : '更新に失敗しました')
     }
   }
 
@@ -202,7 +210,7 @@ export default function MerchandisePage() {
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {displayedMerchandise.map((m) => {
               const clinic = clinics.find((c) => c.id === m.clinic_id)
-              const bookingCount = store.bookings.filter((b) => b.merchandise_id === m.id && b.status !== 'cancelled').length
+              const bookingCount = bookings.filter((b) => b.merchandiseId === m.id && b.status !== 'cancelled').length
               return (
                 <div key={m.id} className={cn('bg-white rounded-xl border shadow-sm p-4 transition-shadow hover:shadow-md', m.is_active ? 'border-green-100' : 'border-gray-200 opacity-70')}>
                   <div className="flex items-start justify-between mb-3">
@@ -285,14 +293,14 @@ export default function MerchandisePage() {
                   {displayedBookings.map((booking) => (
                     <tr key={booking.id} className="hover:bg-green-50/30 transition-colors">
                       <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
-                        {format(new Date(booking.booked_at), 'M/d HH:mm', { locale: ja })}
+                        {format(new Date(booking.bookedAt), 'M/d HH:mm', { locale: ja })}
                       </td>
                       <td className="px-4 py-3">
-                        <p className="font-medium text-green-900">{booking.merchandise?.name ?? '—'}</p>
+                        <p className="font-medium text-green-900">{booking.merchandiseName ?? '—'}</p>
                         {booking.notes && <p className="text-xs text-muted-foreground mt-0.5">{booking.notes}</p>}
                       </td>
-                      <td className="px-4 py-3 font-medium">{booking.patient_name}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{booking.patient_phone ?? '—'}</td>
+                      <td className="px-4 py-3 font-medium">{booking.patientName}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{booking.patientPhone ?? '—'}</td>
                       <td className="px-4 py-3 text-center font-semibold">{booking.quantity}</td>
                       <td className="px-4 py-3">
                         <Select

@@ -11,7 +11,6 @@ import { Plus, Search, Trash2, FileText, ChevronRight } from 'lucide-react'
 import { useMedicalRecordList, toApiInput } from '@/features/records/hooks/useMedicalRecordList'
 import { apiPost, ApiError } from '@/lib/api-client'
 import { useClinicStore } from '@/lib/clinic-store'
-import { usePatientStore } from '@/lib/patient-store'
 import { RecordForm } from '@/features/records/components/RecordForm'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { EmptyState } from '@/components/common/EmptyState'
@@ -20,7 +19,6 @@ import { cn } from '@/lib/utils'
 
 export default function RecordsPage() {
   const store = useClinicStore()
-  const patients = usePatientStore()
 
   const [search, setSearch] = useState('')
   const [filterClinic, setFilterClinic] = useState('all')

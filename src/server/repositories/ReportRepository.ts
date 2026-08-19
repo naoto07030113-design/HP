@@ -58,12 +58,18 @@ export type AnalyticsInvoice = {
   clinic_id: string
   staff_id: string | null
   total_amount: number
+  payment_method: 'cash' | 'card' | 'paypay' | 'line_pay' | 'insurance' | 'other'
 }
 
 export type AnalyticsPatient = {
   id: string
   clinic_id: string
+  name: string
+  name_kana: string | null
+  phone: string | null
   first_visit_date: string | null
+  referral_source: string | null
+  is_active: boolean
 }
 
 export const reportRepository = {
@@ -110,7 +116,7 @@ export const reportRepository = {
     return readAll<AnalyticsInvoice>(() => {
       let q = db()
         .from('invoices')
-        .select('visit_date,clinic_id,staff_id,total_amount')
+        .select('visit_date,clinic_id,staff_id,total_amount,payment_method')
         .is('deleted_at', null)
         .eq('status', 'paid')
         .gte('visit_date', from)
@@ -123,7 +129,10 @@ export const reportRepository = {
   /** 新患数・未再診数の判定に使う。氏名などは読まない */
   async analyticsPatients(clinicId: string | null): Promise<AnalyticsPatient[]> {
     return readAll<AnalyticsPatient>(() => {
-      let q = db().from('patients').select('id,clinic_id,first_visit_date').is('deleted_at', null)
+      let q = db()
+        .from('patients')
+        .select('id,clinic_id,name,name_kana,phone,first_visit_date,referral_source,is_active')
+        .is('deleted_at', null)
       if (clinicId) q = q.eq('clinic_id', clinicId)
       return q.order('id') as unknown as { range: Function }
     }, '集計用の患者取得')

@@ -12,7 +12,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { format } from 'date-fns'
 import { useClinicStore } from '@/lib/clinic-store'
-import { usePatientStore, patientStore } from '@/lib/patient-store'
+import { usePatientSearch } from '@/features/patients/hooks/usePatientList'
+import type { Patient } from '@/types/patient'
 import { Search, UserCheck, Mic, MicOff, Camera } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -157,7 +158,6 @@ export function RecordForm({
   onSubmit,
 }: Props) {
   const store = useClinicStore()
-  const allPatients = usePatientStore()
   const [form, setForm] = useState<MedicalRecordFormData>(EMPTY)
   const [patientSearch, setPatientSearch] = useState('')
   const [showSearch, setShowSearch] = useState(false)
@@ -169,9 +169,8 @@ export function RecordForm({
   const voiceA = useSpeechInput((fn) => setForm((f) => ({ ...f, assessment: fn(f.assessment) })))
   const voiceP = useSpeechInput((fn) => setForm((f) => ({ ...f, plan: fn(f.plan) })))
 
-  const searchedPatients = patientSearch.length >= 1
-    ? patientStore.search(patientSearch, form.clinic_id || undefined).slice(0, 6)
-    : []
+  // 候補はサーバーで検索する（以前は全患者を読み込んでから絞っていた）
+  const { results: searchedPatients } = usePatientSearch(patientSearch, form.clinic_id || null)
 
   useEffect(() => {
     if (!open) return
@@ -200,9 +199,6 @@ export function RecordForm({
       })
     } else {
       const clinicId = defaultClinicId ?? store.clinics[0]?.id ?? ''
-      const patient = defaultPatientId
-        ? allPatients.find((p) => p.id === defaultPatientId)
-        : null
       setForm({
         ...EMPTY,
         clinic_id: clinicId,
@@ -210,7 +206,7 @@ export function RecordForm({
         visit_date: defaultDate ?? format(new Date(), 'yyyy-MM-dd'),
         reservation_id: defaultReservationId ?? null,
         patient_id: defaultPatientId ?? '',
-        patient_name: patient?.name ?? defaultPatientName ?? '',
+        patient_name: defaultPatientName ?? '',
       })
     }
     setPatientSearch('')
@@ -228,7 +224,7 @@ export function RecordForm({
     setForm((f) => ({ ...f, [k]: v }))
   }
 
-  function selectPatient(p: ReturnType<typeof patientStore.getAll>[number]) {
+  function selectPatient(p: Patient) {
     setF('patient_id', p.id)
     setF('patient_name', p.name)
     setPatientSearch('')

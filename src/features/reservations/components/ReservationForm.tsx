@@ -10,7 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
 import { format, parseISO, addMinutes } from 'date-fns'
-import { usePatientStore, patientStore } from '@/lib/patient-store'
+import { usePatientSearch } from '@/features/patients/hooks/usePatientList'
+import { useReservationList } from '@/features/reservations/hooks/useReservationList'
+import type { Patient } from '@/types/patient'
 import { useClinicStore } from '@/lib/clinic-store'
 import { toast } from 'sonner'
 import { Search, UserCheck, AlertTriangle } from 'lucide-react'
@@ -41,8 +43,6 @@ export function ReservationForm({
   open, onOpenChange, initial, clinics, staff, menus,
   defaultDate, defaultStartTime, defaultStaffId, defaultClinicId, onSubmit,
 }: Props) {
-  const allPatients = usePatientStore()
-  const { reservations } = useClinicStore()
   const [conflictWarning, setConflictWarning] = useState<string | null>(null)
   const [clinicId, setClinicId] = useState(defaultClinicId ?? clinics[0]?.id ?? '')
   const [staffId, setStaffId] = useState(defaultStaffId ?? '')
@@ -59,11 +59,16 @@ export function ReservationForm({
   const [status, setStatus] = useState<Reservation['status']>('confirmed')
   const [memo, setMemo] = useState('')
 
-  const searchedPatients = patientSearch.length >= 1
-    ? patientStore.search(patientSearch, clinicId || undefined).slice(0, 6)
-    : []
+  // 候補はサーバーで検索する（以前は全患者を読み込んでから絞っていた）
+  const { results: searchedPatients } = usePatientSearch(patientSearch, clinicId || null)
 
-  function selectPatient(p: ReturnType<typeof patientStore.getAll>[number]) {
+  // 重複の事前警告用に、その日・その担当者の予約だけを引く（確定判定はサーバー側）
+  const { items: reservations } = useReservationList({
+    clinicId: clinicId || null, staffId: staffId || null, status: null, search: '',
+    from: startDate, to: startDate, perPage: 200,
+  })
+
+  function selectPatient(p: Patient) {
     setPatientId(p.id)
     setPatientName(p.name)
     setPatientPhone(p.phone ?? '')

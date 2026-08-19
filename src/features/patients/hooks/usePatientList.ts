@@ -184,3 +184,34 @@ export function usePatient(patientId: string) {
 
   return { patient, loading, error, reload: () => setReloadToken((n) => n + 1) }
 }
+
+/**
+ * 患者名・電話番号での検索。予約フォームやカルテフォームの候補表示に使う。
+ *
+ * 以前は全患者をブラウザに読み込んでから絞り込んでいた。
+ * 検索はサーバーで行い、候補だけを受け取る。
+ */
+export function usePatientSearch(query: string, clinicId: string | null, limit = 6) {
+  const [results, setResults] = useState<Patient[]>([])
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    const q = query.trim()
+    if (q.length < 1) { setResults([]); setLoading(false); return }
+
+    const controller = new AbortController()
+    setLoading(true)
+    const timer = setTimeout(() => {
+      apiPost<Response>('/api/v1/patients/list', {
+        search: q, clinicId: clinicId ?? undefined, page: 1, perPage: limit,
+      }, { authenticated: true, signal: controller.signal })
+        .then((res) => setResults(res.patients.map(toPatient)))
+        .catch(() => { if (!controller.signal.aborted) setResults([]) })
+        .finally(() => { if (!controller.signal.aborted) setLoading(false) })
+    }, 250)
+
+    return () => { clearTimeout(timer); controller.abort() }
+  }, [query, clinicId, limit])
+
+  return { results, loading }
+}

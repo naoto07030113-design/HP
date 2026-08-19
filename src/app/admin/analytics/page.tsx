@@ -1,18 +1,13 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { format, subDays, subMonths, parseISO, startOfMonth, differenceInDays } from 'date-fns'
+import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { TrendingUp, TrendingDown, Users, CalendarCheck, Repeat2, Receipt, UserX, PhoneCall } from 'lucide-react'
 import { useClinicStore } from '@/lib/clinic-store'
-import { useAccountingStore, accountingStore } from '@/lib/accounting-store'
 import { useSettingsStore } from '@/lib/settings-store'
-import { patientStore, usePatientStore } from '@/lib/patient-store'
+import { useAnalyticsReport } from '@/features/reports/hooks/useAnalyticsReport'
 import { cn } from '@/lib/utils'
-
-const TODAY = format(new Date(), 'yyyy-MM-dd')
-const THIS_MONTH = format(new Date(), 'yyyy-MM')
-const LAST_MONTH = format(subMonths(new Date(), 1), 'yyyy-MM')
 
 // ── シンプルな棒グラフ ────────────────────────────────────
 function BarChart({
@@ -92,160 +87,43 @@ function StatusBar({ data }: { data: { label: string; count: number; color: stri
   )
 }
 
+const STATUS_LABELS: Record<string, { label: string; color: string }> = {
+  visited:   { label: '来院済',        color: 'bg-green-500' },
+  confirmed: { label: '予約確定',      color: 'bg-blue-400' },
+  cancelled: { label: 'キャンセル',    color: 'bg-gray-300' },
+  no_show:   { label: '無断キャンセル', color: 'bg-red-400' },
+}
+
 export default function AnalyticsPage() {
-  useAccountingStore()
   useSettingsStore()
-  usePatientStore()
-  const { reservations, staff, menus, clinics } = useClinicStore()
+  const { clinics } = useClinicStore()
   const [selectedClinic, setSelectedClinic] = useState('all')
   const [inactiveDays, setInactiveDays] = useState(60)
 
-  const allInvoices = accountingStore.getAll()
-  const allPatients = patientStore.getAll()
+  // 集計はサーバー側で行う（画面に届くのは結果だけ）
+  const { report, loading, error } = useAnalyticsReport({
+    clinicId: selectedClinic === 'all' ? null : selectedClinic,
+    inactiveDays,
+  })
 
-  // ── KPI 計算 ────────────────────────────────────
-  const kpi = useMemo(() => {
-    const filterClinic = (inv: typeof allInvoices[0]) =>
-      selectedClinic === 'all' || inv.clinic_id === selectedClinic
-
-    const paid = allInvoices.filter((i) => i.status === 'paid' && filterClinic(i))
-
-    const thisMonthRev = paid.filter((i) => i.visit_date.startsWith(THIS_MONTH))
-      .reduce((s, i) => s + i.total_amount, 0)
-    const lastMonthRev = paid.filter((i) => i.visit_date.startsWith(LAST_MONTH))
-      .reduce((s, i) => s + i.total_amount, 0)
-
-    const visited = reservations.filter((r) => r.status === 'visited' &&
-      (selectedClinic === 'all' || r.clinic_id === selectedClinic))
-    const thisMonthVisits = visited.filter((r) => r.start_at.startsWith(THIS_MONTH)).length
-    const lastMonthVisits = visited.filter((r) => r.start_at.startsWith(LAST_MONTH)).length
-
-    const thisMonthStart = startOfMonth(new Date()).toISOString().slice(0, 10)
-    const newPatients = allPatients.filter(
-      (p) => (p.first_visit_date ?? '') >= thisMonthStart &&
-        (selectedClinic === 'all' || p.clinic_id === selectedClinic),
-    ).length
-
-    const visitCountByPatient = new Map<string, number>()
-    visited.forEach((r) => {
-      const key = r.patient_id ?? r.patient_name
-      visitCountByPatient.set(key, (visitCountByPatient.get(key) ?? 0) + 1)
-    })
-    const total = visitCountByPatient.size
-    const repeat = Array.from(visitCountByPatient.values()).filter((c) => c >= 2).length
-    const repeatRate = total > 0 ? Math.round(repeat / total * 100) : 0
-
-    return { thisMonthRev, lastMonthRev, thisMonthVisits, lastMonthVisits, newPatients, repeatRate }
-  }, [allInvoices, reservations, allPatients, selectedClinic])
-
-  // ── 30日チャート ────────────────────────────────────
-  const days30 = useMemo(() => {
-    return Array.from({ length: 30 }, (_, i) => {
-      const date = format(subDays(new Date(), 29 - i), 'yyyy-MM-dd')
-      const label = i % 5 === 0 || i === 29 ? format(subDays(new Date(), 29 - i), 'M/d') : ''
-      const revenue = allInvoices
-        .filter((inv) => inv.status === 'paid' && inv.visit_date === date &&
-          (selectedClinic === 'all' || inv.clinic_id === selectedClinic))
-        .reduce((s, inv) => s + inv.total_amount, 0)
-      const visits = reservations.filter((r) =>
-        r.status === 'visited' && r.start_at.startsWith(date) &&
-        (selectedClinic === 'all' || r.clinic_id === selectedClinic),
-      ).length
-      return { date, label, revenue, visits }
-    })
-  }, [allInvoices, reservations, selectedClinic])
-
-  // ── スタッフ別実績 ────────────────────────────────────
-  const staffStats = useMemo(() => {
-    const filter = (clinicId: string) => selectedClinic === 'all' || clinicId === selectedClinic
-    return staff
-      .filter((s) => s.is_active && filter(s.clinic_id))
-      .map((s) => {
-        const visits = reservations.filter((r) =>
-          r.staff_id === s.id && r.status === 'visited' && r.start_at.startsWith(THIS_MONTH),
-        ).length
-        const revenue = allInvoices.filter((i) =>
-          i.staff_id === s.id && i.status === 'paid' && i.visit_date.startsWith(THIS_MONTH),
-        ).reduce((sum, i) => sum + i.total_amount, 0)
-        return { ...s, visits, revenue }
-      })
-      .sort((a, b) => b.visits - a.visits)
-  }, [staff, reservations, allInvoices, selectedClinic])
-
-  // ── メニュー別売上 ────────────────────────────────────
-  const menuRanking = useMemo(() => {
-    const map = new Map<string, { name: string; count: number; revenue: number }>()
-    allInvoices
-      .filter((i) => i.status === 'paid' && i.visit_date.startsWith(THIS_MONTH) &&
-        (selectedClinic === 'all' || i.clinic_id === selectedClinic))
-      .forEach((inv) => {
-        inv.items.forEach((item) => {
-          const existing = map.get(item.name) ?? { name: item.name, count: 0, revenue: 0 }
-          map.set(item.name, {
-            name: item.name,
-            count: existing.count + item.quantity,
-            revenue: existing.revenue + item.subtotal,
-          })
-        })
-      })
-    return Array.from(map.values()).sort((a, b) => b.revenue - a.revenue).slice(0, 8)
-  }, [allInvoices, selectedClinic])
-
-  // ── 予約ステータス内訳 ────────────────────────────────────
-  const statusBreakdown = useMemo(() => {
-    const monthly = reservations.filter((r) =>
-      r.start_at.startsWith(THIS_MONTH) &&
-      (selectedClinic === 'all' || r.clinic_id === selectedClinic),
-    )
-    return [
-      { label: '来院済', count: monthly.filter((r) => r.status === 'visited').length, color: 'bg-green-500' },
-      { label: '予約確定', count: monthly.filter((r) => r.status === 'confirmed').length, color: 'bg-blue-400' },
-      { label: 'キャンセル', count: monthly.filter((r) => r.status === 'cancelled').length, color: 'bg-gray-300' },
-      { label: '無断キャンセル', count: monthly.filter((r) => r.status === 'no_show').length, color: 'bg-red-400' },
-    ]
-  }, [reservations, selectedClinic])
-
-  // ── 未再診患者リスト ────────────────────────────────────
-  const inactivePatients = useMemo(() => {
-    const threshold = format(subDays(new Date(), inactiveDays), 'yyyy-MM-dd')
-
-    // Build a map of patient_id -> last visit date from reservations
-    const lastVisit = new Map<string, string>()
-    reservations.forEach((r) => {
-      if (r.status !== 'visited') return
-      if (selectedClinic !== 'all' && r.clinic_id !== selectedClinic) return
-      const key = r.patient_id ?? r.patient_name
-      const existing = lastVisit.get(key)
-      const date = r.start_at.slice(0, 10)
-      if (!existing || date > existing) lastVisit.set(key, date)
-    })
-
-    // Find patients whose last visit is older than threshold (or never visited)
-    return allPatients
-      .filter((p) => {
-        if (!p.is_active) return false
-        if (selectedClinic !== 'all' && p.clinic_id !== selectedClinic) return false
-        const last = lastVisit.get(p.id)
-        if (!last) return true // never visited
-        return last < threshold
-      })
-      .map((p) => ({
-        ...p,
-        lastVisitDate: lastVisit.get(p.id) ?? null,
-        daysSince: lastVisit.get(p.id)
-          ? differenceInDays(new Date(), new Date(lastVisit.get(p.id)!))
-          : null,
-      }))
-      .sort((a, b) => {
-        if (a.lastVisitDate === null) return -1
-        if (b.lastVisitDate === null) return 1
-        return a.lastVisitDate < b.lastVisitDate ? -1 : 1
-      })
-      .slice(0, 50)
-  }, [allPatients, reservations, selectedClinic, inactiveDays])
+  const { kpi, days30, staffStats, menuRanking, inactivePatients } = report
+  const statusBreakdown = useMemo(
+    () => report.statusBreakdown.map((s) => ({
+      label: STATUS_LABELS[s.status]?.label ?? s.status,
+      count: s.count,
+      color: STATUS_LABELS[s.status]?.color ?? 'bg-gray-300',
+    })),
+    [report.statusBreakdown],
+  )
 
   return (
-    <div className="p-4 lg:p-6 space-y-6">
+    <div className={cn('p-4 lg:p-6 space-y-6 transition-opacity', loading && 'opacity-60')}>
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
       {/* ヘッダー */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
@@ -447,7 +325,7 @@ export default function AnalyticsPage() {
                   <tr key={p.id} className="hover:bg-green-50/40">
                     <td className="py-2.5">
                       <div className="font-medium text-green-900">{p.name}</div>
-                      {p.name_kana && <div className="text-xs text-muted-foreground">{p.name_kana}</div>}
+                      {p.nameKana && <div className="text-xs text-muted-foreground">{p.nameKana}</div>}
                     </td>
                     <td className="py-2.5 text-muted-foreground hidden sm:table-cell">
                       {p.phone ? (
