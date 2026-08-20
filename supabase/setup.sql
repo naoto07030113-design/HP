@@ -16,12 +16,12 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- updated_at 自動更新関数
 CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER LANGUAGE plpgsql SET search_path = '' AS $$
 BEGIN
   NEW.updated_at = NOW();
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 -- ================================================================
 -- 1. テーブル定義（存在しなければ作成）
@@ -494,6 +494,19 @@ DROP POLICY IF EXISTS "public_update_reservations"     ON reservations;
 DROP POLICY IF EXISTS "public_insert_patients"         ON patients;
 DROP POLICY IF EXISTS "public_insert_merch_bookings"   ON merchandise_bookings;
 
+-- 旧セットアップが残す「ログイン済みなら全操作可」（RLS の許可は OR で結合されるため、
+-- 1つでも残っているとロール別の制限が一切効かない）
+DROP POLICY IF EXISTS "staff_all_clinics"         ON clinics;
+DROP POLICY IF EXISTS "staff_all_staff"           ON staff;
+DROP POLICY IF EXISTS "staff_all_menus"           ON menus;
+DROP POLICY IF EXISTS "staff_all_announcements"   ON announcements;
+DROP POLICY IF EXISTS "staff_all_app_settings"    ON app_settings;
+DROP POLICY IF EXISTS "staff_all_closed_days"     ON closed_days;
+DROP POLICY IF EXISTS "staff_all_merchandise"     ON merchandise;
+DROP POLICY IF EXISTS "staff_all_monthly_reports" ON monthly_reports;
+DROP POLICY IF EXISTS "auth_all_closed_days"      ON closed_days;
+DROP POLICY IF EXISTS "anon_read_closed_days"     ON closed_days;
+
 -- 010_rls_clinic_scope.sql が作るポリシー（再実行時の掃除）
 DROP POLICY IF EXISTS "read_clinics"              ON clinics;
 DROP POLICY IF EXISTS "read_staff"                ON staff;
@@ -516,21 +529,30 @@ DROP POLICY IF EXISTS "admin_rw_monthly_reports"  ON monthly_reports;
 -- ロールと所属院は app_metadata からのみ読む。
 -- user_metadata は本人が書き換えられるため信頼しない。
 
-CREATE OR REPLACE FUNCTION public.auth_role()
-RETURNS text LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+-- 公開しないスキーマに置く。public に置くと PostgREST 経由で
+-- /rest/v1/rpc/auth_role のように外から直接呼べてしまう。
+CREATE SCHEMA IF NOT EXISTS app_private;
+GRANT USAGE ON SCHEMA app_private TO anon, authenticated, service_role;
+
+CREATE OR REPLACE FUNCTION app_private.auth_role()
+RETURNS text LANGUAGE sql STABLE SECURITY DEFINER SET search_path = '' AS $$
   SELECT COALESCE(NULLIF(auth.jwt() -> 'app_metadata' ->> 'role', ''), 'receptionist');
 $$;
 
-CREATE OR REPLACE FUNCTION public.auth_clinic_id()
-RETURNS uuid LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+CREATE OR REPLACE FUNCTION app_private.auth_clinic_id()
+RETURNS uuid LANGUAGE sql STABLE SECURITY DEFINER SET search_path = '' AS $$
   SELECT NULLIF(auth.jwt() -> 'app_metadata' ->> 'clinic_id', '')::uuid;
 $$;
 
-CREATE OR REPLACE FUNCTION public.can_access_clinic(target uuid)
-RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
-  SELECT public.auth_role() = 'admin'
-      OR (target IS NOT NULL AND target = public.auth_clinic_id());
+CREATE OR REPLACE FUNCTION app_private.can_access_clinic(target uuid)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = '' AS $$
+  SELECT app_private.auth_role() = 'admin'
+      OR (target IS NOT NULL AND target = app_private.auth_clinic_id());
 $$;
+
+GRANT EXECUTE ON FUNCTION app_private.auth_role()             TO anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION app_private.auth_clinic_id()        TO anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION app_private.can_access_clinic(uuid) TO anon, authenticated, service_role;
 
 -- ---- 患者データ: ブラウザからは一切触れさせない ----
 --
@@ -557,37 +579,37 @@ CREATE POLICY "read_closed_days"   ON closed_days   FOR SELECT TO anon, authenti
 CREATE POLICY "read_merchandise"   ON merchandise   FOR SELECT TO anon, authenticated USING (true);
 
 CREATE POLICY "admin_write_clinics" ON clinics FOR ALL TO authenticated
-  USING (public.auth_role() = 'admin') WITH CHECK (public.auth_role() = 'admin');
+  USING (app_private.auth_role() = 'admin') WITH CHECK (app_private.auth_role() = 'admin');
 CREATE POLICY "admin_write_staff" ON staff FOR ALL TO authenticated
-  USING (public.auth_role() = 'admin') WITH CHECK (public.auth_role() = 'admin');
+  USING (app_private.auth_role() = 'admin') WITH CHECK (app_private.auth_role() = 'admin');
 CREATE POLICY "admin_write_menus" ON menus FOR ALL TO authenticated
-  USING (public.auth_role() = 'admin') WITH CHECK (public.auth_role() = 'admin');
+  USING (app_private.auth_role() = 'admin') WITH CHECK (app_private.auth_role() = 'admin');
 CREATE POLICY "admin_write_announcements" ON announcements FOR ALL TO authenticated
-  USING (public.auth_role() = 'admin') WITH CHECK (public.auth_role() = 'admin');
+  USING (app_private.auth_role() = 'admin') WITH CHECK (app_private.auth_role() = 'admin');
 
 -- システム設定は「システム設定」画面（管理者）と「コミュニケーション」画面
 -- （管理者・施術者）の両方から保存されるため、この2ロールに許す
 CREATE POLICY "admin_write_app_settings" ON app_settings FOR ALL TO authenticated
-  USING (public.auth_role() IN ('admin', 'staff'))
-  WITH CHECK (public.auth_role() IN ('admin', 'staff'));
+  USING (app_private.auth_role() IN ('admin', 'staff'))
+  WITH CHECK (app_private.auth_role() IN ('admin', 'staff'));
 
 CREATE POLICY "staff_write_closed_days" ON closed_days FOR ALL TO authenticated
   USING (
-    public.auth_role() IN ('admin', 'staff')
-    AND (clinic_id IS NULL OR public.can_access_clinic(clinic_id))
+    app_private.auth_role() IN ('admin', 'staff')
+    AND (clinic_id IS NULL OR app_private.can_access_clinic(clinic_id))
   )
   WITH CHECK (
-    public.auth_role() IN ('admin', 'staff')
-    AND (clinic_id IS NULL OR public.can_access_clinic(clinic_id))
+    app_private.auth_role() IN ('admin', 'staff')
+    AND (clinic_id IS NULL OR app_private.can_access_clinic(clinic_id))
   );
 
 CREATE POLICY "staff_write_merchandise" ON merchandise FOR ALL TO authenticated
-  USING (public.auth_role() IN ('admin', 'staff') AND public.can_access_clinic(clinic_id))
-  WITH CHECK (public.auth_role() IN ('admin', 'staff') AND public.can_access_clinic(clinic_id));
+  USING (app_private.auth_role() IN ('admin', 'staff') AND app_private.can_access_clinic(clinic_id))
+  WITH CHECK (app_private.auth_role() IN ('admin', 'staff') AND app_private.can_access_clinic(clinic_id));
 
 -- 月次レポートは経営数値のまとめ（患者個人の情報は含まない）。画面が管理者専用
 CREATE POLICY "admin_rw_monthly_reports" ON monthly_reports FOR ALL TO authenticated
-  USING (public.auth_role() = 'admin') WITH CHECK (public.auth_role() = 'admin');
+  USING (app_private.auth_role() = 'admin') WITH CHECK (app_private.auth_role() = 'admin');
 
 -- 予約・患者情報: anon からは一切触れさせない。
 --
