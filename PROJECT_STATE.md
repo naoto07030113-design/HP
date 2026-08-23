@@ -10,6 +10,17 @@
 「動くアプリ」ではなく、安全に運用でき、異常に気づけて、原因を追跡でき、
 データを戻せる業務基幹システムにする。
 
+# 本番環境
+
+| | |
+|---|---|
+| Supabase | `fupfwpyvejzwrubomhov`（`itomedicalcare1995@gmail.com` の組織） |
+| Vercel | チーム `naoto's projects` / プロジェクト `hp` |
+| リポジトリ | `naoto07030113-design/HP`（**公開**。秘密情報を置かないこと） |
+
+`unbfufnqajavptbsrsfc`（プロジェクト名「HP作成」）は**旧営業システム用の別プロジェクト**。
+このシステムとは無関係なので触らないこと。
+
 # CORE
 
 | 層 | 技術 |
@@ -136,20 +147,23 @@
    - 旧セットアップが残していた「ログイン済みなら全操作可」ポリシーも撤去
    - 実測: 匿名・受付とも患者/予約/カルテ/会計/シフト/物販予約は 0 行、
      院・メニュー・スタッフは参照可、受付による院マスタ更新は 0 行で拒否
-2. `CLINIC_SERVICE_ROLE_KEY` を Vercel に設定する（**必須になった**。未設定だと予約APIが動かない）
-3. 管理者アカウントの `app_metadata` に `{"role":"admin"}` を設定する
-   （未設定だと最小権限の受付として扱われ、管理業務ができない）
+2. ~~管理者アカウントのロール設定~~ **完了（2026-08-20）**
+   `naoto07030113@gmail.com` と `itomedicalcare1995@gmail.com` を `admin` に設定
+3. **Vercel の Production 環境に環境変数3つを設定する**（デプロイ前に必須）
+   - `NEXT_PUBLIC_CLINIC_SUPABASE_URL` = `https://fupfwpyvejzwrubomhov.supabase.co`
+   - `NEXT_PUBLIC_CLINIC_SUPABASE_ANON_KEY` = `sb_publishable_jIbUWn3vDXHZtGF_DJ8a1A_kpMt-NcE`
+   - `CLINIC_SERVICE_ROLE_KEY` = Supabase の secret key（Sensitive で登録）
 4. 新コードを本番へデプロイする（現在の本番は5月のコード）
 5. Supabase の「Leaked Password Protection」を有効化する
 6. 論理削除をアプリ側に反映（現在は物理削除のまま）
-6. 監視とアラート、ステージング環境
+7. 監視とアラート、ステージング環境
 
 # OPEN ISSUES
 
 | 優先 | 内容 |
 |---|---|
-| P0 | 本番の2アカウントに `app_metadata.role` が未設定。新コードでは最小権限（受付）として扱われるため、管理者を1人設定するまで管理業務ができない |
-| P0 | 新コードが本番へ未デプロイ（本番は5月のコード）。`CLINIC_SERVICE_ROLE_KEY` も Vercel に未設定 |
+| P0 | 新コードが本番へ未デプロイ（本番は5月のコード） |
+| P0 | Vercel の Production 環境に `NEXT_PUBLIC_CLINIC_SUPABASE_URL` / `ANON_KEY` / `CLINIC_SERVICE_ROLE_KEY` が未設定。旧コードは URL とキーを直書きフォールバックしていたため動いていたが、新コードはフォールバックを廃止したので**このままデプロイすると本番が起動しない** |
 | P1 | 論理削除は患者・カルテ・会計・予約に対応。シフトは予定であり業務記録ではないため物理削除のまま |
 | P0 | バックアップの復元テストが未実施 |
 | P1 | レート制限はプロセス内メモリのため、サーバーレスの複数インスタンス間で共有されない（本格運用では Redis 等へ差し替える） |
