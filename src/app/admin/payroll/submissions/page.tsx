@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import type { PayrollSubmission, SubmissionItem } from '@/types/payroll'
 import { toast } from 'sonner'
+import { payrollFetch } from '@/lib/payroll-client'
 
 const DEPARTMENTS = ['リハビリ', '本院', 'SANRI', 'ストレッチ', 'HaRina']
 
@@ -27,7 +28,7 @@ export default function SubmissionsPage() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/payroll/submissions?year=${year}&month=${month}`)
+      const res = await payrollFetch(`/api/payroll/submissions?year=${year}&month=${month}`)
       const data = await res.json()
       setSubmissions(Array.isArray(data) ? data : [])
     } finally {
@@ -70,7 +71,7 @@ export default function SubmissionsPage() {
       fd.append('month', String(month))
       fd.append('department', department)
 
-      const res = await fetch('/api/payroll/submissions', { method: 'POST', body: fd })
+      const res = await payrollFetch('/api/payroll/submissions', { method: 'POST', body: fd })
       const data = await res.json()
 
       if (!res.ok) throw new Error(data.error)

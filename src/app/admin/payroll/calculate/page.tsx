@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Calculator, Save, Plus, Trash2, CheckCircle2
 import type { PayrollEmployee, PayrollCalculationResult, AllowanceItem } from '@/types/payroll'
 import { formatCurrency } from '@/lib/payroll-calculator'
 import { toast } from 'sonner'
+import { payrollFetch } from '@/lib/payroll-client'
 
 interface CalcPreview {
   employeeId: string
@@ -26,7 +27,7 @@ export default function PayrollCalculatePage() {
   const [saving, setSaving] = useState(false)
 
   const loadEmployees = useCallback(async () => {
-    const res = await fetch('/api/payroll/employees?active=true')
+    const res = await payrollFetch('/api/payroll/employees?active=true')
     const data = await res.json()
     setEmployees(Array.isArray(data) ? data : [])
     if (Array.isArray(data) && data.length > 0) setSelectedId(data[0].id)
@@ -45,7 +46,7 @@ export default function PayrollCalculatePage() {
     if (residentTax !== null) adjustments.resident_tax = residentTax
 
     try {
-      const res = await fetch('/api/payroll/calculate', {
+      const res = await payrollFetch('/api/payroll/calculate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -75,7 +76,7 @@ export default function PayrollCalculatePage() {
       const adjustments: Record<string, number> = { performance_allowance: perfAllowance }
       if (residentTax !== null) adjustments.resident_tax = residentTax
 
-      const res = await fetch('/api/payroll/calculate', {
+      const res = await payrollFetch('/api/payroll/calculate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -360,7 +361,7 @@ function CalcResultView({
           <span className="text-2xl font-bold text-green-800 tabular-nums">{formatCurrency(result.net_pay)}</span>
         </div>
         <div className="mt-2 text-xs text-gray-400 space-y-0.5">
-          <p>標準報酬月額: {formatCurrency(result.standard_monthly_salary)}</p>
+          <p>標準報酵月額: {formatCurrency(result.standard_monthly_salary)}</p>
           <p>課税支給額: {formatCurrency(result.taxable_gross)}</p>
         </div>
       </div>
