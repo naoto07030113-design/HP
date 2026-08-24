@@ -5,6 +5,7 @@ import { Save, ChevronLeft, ChevronRight, Clock, AlertTriangle } from 'lucide-re
 import type { PayrollEmployee, PayrollAttendance } from '@/types/payroll'
 import { toast } from 'sonner'
 import { checkMonthlyOvertimeLimit } from '@/lib/payroll-calculator'
+import { payrollFetch } from '@/lib/payroll-client'
 
 export default function AttendancePage() {
   const now = new Date()
@@ -20,8 +21,8 @@ export default function AttendancePage() {
     setLoading(true)
     try {
       const [empRes, attRes] = await Promise.all([
-        fetch('/api/payroll/employees?active=true'),
-        fetch(`/api/payroll/attendance?year=${year}&month=${month}`),
+        payrollFetch('/api/payroll/employees?active=true'),
+        payrollFetch(`/api/payroll/attendance?year=${year}&month=${month}`),
       ])
       const emps: PayrollEmployee[] = await empRes.json()
       const atts: PayrollAttendance[] = await attRes.json()
@@ -74,7 +75,7 @@ export default function AttendancePage() {
     setSaving(empId)
     try {
       const data = getOrDefault(empId)
-      const res = await fetch('/api/payroll/attendance', {
+      const res = await payrollFetch('/api/payroll/attendance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...data, year, month, payroll_employee_id: empId }),

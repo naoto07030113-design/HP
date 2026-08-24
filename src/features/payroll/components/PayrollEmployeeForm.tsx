@@ -3,9 +3,11 @@
 import { useEffect, useState } from 'react'
 import { X, Save, AlertTriangle } from 'lucide-react'
 import type { PayrollEmployee } from '@/types/payroll'
+import { payrollFetch } from '@/lib/payroll-client'
 
 interface Props {
   initial?: PayrollEmployee
+  readOnly?: boolean
   onSaved: () => void
   onClose: () => void
 }
@@ -16,7 +18,7 @@ interface StaffOption {
   clinic?: { name: string }
 }
 
-export default function PayrollEmployeeForm({ initial, onSaved, onClose }: Props) {
+export default function PayrollEmployeeForm({ initial, readOnly, onSaved, onClose }: Props) {
   const [staffOptions, setStaffOptions] = useState<StaffOption[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -52,7 +54,7 @@ export default function PayrollEmployeeForm({ initial, onSaved, onClose }: Props
   })
 
   useEffect(() => {
-    fetch('/api/payroll/employees?active=true')
+    payrollFetch('/api/payroll/employees?active=true')
       .then(r => r.json())
       .then((data: PayrollEmployee[]) => {
         const usedStaffIds = data.map(e => e.staff_id).filter(Boolean)
@@ -73,6 +75,7 @@ export default function PayrollEmployeeForm({ initial, onSaved, onClose }: Props
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (readOnly) return
     if (!form.staff_id && !isEdit) { setError('スタッフを選択してください'); return }
     if (!form.hire_date) { setError('入社日を入力してください'); return }
 
@@ -104,7 +107,7 @@ export default function PayrollEmployeeForm({ initial, onSaved, onClose }: Props
         : '/api/payroll/employees'
       const method = isEdit ? 'PATCH' : 'POST'
 
-      const res = await fetch(url, {
+      const res = await payrollFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -134,6 +137,13 @@ export default function PayrollEmployeeForm({ initial, onSaved, onClose }: Props
       </div>
 
       <form onSubmit={handleSubmit} className="p-5 space-y-5">
+        <fieldset disabled={readOnly} className="space-y-5">
+        {readOnly && (
+          <div className="flex items-center gap-2 text-gray-500 bg-gray-50 rounded-lg p-3 text-sm">
+            <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+            院長権限では閲覧のみ可能です（編集は総院長・給与担当のみ）
+          </div>
+        )}
         {error && (
           <div className="flex items-center gap-2 text-red-600 bg-red-50 rounded-lg p-3 text-sm">
             <AlertTriangle className="w-4 h-4 flex-shrink-0" />
@@ -254,11 +264,11 @@ export default function PayrollEmployeeForm({ initial, onSaved, onClose }: Props
           </div>
         </Section>
 
-        {/* 社会保険・税務 */}
-        <Section title="社会保険・税務">
+        {/* 社会保险・税務 */}
+        <Section title="社会保险・税務">
           <div className="space-y-2">
             <CheckboxField
-              label="健康保険加入"
+              label="健康保险加入"
               checked={form.health_insurance_enrolled}
               onChange={v => set('health_insurance_enrolled', v)}
             />
@@ -268,7 +278,7 @@ export default function PayrollEmployeeForm({ initial, onSaved, onClose }: Props
               onChange={v => set('pension_enrolled', v)}
             />
             <CheckboxField
-              label="雇用保険加入"
+              label="雇用保险加入"
               checked={form.employment_insurance_enrolled}
               onChange={v => set('employment_insurance_enrolled', v)}
             />
@@ -354,14 +364,17 @@ export default function PayrollEmployeeForm({ initial, onSaved, onClose }: Props
           )}
         </Section>
 
-        <button
-          type="submit"
-          disabled={saving}
-          className="w-full flex items-center justify-center gap-2 bg-green-700 text-white py-2.5 rounded-lg font-medium hover:bg-green-800 disabled:opacity-50 transition-colors"
-        >
-          <Save className="w-4 h-4" />
-          {saving ? '保存中...' : (isEdit ? '変更を保存' : '登録する')}
-        </button>
+        {!readOnly && (
+          <button
+            type="submit"
+            disabled={saving}
+            className="w-full flex items-center justify-center gap-2 bg-green-700 text-white py-2.5 rounded-lg font-medium hover:bg-green-800 disabled:opacity-50 transition-colors"
+          >
+            <Save className="w-4 h-4" />
+            {saving ? '保存中...' : (isEdit ? '変更を保存' : '登録する')}
+          </button>
+        )}
+        </fieldset>
       </form>
     </div>
   )

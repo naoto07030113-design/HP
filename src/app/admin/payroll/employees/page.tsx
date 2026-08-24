@@ -5,8 +5,12 @@ import { Plus, Search, ChevronRight, Building2, AlertTriangle } from 'lucide-rea
 import type { PayrollEmployee } from '@/types/payroll'
 import PayrollEmployeeForm from '@/features/payroll/components/PayrollEmployeeForm'
 import { toast } from 'sonner'
+import { payrollFetch } from '@/lib/payroll-client'
+import { useCurrentUser, PAYROLL_PERMISSIONS } from '@/lib/auth-store'
 
 export default function PayrollEmployeesPage() {
+  const currentUser = useCurrentUser()
+  const canManage = PAYROLL_PERMISSIONS.canManageEmployees(currentUser?.payrollRole ?? null)
   const [employees, setEmployees] = useState<PayrollEmployee[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -16,7 +20,7 @@ export default function PayrollEmployeesPage() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch('/api/payroll/employees?active=true')
+      const res = await payrollFetch('/api/payroll/employees?active=true')
       const data = await res.json()
       setEmployees(Array.isArray(data) ? data : [])
     } finally {
@@ -39,13 +43,15 @@ export default function PayrollEmployeesPage() {
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-semibold text-green-900">在籍従業員 ({employees.length}名)</h2>
-          <button
-            onClick={() => { setSelectedId(null); setShowForm(true) }}
-            className="flex items-center gap-1.5 bg-green-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-green-800 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            新規登録
-          </button>
+          {canManage && (
+            <button
+              onClick={() => { setSelectedId(null); setShowForm(true) }}
+              className="flex items-center gap-1.5 bg-green-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-green-800 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              新規登録
+            </button>
+          )}
         </div>
 
         {/* 検索 */}
@@ -87,6 +93,7 @@ export default function PayrollEmployeesPage() {
         <div className="w-[520px] flex-shrink-0">
           <PayrollEmployeeForm
             initial={selected}
+            readOnly={!canManage}
             onSaved={() => {
               toast.success(selected ? '従業員情報を更新しました' : '従業員を登録しました')
               load()
