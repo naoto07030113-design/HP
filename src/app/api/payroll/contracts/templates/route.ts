@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { getPayrollAuth, requireNonClinicDirector } from '@/lib/payroll-auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,6 +20,10 @@ export async function GET() {
 }
 
 export async function PATCH(req: NextRequest) {
+  const auth = await getPayrollAuth(req)
+  const denied = requireNonClinicDirector(auth)
+  if (denied) return denied
+
   const supabase = getAdmin()
   const { id, ...updates } = await req.json()
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })

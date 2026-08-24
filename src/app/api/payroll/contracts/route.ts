@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { getPayrollAuth, requireNonClinicDirector } from '@/lib/payroll-auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -34,6 +35,10 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await getPayrollAuth(req)
+  const denied = requireNonClinicDirector(auth)
+  if (denied) return denied
+
   const supabase = getAdmin()
   const body = await req.json() as {
     payroll_employee_id: string

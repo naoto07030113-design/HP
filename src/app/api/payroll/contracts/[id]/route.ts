@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { getPayrollAuth, requireNonClinicDirector } from '@/lib/payroll-auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,6 +21,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const auth = await getPayrollAuth(req)
+  const denied = requireNonClinicDirector(auth)
+  if (denied) return denied
+
   const { id } = await params
   const supabase = getAdmin()
   const body = await req.json()
@@ -33,7 +38,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   return NextResponse.json(data)
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const auth = await getPayrollAuth(req)
+  const denied = requireNonClinicDirector(auth)
+  if (denied) return denied
+
   const { id } = await params
   const supabase = getAdmin()
   const { error } = await supabase.from('employee_contracts').delete().eq('id', id)

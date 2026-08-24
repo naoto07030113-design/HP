@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase'
 import { calculatePayroll } from '@/lib/payroll-calculator'
+import { getPayrollAuth, requireNonClinicDirector } from '@/lib/payroll-auth'
 import type { PayrollEmployee, PayrollAttendance, SocialInsuranceRates, AllowanceItem } from '@/types/payroll'
 
 export const dynamic = 'force-dynamic'
 
 // プレビュー計算（未保存）
 export async function POST(req: NextRequest) {
+  const auth = await getPayrollAuth(req)
+  const denied = requireNonClinicDirector(auth)
+  if (denied) return denied
+
   const supabase = createServiceClient()
   const body = await req.json()
   const { employee_id, year, month, additional_allowances, manual_adjustments, save } = body

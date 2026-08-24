@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase'
+import { getPayrollAuth, requireNonClinicDirector } from '@/lib/payroll-auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -22,6 +23,10 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const auth = await getPayrollAuth(req)
+  const denied = requireNonClinicDirector(auth)
+  if (denied) return denied
+
   const supabase = createServiceClient()
   const body = await req.json()
 
@@ -37,9 +42,13 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const auth = await getPayrollAuth(req)
+  const denied = requireNonClinicDirector(auth)
+  if (denied) return denied
+
   const supabase = createServiceClient()
   const { error } = await supabase
     .from('payroll_employees')
