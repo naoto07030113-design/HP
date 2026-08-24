@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { sendPayslipEmail } from '@/lib/payroll-email'
+import { getPayrollAuth, requireNonClinicDirector } from '@/lib/payroll-auth'
 
 function getAdmin() {
   return createClient(
@@ -12,6 +13,10 @@ function getAdmin() {
 // POST /api/payroll/send-slips
 // body: { year, month, employee_ids?: string[] }  → employee_ids are payroll_employee.id
 export async function POST(req: NextRequest) {
+  const auth = await getPayrollAuth(req)
+  const denied = requireNonClinicDirector(auth)
+  if (denied) return denied
+
   const { year, month, employee_ids } = await req.json() as {
     year: number; month: number; employee_ids?: string[]
   }

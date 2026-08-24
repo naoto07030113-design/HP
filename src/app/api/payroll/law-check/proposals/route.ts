@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { getPayrollAuth, requireNonClinicDirector } from '@/lib/payroll-auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,6 +29,10 @@ export async function GET(req: NextRequest) {
 // PATCH /api/payroll/law-check/proposals
 // body: { id, action: 'approve'|'reject'|'apply', manual_value?: object }
 export async function PATCH(req: NextRequest) {
+  const auth = await getPayrollAuth(req)
+  const denied = requireNonClinicDirector(auth)
+  if (denied) return denied
+
   const supabase = getAdmin()
   const { id, action, manual_value } = await req.json() as {
     id: string
@@ -113,7 +118,7 @@ export async function PATCH(req: NextRequest) {
         }
       }
 
-      if (prop.category === '社会保険' && value) {
+      if (prop.category === '社会保险' && value) {
         // social_insurance_rates を更新
         const prefecture  = String(value.prefecture ?? '東京')
         const effDate     = prop.effective_date ?? new Date().toISOString().slice(0, 10)

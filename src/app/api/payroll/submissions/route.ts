@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase'
+import { getPayrollAuth, requireNonClinicDirector } from '@/lib/payroll-auth'
 import OpenAI from 'openai'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
+  const auth = await getPayrollAuth(req)
+  const denied = requireNonClinicDirector(auth)
+  if (denied) return denied
+
   const supabase = createServiceClient()
   const { searchParams } = new URL(req.url)
   const year = searchParams.get('year')
@@ -24,6 +29,10 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await getPayrollAuth(req)
+  const denied = requireNonClinicDirector(auth)
+  if (denied) return denied
+
   const supabase = createServiceClient()
   const formData = await req.formData()
 
@@ -38,7 +47,7 @@ export async function POST(req: NextRequest) {
 
   // AI解析
   const prompt = `
-以下は日本の鍼灸整骨院グループの給与申請書から抽出したテキストです。
+以下は日本の镤灸整骨院グループの給与申請書から抽出したテキストです。
 部署: ${dept}
 対象年月: ${year}年${month}月
 
