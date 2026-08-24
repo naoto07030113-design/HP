@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { useCurrentUser, ROLE_LABELS } from '@/lib/auth-store'
+import { useCurrentUser, ROLE_LABELS, PAYROLL_ROLE_LABELS, PAYROLL_PERMISSIONS, type PayrollRole } from '@/lib/auth-store'
 import { getSupabaseClient } from '@/lib/supabase'
 import {
   LayoutDashboard, Users, Clock, Calculator, FileText,
@@ -12,30 +12,42 @@ import {
 import { useState, useEffect } from 'react'
 
 const TABS = [
-  { href: '/admin/payroll',             label: 'ダッシュボード',   icon: LayoutDashboard, exact: true },
-  { href: '/admin/payroll/employees',   label: '従業員管理',       icon: Users },
-  { href: '/admin/payroll/contracts',   label: '労務・契約',       icon: FileSignature },
-  { href: '/admin/payroll/attendance',  label: '勤怠管理',         icon: Clock },
-  { href: '/admin/payroll/calculate',   label: '給与計算',         icon: Calculator },
-  { href: '/admin/payroll/slips',       label: '給与明細',         icon: FileText },
-  { href: '/admin/payroll/export',      label: '税理士・印刷出力', icon: Download },
-  { href: '/admin/payroll/submissions', label: 'PDF申請書取込',    icon: Upload },
-  { href: '/admin/payroll/compliance',  label: '法令・コンプラ',   icon: ShieldCheck, badge: true },
+  { href: '/admin/payroll',             label: 'ダッシュボード',   icon: LayoutDashboard, exact: true, show: () => true },
+  { href: '/admin/payroll/employees',   label: '従業員管理',       icon: Users,           show: () => true },
+  { href: '/admin/payroll/contracts',   label: '労務・契約',       icon: FileSignature,   show: PAYROLL_PERMISSIONS.canManageContracts },
+  { href: '/admin/payroll/attendance',  label: '勤怠管理',         icon: Clock,           show: () => true },
+  { href: '/admin/payroll/calculate',   label: '給与計算',         icon: Calculator,      show: PAYROLL_PERMISSIONS.canRunCalculation },
+  { href: '/admin/payroll/slips',       label: '給与明細',         icon: FileText,        show: () => true },
+  { href: '/admin/payroll/export',      label: '税理士・印刷出力', icon: Download,        show: PAYROLL_PERMISSIONS.canAccessExport },
+  { href: '/admin/payroll/submissions', label: 'PDF申請書取込',    icon: Upload,          show: PAYROLL_PERMISSIONS.canAccessSubmissions },
+  { href: '/admin/payroll/compliance',  label: '法令・コンプラ',   icon: ShieldCheck,     show: PAYROLL_PERMISSIONS.canAccessCompliance, badge: true },
 ]
 
 export default function PayrollLayout({ children }: { children: React.ReactNode }) {
   const pathname    = usePathname()
   const router      = useRouter()
   const currentUser = useCurrentUser()
+  const payrollRole: PayrollRole | null = currentUser?.payrollRole ?? null
+  const visibleTabs = TABS.filter(t => t.show(payrollRole))
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [pendingCompliance, setPendingCompliance] = useState(0)
 
   useEffect(() => {
+    if (!PAYROLL_PERMISSIONS.canAccessCompliance(payrollRole)) return
     fetch('/api/payroll/compliance?pending=true')
       .then(r => r.json())
       .then(d => setPendingCompliance(Array.isArray(d) ? d.length : 0))
       .catch(() => {})
-  }, [])
+  }, [payrollRole])
+
+  // 権限のないタブへ直接URLアクセスした場合はダッシュボードへ戻す
+  useEffect(() => {
+    if (!currentUser) return
+    const matched = TABS.find(t => (t.exact ? pathname === t.href : pathname.startsWith(t.href)))
+    if (matched && !matched.show(payrollRole)) {
+      router.replace('/admin/payroll')
+    }
+  }, [currentUser, pathname, payrollRole, router])
 
   async function handleSignOut() {
     await getSupabaseClient().auth.signOut()
@@ -79,7 +91,11 @@ export default function PayrollLayout({ children }: { children: React.ReactNode 
             <span className="max-w-[120px] truncate">
               {currentUser?.displayName || currentUser?.email || ''}
             </span>
-            {currentUser?.role && (
+            {payrollRole ? (
+              <span className="text-xs px-1.5 py-0.5 rounded bg-green-50 text-green-700 font-medium">
+                {PAYROLL_ROLE_LABELS[payrollRole]}
+              </span>
+            ) : currentUser?.role && (
               <span className="text-xs text-gray-400">
                 {ROLE_LABELS[currentUser.role]}
               </span>
@@ -107,7 +123,7 @@ export default function PayrollLayout({ children }: { children: React.ReactNode 
       {/* タブナビゲーション */}
       <div className="flex-shrink-0 bg-white border-b border-gray-200 px-6">
         <nav className="flex gap-0 overflow-x-auto">
-          {TABS.map(({ href, label, icon: Icon, exact, badge }) => {
+          {visibleTabs.map(({ href, label, icon: Icon, exact, badge }) => {
             const active = exact ? pathname === href : pathname.startsWith(href)
             return (
               <Link

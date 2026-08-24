@@ -22,11 +22,18 @@ export default function AdminLoginPage() {
     setError(null)
 
     const supabase = getSupabaseClient()
-    const { error: authError } = await supabase.auth.signInWithPassword({ email, password })
+    const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password })
 
     if (authError) {
       setError('メールアドレスまたはパスワードが正しくありません')
       setLoading(false)
+      return
+    }
+
+    // 給与労務ロール（院長・総院長・給与担当）が設定されているアカウントは給与労務システムへ
+    const payrollRole = data.user?.user_metadata?.payroll_role
+    if (payrollRole === 'chief_director' || payrollRole === 'clinic_director' || payrollRole === 'payroll_staff') {
+      router.replace('/admin/payroll')
       return
     }
 

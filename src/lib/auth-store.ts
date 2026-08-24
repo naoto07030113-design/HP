@@ -3,14 +3,18 @@
 import { useState, useEffect } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { getSupabaseClient } from './supabase'
+import { parsePayrollRole, type PayrollRole } from '@/types/payroll-role'
 
 export type UserRole = 'admin' | 'staff' | 'receptionist'
+export type { PayrollRole }
 
 export interface CurrentUser {
   id: string
   email: string | undefined
   role: UserRole
   displayName: string
+  payrollRole: PayrollRole | null
+  payrollClinicId: string | null
 }
 
 function roleFromUser(user: User): UserRole {
@@ -20,6 +24,19 @@ function roleFromUser(user: User): UserRole {
   if (raw === 'staff') return 'staff'
   if (raw === 'receptionist') return 'receptionist'
   return 'admin'
+}
+
+function payrollRoleFromUser(user: User): PayrollRole | null {
+  const meta = user.user_metadata ?? {}
+  const appMeta = user.app_metadata ?? {}
+  return parsePayrollRole(meta.payroll_role ?? appMeta.payroll_role)
+}
+
+function payrollClinicIdFromUser(user: User): string | null {
+  const meta = user.user_metadata ?? {}
+  const appMeta = user.app_metadata ?? {}
+  const raw = meta.clinic_id ?? appMeta.clinic_id
+  return typeof raw === 'string' ? raw : null
 }
 
 function nameFromUser(user: User): string {
@@ -38,6 +55,8 @@ export function useCurrentUser(): CurrentUser | null {
           email: session.user.email,
           role: roleFromUser(session.user),
           displayName: nameFromUser(session.user),
+          payrollRole: payrollRoleFromUser(session.user),
+          payrollClinicId: payrollClinicIdFromUser(session.user),
         })
       }
     })
@@ -48,6 +67,8 @@ export function useCurrentUser(): CurrentUser | null {
           email: session.user.email,
           role: roleFromUser(session.user),
           displayName: nameFromUser(session.user),
+          payrollRole: payrollRoleFromUser(session.user),
+          payrollClinicId: payrollClinicIdFromUser(session.user),
         })
       } else {
         setUser(null)
@@ -81,3 +102,5 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   staff: 'スタッフ',
   receptionist: '受付',
 }
+
+export { PAYROLL_ROLE_LABELS, PAYROLL_PERMISSIONS, isClinicScoped } from '@/types/payroll-role'
