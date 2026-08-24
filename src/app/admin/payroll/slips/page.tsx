@@ -8,6 +8,8 @@ import {
 import type { PayrollCalculation } from '@/types/payroll'
 import { formatCurrency } from '@/lib/payroll-calculator'
 import { toast } from 'sonner'
+import { payrollFetch } from '@/lib/payroll-client'
+import { useCurrentUser, PAYROLL_PERMISSIONS } from '@/lib/auth-store'
 
 type CalcWithEmployee = PayrollCalculation & {
   employee: {
@@ -25,6 +27,10 @@ interface TokenStatus {
 }
 
 export default function PayrollSlipsPage() {
+  const currentUser = useCurrentUser()
+  const payrollRole = currentUser?.payrollRole ?? null
+  const canManage   = PAYROLL_PERMISSIONS.canUpdateSlipStatus(payrollRole)
+  const canSend     = PAYROLL_PERMISSIONS.canSendSlips(payrollRole)
   const now = new Date()
   const [year, setYear]     = useState(now.getFullYear())
   const [month, setMonth]   = useState(now.getMonth() + 1)
@@ -39,8 +45,8 @@ export default function PayrollSlipsPage() {
     setLoading(true)
     try {
       const [slipRes, tokenRes] = await Promise.all([
-        fetch(`/api/payroll/slips?year=${year}&month=${month}`),
-        fetch(`/api/payroll/send-slips?year=${year}&month=${month}`),
+        payrollFetch(`/api/payroll/slips?year=${year}&month=${month}`),
+        payrollFetch(`/api/payroll/send-slips?year=${year}&month=${month}`),
       ])
       const slipData  = await slipRes.json()
       const tokenData = await tokenRes.json()
@@ -56,7 +62,7 @@ export default function PayrollSlipsPage() {
   async function bulkUpdateStatus(ids: string[], status: string) {
     setUpdating(true)
     try {
-      const res = await fetch('/api/payroll/slips', {
+      const res = await payrollFetch('/api/payroll/slips', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids, status }),
@@ -74,7 +80,7 @@ export default function PayrollSlipsPage() {
   async function sendSlips(employeeIds?: string[]) {
     setSending(true)
     try {
-      const res = await fetch('/api/payroll/send-slips', {
+      const res = await payrollFetch('/api/payroll/send-slips', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ year, month, employee_ids: employeeIds }),
@@ -179,7 +185,7 @@ export default function PayrollSlipsPage() {
 
         {/* 一括操作 */}
         <div className="flex flex-wrap items-center gap-2 mb-3">
-          {draftIds.length > 0 && (
+          {canManage && draftIds.length > 0 && (
             <button
               onClick={() => bulkUpdateStatus(draftIds, 'confirmed')}
               disabled={updating}
@@ -189,7 +195,7 @@ export default function PayrollSlipsPage() {
               下書きを一括確定 ({draftIds.length}件)
             </button>
           )}
-          {confirmedIds.length > 0 && (
+          {canManage && confirmedIds.length > 0 && (
             <button
               onClick={() => bulkUpdateStatus(confirmedIds, 'paid')}
               disabled={updating}
@@ -199,7 +205,7 @@ export default function PayrollSlipsPage() {
               確定を振込済に ({confirmedIds.length}件)
             </button>
           )}
-          {sendableCalcs.length > 0 && (
+          {canSend && sendableCalcs.length > 0 && (
             <button
               onClick={() => sendSlips()}
               disabled={sending}
@@ -209,7 +215,7 @@ export default function PayrollSlipsPage() {
               {sending ? '送付中...' : `電子送付 (${sendableCalcs.length}名)`}
             </button>
           )}
-          {calcs.length > 0 && sendableCalcs.length === 0 && calcs.some(c => c.status !== 'draft') && (
+          {canSend && calcs.length > 0 && sendableCalcs.length === 0 && calcs.some(c => c.status !== 'draft') && (
             <span className="flex items-center gap-1 text-xs text-amber-600 ml-auto">
               <AlertCircle className="w-3.5 h-3.5" />
               メール未登録のため電子送付不可
@@ -285,6 +291,7 @@ export default function PayrollSlipsPage() {
             onClose={() => setSelected(null)}
             onSend={() => sendSlips([selected.employee?.id])}
             sending={sending}
+            canSendRole={canSend}
           />
         </div>
       )}
@@ -293,16 +300,17 @@ export default function PayrollSlipsPage() {
 }
 
 function PayslipDetail({
-  calc, tokenStatus, onClose, onSend, sending,
+  calc, tokenStatus, onClose, onSend, sending, canSendRole,
 }: {
   calc: CalcWithEmployee
   tokenStatus: TokenStatus | null
   onClose: () => void
   onSend: () => void
   sending: boolean
+  canSendRole: boolean
 }) {
   const hasEmail = !!calc.employee?.email
-  const canSend  = hasEmail && calc.status !== 'draft'
+  const canSend  = canSendRole && hasEmail && calc.status !== 'draft'
 
   return (
     <div className="bg-white rounded-xl border border-green-100 overflow-hidden sticky top-0">
@@ -324,29 +332,33 @@ function PayslipDetail({
 
       {/* 電子送付ボタン */}
       <div className="px-4 py-3 border-b border-green-50 bg-green-50/50">
-        <button
-          onClick={onSend}
-          disabled={!canSend || sending}
-          className={`w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
-            canSend
-              ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-              : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-          }`}
-        >
-          <Mail className="w-4 h-4" />
-          {sending ? '送付中...' : '電子送付（メール送信）'}
-        </button>
-        {!hasEmail && (
-          <p className="text-xs text-amber-600 mt-1.5 flex items-center gap-1">
-            <AlertCircle className="w-3 h-3" />
-            従業員マスタにメールを登録してください
-          </p>
-        )}
-        {calc.status === 'draft' && hasEmail && (
-          <p className="text-xs text-amber-600 mt-1.5 flex items-center gap-1">
-            <AlertCircle className="w-3 h-3" />
-            確定後に送付できます
-          </p>
+        {canSendRole && (
+          <>
+            <button
+              onClick={onSend}
+              disabled={!canSend || sending}
+              className={`w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+                canSend
+                  ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              }`}
+            >
+              <Mail className="w-4 h-4" />
+              {sending ? '送付中...' : '電子送付（メール送信）'}
+            </button>
+            {!hasEmail && (
+              <p className="text-xs text-amber-600 mt-1.5 flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" />
+                従業員マスタにメールを登録してください
+              </p>
+            )}
+            {calc.status === 'draft' && hasEmail && (
+              <p className="text-xs text-amber-600 mt-1.5 flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" />
+                確定後に送付できます
+              </p>
+            )}
+          </>
         )}
         {tokenStatus && (
           <div className="mt-2 text-xs text-gray-500 space-y-0.5">
@@ -392,10 +404,10 @@ function PayslipDetail({
         <div>
           <p className="text-xs font-semibold text-gray-500 mb-2">【控除】</p>
           <div className="space-y-1">
-            {calc.health_insurance > 0 && <SlipRow label="健康保険料" amount={calc.health_insurance} deduction />}
-            {calc.nursing_care_insurance > 0 && <SlipRow label="介護保険料" amount={calc.nursing_care_insurance} deduction />}
-            {calc.welfare_pension > 0 && <SlipRow label="厚生年金保険料" amount={calc.welfare_pension} deduction />}
-            {calc.employment_insurance > 0 && <SlipRow label="雇用保険料" amount={calc.employment_insurance} deduction />}
+            {calc.health_insurance > 0 && <SlipRow label="健康保险料" amount={calc.health_insurance} deduction />}
+            {calc.nursing_care_insurance > 0 && <SlipRow label="介護保险料" amount={calc.nursing_care_insurance} deduction />}
+            {calc.welfare_pension > 0 && <SlipRow label="厚生年金保险料" amount={calc.welfare_pension} deduction />}
+            {calc.employment_insurance > 0 && <SlipRow label="雇用保险料" amount={calc.employment_insurance} deduction />}
             {calc.income_tax > 0 && <SlipRow label="所得税" amount={calc.income_tax} deduction />}
             {calc.resident_tax > 0 && <SlipRow label="住民税" amount={calc.resident_tax} deduction />}
             {calc.other_deductions > 0 && <SlipRow label="その他控除" amount={calc.other_deductions} deduction />}
