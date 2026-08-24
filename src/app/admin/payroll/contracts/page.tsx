@@ -5,6 +5,7 @@ import {
   Plus, Send, CheckCircle2, Clock, FileText, Search,
   ChevronRight, X, Edit2, Trash2, Eye, RefreshCw,
 } from 'lucide-react'
+import { payrollFetch } from '@/lib/payroll-client'
 
 // ---- Types ----------------------------------------------------------------
 
@@ -159,7 +160,7 @@ export default function ContractsPage() {
     setSending(true)
     setSendMsg('')
     try {
-      const res = await fetch(`/api/payroll/contracts/${selectedId}/send`, { method: 'POST' })
+      const res = await payrollFetch(`/api/payroll/contracts/${selectedId}/send`, { method: 'POST' })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'エラー')
       setSendMsg('送信しました')
@@ -175,7 +176,7 @@ export default function ContractsPage() {
   async function handleDelete() {
     if (!selectedId) return
     if (!confirm('この契約書を削除しますか？')) return
-    await fetch(`/api/payroll/contracts/${selectedId}`, { method: 'DELETE' })
+    await payrollFetch(`/api/payroll/contracts/${selectedId}`, { method: 'DELETE' })
     setSelectedId(null)
     await load()
   }
@@ -393,7 +394,7 @@ function DetailPanel({
           </span>
         )}
         {detail.valid_from && (
-          <span>有効期間: {detail.valid_from} 〜 {detail.valid_until ?? ''}</span>
+          <span>有効期間: {detail.valid_from} 〇 {detail.valid_until ?? ''}</span>
         )}
       </div>
 
@@ -529,7 +530,7 @@ function CreateContractModal({ onClose, onCreated }: { onClose: () => void; onCr
     setSubmitting(true)
     setError('')
     try {
-      const res = await fetch('/api/payroll/contracts', {
+      const res = await payrollFetch('/api/payroll/contracts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -758,7 +759,7 @@ function TemplateEditorModal({ onClose }: { onClose: () => void }) {
     setSaving(true)
     setMsg('')
     try {
-      const res = await fetch('/api/payroll/contracts/templates', {
+      const res = await payrollFetch('/api/payroll/contracts/templates', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: selected.id, content: editContent }),
