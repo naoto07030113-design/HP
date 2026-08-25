@@ -394,7 +394,7 @@ function DetailPanel({
           </span>
         )}
         {detail.valid_from && (
-          <span>有効期間: {detail.valid_from} 〇 {detail.valid_until ?? ''}</span>
+          <span>有効期間: {detail.valid_from} 〜 {detail.valid_until ?? ''}</span>
         )}
       </div>
 
