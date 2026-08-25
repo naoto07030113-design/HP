@@ -118,7 +118,7 @@ export async function PATCH(req: NextRequest) {
         }
       }
 
-      if (prop.category === '社会保险' && value) {
+      if (prop.category === '社会保険' && value) {
         // social_insurance_rates を更新
         const prefecture  = String(value.prefecture ?? '東京')
         const effDate     = prop.effective_date ?? new Date().toISOString().slice(0, 10)

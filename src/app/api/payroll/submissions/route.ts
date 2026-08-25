@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
 
   // AI解析
   const prompt = `
-以下は日本の镤灸整骨院グループの給与申請書から抽出したテキストです。
+以下は日本の鍼灸整骨院グループの給与申請書から抽出したテキストです。
 部署: ${dept}
 対象年月: ${year}年${month}月
 

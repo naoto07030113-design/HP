@@ -264,11 +264,11 @@ export default function PayrollEmployeeForm({ initial, readOnly, onSaved, onClos
           </div>
         </Section>
 
-        {/* 社会保险・税務 */}
-        <Section title="社会保险・税務">
+        {/* 社会保険・税務 */}
+        <Section title="社会保険・税務">
           <div className="space-y-2">
             <CheckboxField
-              label="健康保险加入"
+              label="健康保険加入"
               checked={form.health_insurance_enrolled}
               onChange={v => set('health_insurance_enrolled', v)}
             />
@@ -278,7 +278,7 @@ export default function PayrollEmployeeForm({ initial, readOnly, onSaved, onClos
               onChange={v => set('pension_enrolled', v)}
             />
             <CheckboxField
-              label="雇用保险加入"
+              label="雇用保険加入"
               checked={form.employment_insurance_enrolled}
               onChange={v => set('employment_insurance_enrolled', v)}
             />

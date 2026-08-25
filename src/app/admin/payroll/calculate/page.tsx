@@ -27,7 +27,7 @@ export default function PayrollCalculatePage() {
   const [saving, setSaving] = useState(false)
 
   const loadEmployees = useCallback(async () => {
-    const res = await payrollFetch('/api/payroll/employees?active=true')
+    const res = await fetch('/api/payroll/employees?active=true')
     const data = await res.json()
     setEmployees(Array.isArray(data) ? data : [])
     if (Array.isArray(data) && data.length > 0) setSelectedId(data[0].id)
@@ -361,7 +361,7 @@ function CalcResultView({
           <span className="text-2xl font-bold text-green-800 tabular-nums">{formatCurrency(result.net_pay)}</span>
         </div>
         <div className="mt-2 text-xs text-gray-400 space-y-0.5">
-          <p>標準報酵月額: {formatCurrency(result.standard_monthly_salary)}</p>
+          <p>標準報酬月額: {formatCurrency(result.standard_monthly_salary)}</p>
           <p>課税支給額: {formatCurrency(result.taxable_gross)}</p>
         </div>
       </div>
