@@ -404,10 +404,10 @@ function PayslipDetail({
         <div>
           <p className="text-xs font-semibold text-gray-500 mb-2">【控除】</p>
           <div className="space-y-1">
-            {calc.health_insurance > 0 && <SlipRow label="健康保险料" amount={calc.health_insurance} deduction />}
-            {calc.nursing_care_insurance > 0 && <SlipRow label="介護保险料" amount={calc.nursing_care_insurance} deduction />}
-            {calc.welfare_pension > 0 && <SlipRow label="厚生年金保险料" amount={calc.welfare_pension} deduction />}
-            {calc.employment_insurance > 0 && <SlipRow label="雇用保险料" amount={calc.employment_insurance} deduction />}
+            {calc.health_insurance > 0 && <SlipRow label="健康保険料" amount={calc.health_insurance} deduction />}
+            {calc.nursing_care_insurance > 0 && <SlipRow label="介護保険料" amount={calc.nursing_care_insurance} deduction />}
+            {calc.welfare_pension > 0 && <SlipRow label="厚生年金保険料" amount={calc.welfare_pension} deduction />}
+            {calc.employment_insurance > 0 && <SlipRow label="雇用保険料" amount={calc.employment_insurance} deduction />}
             {calc.income_tax > 0 && <SlipRow label="所得税" amount={calc.income_tax} deduction />}
             {calc.resident_tax > 0 && <SlipRow label="住民税" amount={calc.resident_tax} deduction />}
             {calc.other_deductions > 0 && <SlipRow label="その他控除" amount={calc.other_deductions} deduction />}
