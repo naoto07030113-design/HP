@@ -18,7 +18,7 @@ const IMPACT_MAP: Record<ImpactLevel, { label: string; cls: string }> = {
 
 const CATEGORY_COLORS: Record<string, string> = {
   '最低賃金': 'bg-yellow-100 text-yellow-800',
-  '社会保险': 'bg-blue-100 text-blue-800',
+  '社会保険': 'bg-blue-100 text-blue-800',
   '税制':     'bg-purple-100 text-purple-800',
   '労働法':   'bg-orange-100 text-orange-800',
   '育休':     'bg-pink-100 text-pink-800',
@@ -439,7 +439,7 @@ function ProposalModal({
   )
 
   const canAutoApply = proposal.change_type === 'rate_update' &&
-    (proposal.category === '最低賃金' || proposal.category === '社会保险')
+    (proposal.category === '最低賃金' || proposal.category === '社会保険')
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -576,7 +576,7 @@ function AddComplianceForm({ onSaved }: { onSaved: () => void }) {
         <div>
           <label className="text-xs text-gray-500 mb-1 block">カテゴリ</label>
           <select value={form.category} onChange={e => set('category', e.target.value)} className="input text-sm">
-            {['最低賃金', '社会保险', '税制', '労働法', '育休', 'その他'].map(c => (
+            {['最低賃金', '社会保険', '税制', '労働法', '育休', 'その他'].map(c => (
               <option key={c} value={c}>{c}</option>
             ))}
           </select>
