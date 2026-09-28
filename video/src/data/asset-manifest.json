@@ -1,0 +1,150 @@
+{
+  "assets/bakery/bakery_bell.png": {
+    "w": 120,
+    "h": 150
+  },
+  "assets/bakery/bakery_building.png": {
+    "w": 1300,
+    "h": 960
+  },
+  "assets/bakery/bakery_door.png": {
+    "w": 200,
+    "h": 340
+  },
+  "assets/bakery/bakery_far_bg.png": {
+    "w": 3840,
+    "h": 520
+  },
+  "assets/bakery/bakery_front_branch.png": {
+    "w": 1700,
+    "h": 640
+  },
+  "assets/bakery/bakery_front_flowers.png": {
+    "w": 1100,
+    "h": 640
+  },
+  "assets/bakery/bakery_ground.png": {
+    "w": 3840,
+    "h": 320
+  },
+  "assets/bakery/bakery_planters.png": {
+    "w": 1500,
+    "h": 330
+  },
+  "assets/bakery/bakery_sign.png": {
+    "w": 400,
+    "h": 560
+  },
+  "assets/bakery/bakery_sky.png": {
+    "w": 1920,
+    "h": 1080
+  },
+  "assets/bakery/bakery_table.png": {
+    "w": 640,
+    "h": 440
+  },
+  "assets/bakery/bakery_window.png": {
+    "w": 580,
+    "h": 344
+  },
+  "assets/bakery/bread_display.png": {
+    "w": 520,
+    "h": 290
+  },
+  "assets/character/char_ref.png": {
+    "w": 1920,
+    "h": 1080
+  },
+  "assets/character/happy.png": {
+    "w": 560,
+    "h": 900
+  },
+  "assets/character/stop.png": {
+    "w": 560,
+    "h": 900
+  },
+  "assets/character/surprised.png": {
+    "w": 560,
+    "h": 900
+  },
+  "assets/character/walk_01.png": {
+    "w": 560,
+    "h": 900
+  },
+  "assets/character/walk_02.png": {
+    "w": 560,
+    "h": 900
+  },
+  "assets/character/walk_03.png": {
+    "w": 560,
+    "h": 900
+  },
+  "assets/character/walk_04.png": {
+    "w": 560,
+    "h": 900
+  },
+  "assets/street/clouds.png": {
+    "w": 3840,
+    "h": 460
+  },
+  "assets/street/far_town.png": {
+    "w": 3840,
+    "h": 300
+  },
+  "assets/street/fg_bench.png": {
+    "w": 640,
+    "h": 330
+  },
+  "assets/street/fg_fence.png": {
+    "w": 1400,
+    "h": 300
+  },
+  "assets/street/fg_flowers.png": {
+    "w": 760,
+    "h": 330
+  },
+  "assets/street/fg_planters.png": {
+    "w": 820,
+    "h": 380
+  },
+  "assets/street/front_branch.png": {
+    "w": 1900,
+    "h": 720
+  },
+  "assets/street/front_flowers.png": {
+    "w": 1000,
+    "h": 620
+  },
+  "assets/street/front_lamp.png": {
+    "w": 380,
+    "h": 1400
+  },
+  "assets/street/front_tree.png": {
+    "w": 900,
+    "h": 1500
+  },
+  "assets/street/houses.png": {
+    "w": 3840,
+    "h": 620
+  },
+  "assets/street/mountains.png": {
+    "w": 3840,
+    "h": 440
+  },
+  "assets/street/road.png": {
+    "w": 3840,
+    "h": 360
+  },
+  "assets/street/sky.png": {
+    "w": 1920,
+    "h": 1080
+  },
+  "assets/street/street_shops.png": {
+    "w": 3840,
+    "h": 560
+  },
+  "assets/street/transition_tree.png": {
+    "w": 2700,
+    "h": 1500
+  }
+}
