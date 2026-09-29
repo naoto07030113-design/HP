@@ -35,13 +35,32 @@ export const SCENES: SceneBeat[] = [
 ];
 
 // Fine-grained character state switches (inside the beats above).
+// A change between side-facing and front-facing poses is played as a
+// Paper-Mario style paper flip (the sheet turns edge-on, then the new side).
 export const CHARACTER_STATES: {from: number; state: CharacterState}[] = [
   {from: 0, state: 'walking'},
   {from: 508, state: 'stop'},
   {from: 548, state: 'surprised'},
-  {from: 652, state: 'happy'},
+  {from: 662, state: 'cheer'}, // flips to face the camera, delighted
+  {from: 722, state: 'happy'}, // flips back toward the bakery
   {from: 770, state: 'walking'},
   {from: 866, state: 'happy'},
+];
+export const FLIP_FRAMES = 10;
+
+/** Little jumps: [start frame, height px, duration frames]. */
+export const HOPS: [number, number, number][] = [
+  [548, 70, 16], // surprise!
+  [672, 34, 11], // happy double hop
+  [685, 34, 11],
+  [868, 40, 13], // arrival
+];
+
+export type EmoteType = 'exclaim' | 'heart' | 'note';
+export const EMOTES: {frame: number; type: EmoteType; duration: number}[] = [
+  {frame: 549, type: 'exclaim', duration: 42},
+  {frame: 670, type: 'heart', duration: 48},
+  {frame: 870, type: 'note', duration: 30},
 ];
 
 // ---------------------------------------------------------------------------

@@ -23,7 +23,7 @@ const save = (svg, file) => {
 if (which === 'all' || which === 'character') {
   console.log('character');
   save(characterSheet(), out('character', 'char_ref.png'));
-  for (const name of ['walk_01', 'walk_02', 'walk_03', 'walk_04', 'stop', 'surprised', 'happy']) {
+  for (const name of ['walk_01', 'walk_02', 'walk_03', 'walk_04', 'stop', 'surprised', 'happy', 'happy_front']) {
     save(doc(DIM.W, DIM.H, drawBody(POSES[name])), out('character', `${name}.png`));
   }
   console.log(`  step length: ${stepLength().toFixed(1)} canvas px (canvas ${DIM.W}x${DIM.H}, ground y=${DIM.ground})`);

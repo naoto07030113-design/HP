@@ -155,6 +155,14 @@ const defs = (W, H, grain) => `
   <filter id="ps" x="-20%" y="-20%" width="140%" height="140%">
     <feDropShadow dx="2" dy="3" stdDeviation="2.2" flood-color="#3a2a1e" flood-opacity="0.2"/>
   </filter>
+  <filter id="diecut" x="-10%" y="-10%" width="120%" height="120%">
+    <feMorphology in="SourceAlpha" operator="dilate" radius="11" result="d2"/>
+    <feFlood flood-color="#cfc6b6"/><feComposite in2="d2" operator="in" result="rim"/>
+    <feOffset in="rim" dx="1.5" dy="4" result="rimOff"/>
+    <feMorphology in="SourceAlpha" operator="dilate" radius="10" result="d1"/>
+    <feFlood flood-color="#fffdf8"/><feComposite in2="d1" operator="in" result="white"/>
+    <feMerge><feMergeNode in="rimOff"/><feMergeNode in="white"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
   <filter id="psBig" x="-20%" y="-20%" width="140%" height="140%">
     <feDropShadow dx="4" dy="6" stdDeviation="5" flood-color="#3a2a1e" flood-opacity="0.2"/>
   </filter>

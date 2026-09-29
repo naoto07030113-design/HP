@@ -1,4 +1,5 @@
-import {CAMERA, CHARACTER_STATES, GIRL_TRACK, VIDEO, type Keyframes} from '../data/scenes';
+import {CAMERA, CHARACTER_STATES, FLIP_FRAMES, GIRL_TRACK, HOPS, VIDEO, type Keyframes} from '../data/scenes';
+import {GIRL} from '../data/characters';
 import type {CharacterState} from '../data/characters';
 
 export const sampleKeys = (keys: Keyframes, frame: number): number => {
@@ -60,4 +61,31 @@ export const footstepFrames = (distancePerPose: number, cycleLength: number): nu
     prev = i;
   }
   return frames;
+};
+
+/**
+ * What the paper doll shows at a frame. When the facing changes (side <-> front)
+ * the sheet flips around its vertical axis: 0 -> 90deg with the old pose,
+ * then -90 -> 0deg with the new one.
+ */
+export const characterVisualAt = (frame: number): {state: CharacterState; flip: number} => {
+  for (let i = 1; i < CHARACTER_STATES.length; i++) {
+    const prev = CHARACTER_STATES[i - 1].state;
+    const next = CHARACTER_STATES[i];
+    if (GIRL.facing[prev] === GIRL.facing[next.state]) continue;
+    const t = (frame - (next.from - FLIP_FRAMES / 2)) / FLIP_FRAMES;
+    if (t < 0 || t >= 1) continue;
+    const e = t * t * (3 - 2 * t);
+    return e < 0.5 ? {state: prev, flip: 180 * e} : {state: next.state, flip: 180 * e - 180};
+  }
+  return {state: characterStateAt(frame), flip: 0};
+};
+
+/** Height of any reaction hop in progress (parabolic jump). */
+export const hopAt = (frame: number) => {
+  for (const [f0, h, d] of HOPS) {
+    const t = (frame - f0) / d;
+    if (t >= 0 && t <= 1) return 4 * h * t * (1 - t);
+  }
+  return 0;
 };

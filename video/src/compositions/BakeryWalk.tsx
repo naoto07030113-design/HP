@@ -1,14 +1,16 @@
 import React from 'react';
 import {AbsoluteFill, Img, interpolate, staticFile, useCurrentFrame} from 'remotion';
 import {AromaEffect} from '../components/AromaEffect';
+import {Emote} from '../components/Emote';
 import {PaperStage} from '../components/PaperStage';
 import {SakuraPetals} from '../components/SakuraPetals';
 import {WalkingGirl} from '../components/WalkingGirl';
 import {SHADOWS} from '../components/PaperShadow';
 import {Soundtrack} from '../components/Soundtrack';
 import manifest from '../data/asset-manifest.json';
-import {CAMERA, EFFECTS, GIRL_SCALE, GIRL_TRACK, GROUND_Y, STAGES, TRANSITION, VIDEO} from '../data/scenes';
-import {cameraX, characterStateAt, girlDistance, girlScreenX, sampleKeys} from '../lib/timeline';
+import {GIRL} from '../data/characters';
+import {CAMERA, EFFECTS, EMOTES, GIRL_SCALE, GIRL_TRACK, GROUND_Y, STAGES, TRANSITION, VIDEO} from '../data/scenes';
+import {cameraX, characterVisualAt, girlDistance, girlScreenX, hopAt, sampleKeys} from '../lib/timeline';
 
 const PAPER = '#f4ecdd';
 
@@ -19,6 +21,8 @@ export const BakeryWalk: React.FC = () => {
   const zoom = sampleKeys(CAMERA.zoom, frame);
   const originX = sampleKeys(CAMERA.zoomOriginX, frame);
   const gx = girlScreenX(frame);
+  const look = characterVisualAt(frame);
+  const hop = hopAt(frame);
 
   // wipe: a huge blossom tree sweeps past the lens
   const tr = TRANSITION.tree;
@@ -40,12 +44,24 @@ export const BakeryWalk: React.FC = () => {
             x={gx}
             y={GROUND_Y}
             scale={GIRL_SCALE}
-            state={characterStateAt(frame)}
+            state={look.state}
+            flip={look.flip}
+            hop={hop}
             distance={girlDistance(frame)}
             zIndex={100}
           />
         )}
         <AromaEffect from={EFFECTS.aroma.from} to={EFFECTS.aroma.to} x={gx + 110} y={GROUND_Y - 190} zIndex={115} />
+        {EMOTES.map((e) => (
+          <Emote
+            key={e.frame}
+            type={e.type}
+            from={e.frame}
+            duration={e.duration}
+            x={gx + (GIRL.headTop.x - GIRL.anchor.x) * GIRL_SCALE + 40}
+            y={GROUND_Y - (GIRL.anchor.y - GIRL.headTop.y) * GIRL_SCALE - hop}
+          />
+        ))}
         <SakuraPetals count={EFFECTS.petals.count} seed={EFFECTS.petals.seed} zIndex={140} />
       </AbsoluteFill>
       {showTree && treeSize && (

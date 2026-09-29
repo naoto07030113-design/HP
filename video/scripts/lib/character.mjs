@@ -225,7 +225,9 @@ const TORSO = {
  * pose = {view, turn, face, lean, headTilt, hairLag, bagLag, skirtSway,
  *         legs:{far:{thigh,shin,foot}, near:{...}}, arms:{far:{upper,fore}, near:{...}}}
  */
-export const drawBody = (pose) => {
+export const drawBody = (pose) => `<g filter="url(#diecut)">${drawBodyRaw(pose)}</g>`;
+
+const drawBodyRaw = (pose) => {
   const view = pose.view || 'side';
   const D = DIM;
   const hipX = D.hipX + (pose.dx || 0);
@@ -304,29 +306,29 @@ export const drawBody = (pose) => {
 };
 
 // ---------- poses ----------
-const WALK_ARM_F = {upper: 22, fore: 42};
-const WALK_ARM_B = {upper: -20, fore: -10};
+const WALK_ARM_F = {upper: 10, fore: 22};
+const WALK_ARM_B = {upper: -9, fore: -4};
 const base = {view: 'side', turn: 0.8, face: 'neutral', lean: 2};
 
 export const POSES = {
   walk_01: {
     ...base, skirtSway: -8, hairLag: 4, bagLag: 3,
-    legs: {near: {thigh: 17, shin: 15, foot: 10}, far: {thigh: -15, shin: -26, foot: -18}},
+    legs: {near: {thigh: 9, shin: 8, foot: 6}, far: {thigh: -8, shin: -16, foot: -10}},
     arms: {near: WALK_ARM_B, far: WALK_ARM_F},
   },
   walk_02: {
     ...base, skirtSway: -4, hairLag: 7, bagLag: 5,
-    legs: {near: {thigh: 0, shin: 0, foot: 0}, far: {thigh: 12, shin: -28, foot: -12}},
+    legs: {near: {thigh: 0, shin: 0, foot: 0}, far: {thigh: 8, shin: -22, foot: -8}},
     arms: {near: {upper: -4, fore: 6}, far: {upper: 4, fore: 12}},
   },
   walk_03: {
     ...base, skirtSway: -8, hairLag: 4, bagLag: 3,
-    legs: {far: {thigh: 17, shin: 15, foot: 10}, near: {thigh: -15, shin: -26, foot: -18}},
+    legs: {far: {thigh: 9, shin: 8, foot: 6}, near: {thigh: -8, shin: -16, foot: -10}},
     arms: {far: WALK_ARM_B, near: WALK_ARM_F},
   },
   walk_04: {
     ...base, skirtSway: -4, hairLag: 9, bagLag: 7, lift: -3,
-    legs: {far: {thigh: 0, shin: 0, foot: 0}, near: {thigh: 12, shin: -28, foot: -12}},
+    legs: {far: {thigh: 0, shin: 0, foot: 0}, near: {thigh: 8, shin: -22, foot: -8}},
     arms: {far: {upper: -4, fore: 6}, near: {upper: 4, fore: 12}},
   },
   stop: {
@@ -344,6 +346,12 @@ export const POSES = {
     ...base, face: 'happy', lean: 7, turn: 0.8, headTilt: -5,
     legs: {far: {thigh: -3, shin: -3, foot: 0}, near: {thigh: 4, shin: 3, foot: 0}},
     arms: {far: {upper: 22, fore: 150}, near: {upper: 20, fore: 142}},
+  },
+  // facing the camera, delighted (Paper-Mario style flip-to-front reaction)
+  happy_front: {
+    view: 'front', turn: 0, face: 'happy', lean: 0, headTilt: -4,
+    legs: {far: {thigh: -3, shin: -2}, near: {thigh: 3, shin: 2}},
+    arms: {far: {upper: 14, fore: 168}, near: {upper: -14, fore: -168}},
   },
   // reference-sheet stances
   ref_front: {
