@@ -5,12 +5,13 @@
   "description": "Papercraft 2.5D animation (Remotion) - BakeryWalk",
   "scripts": {
     "assets": "node scripts/generate-assets.mjs",
-    "audio": "node scripts/generate-audio.mjs",
+    "audio": "node scripts/generate-audio.mjs && node scripts/generate-audio-mansion.mjs",
     "studio": "remotion studio src/index.ts",
     "still": "remotion still src/index.ts BakeryWalk",
     "render": "remotion render src/index.ts BakeryWalk out/bakery-walk.mp4 --crf=20",
     "typecheck": "tsc --noEmit",
-    "stills": "node scripts/stills.mjs"
+    "stills": "node scripts/stills.mjs",
+    "render:mansion": "remotion render src/index.ts MansionPatrol out/mansion-patrol.mp4 --crf=20"
   },
   "dependencies": {
     "@remotion/cli": "^4.0.529",

@@ -5,8 +5,9 @@ import {GIRL, type CharacterState} from './characters';
 
 export const VIDEO = {width: 1920, height: 1080, fps: 30, durationInFrames: 900};
 
-/** [frame, value] pairs, linearly interpolated (clamped at the ends). */
-export type Keyframes = [number, number][];
+import type {EmoteType} from '../components/Emote';
+import type {Keyframes, Placement} from '../lib/stage';
+export type {Keyframes, Placement} from '../lib/stage';
 
 export const GIRL_SCALE = 0.7;
 export const WALK = GIRL.walkSpeed; // px/frame
@@ -56,7 +57,6 @@ export const HOPS: [number, number, number][] = [
   [868, 40, 13], // arrival
 ];
 
-export type EmoteType = 'exclaim' | 'heart' | 'note';
 export const EMOTES: {frame: number; type: EmoteType; duration: number}[] = [
   {frame: 549, type: 'exclaim', duration: 42},
   {frame: 670, type: 'heart', duration: 48},
@@ -112,21 +112,6 @@ export const EFFECTS = {
 //   which makes occlusion beats (lamp passing in front of her) easy to aim.
 // `tile` repeats the image horizontally (seamless strips).
 // ---------------------------------------------------------------------------
-export type Placement = {
-  src: string;
-  speed: number;
-  y: number;
-  z: number;
-  scale?: number;
-  tile?: boolean;
-  at?: {frame: number; x: number; girl?: boolean};
-  opacity?: number;
-  shadow?: 'none' | 'soft' | 'mid' | 'deep';
-  flip?: boolean;
-  /** optional swing (deg) around the top centre, used for the door bell */
-  swing?: {frame: number; amplitude: number};
-};
-
 export type StageId = 'street' | 'bakery';
 
 const S = 'assets/street/';

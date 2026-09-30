@@ -1,0 +1,53 @@
+{
+  "canvas": {
+    "w": 560,
+    "h": 760
+  },
+  "anchor": {
+    "x": 250,
+    "y": 730
+  },
+  "beams": {
+    "senior_walk": {
+      "x": 423.3,
+      "y": 561.1,
+      "angle": 4
+    },
+    "senior_alert": {
+      "x": 393.4,
+      "y": 406.5,
+      "angle": -50
+    },
+    "senior_brave": {
+      "x": 432.8,
+      "y": 552.6,
+      "angle": 16
+    },
+    "senior_flee": {
+      "x": 415.5,
+      "y": 432.5,
+      "angle": -30
+    },
+    "junior_walk": {
+      "x": 412.7,
+      "y": 550.2,
+      "angle": 12
+    },
+    "junior_shock": {
+      "x": 370.5,
+      "y": 393.4,
+      "angle": -70
+    },
+    "junior_cling": null,
+    "junior_scared": {
+      "x": 398.4,
+      "y": 543.5,
+      "angle": 30
+    },
+    "junior_flee": {
+      "x": 405.8,
+      "y": 420.9,
+      "angle": -40
+    }
+  }
+}

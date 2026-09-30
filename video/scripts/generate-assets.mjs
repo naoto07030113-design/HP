@@ -37,6 +37,24 @@ if (which === 'all' || which === 'bakery') {
   console.log('bakery');
   for (const [name, [w, h, svg]] of Object.entries(buildBakery())) save(doc(w, h, svg), out('bakery', `${name}.png`));
 }
+if (which === 'all' || which === 'police') {
+  const {drawOfficer, OFFICER_POSES, ADIM} = await import('./lib/animals.mjs');
+  const {policeSheet} = await import('./lib/sheet.mjs');
+  console.log('police');
+  const meta = {canvas: {w: ADIM.W, h: ADIM.H}, anchor: {x: ADIM.hipX, y: ADIM.ground}, beams: {}};
+  for (const [name, pose] of Object.entries(OFFICER_POSES)) {
+    const {svg, beam} = drawOfficer(pose);
+    save(doc(ADIM.W, ADIM.H, svg), out('police', `${name}.png`));
+    meta.beams[name] = beam && {x: +beam.x.toFixed(1), y: +beam.y.toFixed(1), angle: beam.angle};
+  }
+  save(policeSheet(), out('police', 'police_ref.png'));
+  fs.writeFileSync(path.join(root, 'src', 'data', 'mansion', 'police-meta.json'), JSON.stringify(meta, null, 2) + '\n');
+}
+if (which === 'all' || which === 'mansion') {
+  const {buildMansion} = await import('./lib/mansion.mjs');
+  console.log('mansion');
+  for (const [name, [w, h, svg]] of Object.entries(buildMansion())) save(doc(w, h, svg), out('mansion', `${name}.png`));
+}
 fs.mkdirSync(path.dirname(manifestPath), {recursive: true});
 fs.writeFileSync(manifestPath, JSON.stringify(Object.fromEntries(Object.entries(manifest).sort()), null, 2) + '\n');
 console.log(`done in ${((Date.now() - t0) / 1000).toFixed(1)}s`);

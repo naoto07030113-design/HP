@@ -1,20 +1,9 @@
 import {CAMERA, CHARACTER_STATES, FLIP_FRAMES, GIRL_TRACK, HOPS, VIDEO, type Keyframes} from '../data/scenes';
 import {GIRL} from '../data/characters';
-import type {CharacterState} from '../data/characters';
+import {sampleKeys} from './motion';
 
-export const sampleKeys = (keys: Keyframes, frame: number): number => {
-  if (frame <= keys[0][0]) return keys[0][1];
-  for (let i = 1; i < keys.length; i++) {
-    const [f1, v1] = keys[i];
-    const [f0, v0] = keys[i - 1];
-    if (frame <= f1) {
-      const t = (frame - f0) / Math.max(1e-6, f1 - f0);
-      const e = t * t * (3 - 2 * t); // smoothstep between keys: no jerky starts / stops
-      return v0 + (v1 - v0) * e;
-    }
-  }
-  return keys[keys.length - 1][1];
-};
+export {sampleKeys};
+import type {CharacterState} from '../data/characters';
 
 /** Integrate a speed curve into positions for every frame (deterministic). */
 const integrate = (keys: Keyframes, start = 0, fromFrame = 0) => {

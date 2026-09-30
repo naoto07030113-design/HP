@@ -1,4 +1,15 @@
-# BakeryWalk — 紙工作風 2.5D アニメーション (Remotion)
+# 紙工作風 2.5D アニメーション (Remotion)
+
+このプロジェクトには2本の作品があります。
+
+| Composition | 内容 | 出力 |
+|---|---|---|
+| `BakeryWalk` | 春の街を散歩してパン屋にたどり着く女の子（30秒） | `out/bakery-walk.mp4` |
+| `MansionPatrol` | 懐中電灯で洋館を探索する動物のお巡りさん2人（36秒） | `out/mansion-patrol.mp4` |
+
+---
+
+# BakeryWalk
 
 春の街を散歩する女の子が、パンの香りに気づき、パン屋の前までたどり着く約30秒の映像です。
 何層もの紙で作った舞台を、パララックスと前景オクルージョンで動かしています。
@@ -13,10 +24,13 @@
 cd video
 npm install
 npm run assets     # 全PNG素材を生成（public/assets/** と src/data/asset-manifest.json）
+                   # 個別生成: node scripts/generate-assets.mjs character|street|bakery|police|mansion
 npm run audio      # 全音源を合成（public/assets/audio/*.mp3）
 npm run studio     # Remotion Studio でプレビュー
 npm run stills -- 120 330 630   # 指定フレームの静止画を preview/ に書き出し
 npm run render     # out/bakery-walk.mp4 をレンダリング
+npm run render:mansion   # out/mansion-patrol.mp4 をレンダリング
+COMP=MansionPatrol npm run stills -- 270 560   # MansionPatrol の静止画
 ```
 
 Chromium が導入済みの環境では、`REMOTION_CHROME` 環境変数、または `--browser-executable=<path>` オプションでブラウザを指定できます。
@@ -75,3 +89,19 @@ src/
 1. **キャラクター**: `character.mjs` の `PALETTE` と `POSES` を変えて `npm run assets` を実行します（または同じ仕様のPNGに差し替えます）。`characters.ts` に定義を追加してください。
 2. **店舗**: `bakery.mjs` を複製して、建物・窓・陳列・ドアを描き直します。`scenes.ts` の `shopPieces` がまとめて配置します。
 3. **ストーリー**: `scenes.ts` の `SCENES`、`CHARACTER_STATES`、`CAMERA`、`GIRL_TRACK`、`TRANSITION`、`EFFECTS`、`STAGES` を編集します。コンポーネントは変更不要です。
+
+---
+
+# MansionPatrol — 洋館パトロール
+
+柴犬の先輩（怖がりながらも頼りになる）と、うさぎの後輩（物音のたびに飛び上がる）が、懐中電灯を持って夜の洋館を探索します。途中で瓶が倒れて転がり、肖像画が壁から落ちるたびに2人は大慌て。最後は奥の扉からコウモリがわーっと飛び出して終わります。
+
+- **キャラクター**: `scripts/lib/animals.mjs` で描いたちびキャラの紙人形です（白フチ付き）。先輩4ポーズ、後輩5ポーズを `public/assets/police/` に出力し、懐中電灯の先端位置は `src/data/mansion/police-meta.json` に書き出します。設定画は `police_ref.png` です。
+- **背景**: `scripts/lib/mansion.mjs` … 壁紙と月夜の窓（タイル）、じゅうたんの床、肖像画、燭台、柱時計、甲冑、瓶ののったテーブル、大扉と左右の扉、手前の柱・燭台・カーテン・蜘蛛の巣・シャンデリア。
+- **暗闇と懐中電灯**: `DarkRoom.tsx` が画面全体を暗くし、懐中電灯の光の円錐とろうそく・窓・キャラ周りの光だけを切り抜きます。2人は暗闇より上に描いて見やすくし、手前の家具はさらにその上に暗めの明るさで重ねています。
+- **仕掛け**: 瓶・肖像画・扉は `story.ts` の `EVENTS` に合わせて、`MansionPatrol.tsx` の `animate()` で動かします（倒れる、落ちる、きしみながら開く）。
+- **コウモリ**: `BatSwarm.tsx` … 扉から放射状に飛び出し、最後は画面いっぱいに迫ってきます。
+- **音**: `scripts/generate-audio-mansion.mjs` … 忍び足のピチカートとオルゴール（コウモリ以降は追いかけっこ曲）、雷、瓶、落下音、驚きのスティング、扉のきしみ、コウモリの羽音、スライドホイッスル。
+- **タイミングの調整**: `src/data/mansion/story.ts` だけを編集します。カメラ速度・後輩との距離（`JUNIOR_GAP`）・ポーズ・ジャンプ・エモート・イベント・小物の配置がすべてここにあります。
+
+共通部品（`PaperDoll`、`PaperStage`、`ParallaxLayer`、`Emote`、`lib/motion.ts`、`lib/stage.ts`）は2作品で共有しています。新しい作品も、素材の生成スクリプトと `story.ts` を用意すれば同じ仕組みで作れます。

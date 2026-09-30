@@ -23,10 +23,14 @@ export type ParallaxLayerProps = {
   shadow?: ShadowDepth;
   flip?: boolean;
   rotate?: number;
+  /** extra CSS transform for animated props, and its origin */
+  transform?: string;
+  transformOrigin?: string;
+  brightness?: number;
 };
 
 export const ParallaxLayer: React.FC<ParallaxLayerProps> = ({
-  src, cameraX, speed, x = 0, y, scale = 1, zIndex, opacity = 1, tile = false, shadow = 'mid', flip = false, rotate = 0,
+  src, cameraX, speed, x = 0, y, scale = 1, zIndex, opacity = 1, tile = false, shadow = 'mid', flip = false, rotate = 0, transform, transformOrigin = '50% 0%', brightness,
 }) => {
   const size = sizes[src];
   if (!size) throw new Error(`Unknown asset ${src}; run npm run assets`);
@@ -46,8 +50,8 @@ export const ParallaxLayer: React.FC<ParallaxLayerProps> = ({
         top: 0,
         width: w,
         height: h,
-        transform: `${flip ? 'scaleX(-1)' : ''} ${rotate ? `rotate(${rotate}deg)` : ''}`.trim() || undefined,
-        transformOrigin: '50% 0%',
+        transform: `${transform ?? ''} ${flip ? 'scaleX(-1)' : ''} ${rotate ? `rotate(${rotate}deg)` : ''}`.trim() || undefined,
+        transformOrigin,
       }}
     />
   );
@@ -61,7 +65,7 @@ export const ParallaxLayer: React.FC<ParallaxLayerProps> = ({
     copies = [img(0, left)];
   }
   return (
-    <div style={{position: 'absolute', left: 0, top: y, width: VIEW_W, height: h, zIndex, opacity, filter: SHADOWS[shadow]}}>
+    <div style={{position: 'absolute', left: 0, top: y, width: VIEW_W, height: h, zIndex, opacity, filter: `${brightness != null ? `brightness(${brightness}) ` : ''}${SHADOWS[shadow] === 'none' ? '' : SHADOWS[shadow]}`.trim() || undefined}}>
       {copies}
     </div>
   );

@@ -75,6 +75,130 @@
     "w": 560,
     "h": 900
   },
+  "assets/mansion/armor.png": {
+    "w": 260,
+    "h": 640
+  },
+  "assets/mansion/bottle.png": {
+    "w": 90,
+    "h": 200
+  },
+  "assets/mansion/clock.png": {
+    "w": 220,
+    "h": 620
+  },
+  "assets/mansion/door_frame.png": {
+    "w": 520,
+    "h": 760
+  },
+  "assets/mansion/door_leaf.png": {
+    "w": 200,
+    "h": 520
+  },
+  "assets/mansion/door_leaf_r.png": {
+    "w": 200,
+    "h": 520
+  },
+  "assets/mansion/fg_candelabra.png": {
+    "w": 360,
+    "h": 760
+  },
+  "assets/mansion/fg_chair.png": {
+    "w": 460,
+    "h": 440
+  },
+  "assets/mansion/fg_pillar.png": {
+    "w": 260,
+    "h": 1160
+  },
+  "assets/mansion/fg_vase.png": {
+    "w": 300,
+    "h": 520
+  },
+  "assets/mansion/front_chandelier.png": {
+    "w": 700,
+    "h": 460
+  },
+  "assets/mansion/front_cobweb.png": {
+    "w": 520,
+    "h": 420
+  },
+  "assets/mansion/front_curtain.png": {
+    "w": 520,
+    "h": 1200
+  },
+  "assets/mansion/mansion_floor.png": {
+    "w": 3840,
+    "h": 320
+  },
+  "assets/mansion/mansion_wall.png": {
+    "w": 3840,
+    "h": 860
+  },
+  "assets/mansion/portrait_cat.png": {
+    "w": 300,
+    "h": 380
+  },
+  "assets/mansion/portrait_land.png": {
+    "w": 420,
+    "h": 300
+  },
+  "assets/mansion/portrait_mark.png": {
+    "w": 320,
+    "h": 400
+  },
+  "assets/mansion/portrait_owl.png": {
+    "w": 320,
+    "h": 400
+  },
+  "assets/mansion/sconce.png": {
+    "w": 160,
+    "h": 240
+  },
+  "assets/mansion/side_table.png": {
+    "w": 300,
+    "h": 300
+  },
+  "assets/police/junior_cling.png": {
+    "w": 560,
+    "h": 760
+  },
+  "assets/police/junior_flee.png": {
+    "w": 560,
+    "h": 760
+  },
+  "assets/police/junior_scared.png": {
+    "w": 560,
+    "h": 760
+  },
+  "assets/police/junior_shock.png": {
+    "w": 560,
+    "h": 760
+  },
+  "assets/police/junior_walk.png": {
+    "w": 560,
+    "h": 760
+  },
+  "assets/police/police_ref.png": {
+    "w": 1920,
+    "h": 1080
+  },
+  "assets/police/senior_alert.png": {
+    "w": 560,
+    "h": 760
+  },
+  "assets/police/senior_brave.png": {
+    "w": 560,
+    "h": 760
+  },
+  "assets/police/senior_flee.png": {
+    "w": 560,
+    "h": 760
+  },
+  "assets/police/senior_walk.png": {
+    "w": 560,
+    "h": 760
+  },
   "assets/street/clouds.png": {
     "w": 3840,
     "h": 460

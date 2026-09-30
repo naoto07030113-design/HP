@@ -1,6 +1,7 @@
 import React from 'react';
 import {spring, useCurrentFrame, useVideoConfig} from 'remotion';
-import type {EmoteType} from '../data/scenes';
+
+export type EmoteType = 'exclaim' | 'heart' | 'note' | 'sweat';
 
 type Props = {type: EmoteType; from: number; duration: number; x: number; y: number; zIndex?: number};
 
@@ -18,6 +19,9 @@ const SHAPES: Record<EmoteType, (p: Paint) => React.ReactNode> = {
   heart: ({fill, stroke, sw}) => (
     <path d="M0,34 C-40,6 -44,-22 -24,-32 C-12,-38 -2,-30 0,-20 C2,-30 12,-38 24,-32 C44,-22 40,6 0,34Z" fill={fill} stroke={stroke} strokeWidth={sw} strokeLinejoin="round" />
   ),
+  sweat: ({fill, stroke, sw}) => (
+    <path d="M0,-40 C14,-14 26,4 26,18 C26,34 14,44 0,44 C-14,44 -26,34 -26,18 C-26,4 -14,-14 0,-40Z" fill={fill} stroke={stroke} strokeWidth={sw} strokeLinejoin="round" />
+  ),
   note: ({fill, stroke, sw}) => (
     <>
       <path d="M-4,-40 L22,-48 L22,14" fill="none" stroke={stroke} strokeWidth={7 + sw} strokeLinecap="round" strokeLinejoin="round" />
@@ -31,6 +35,7 @@ const INK: Record<EmoteType, Paint> = {
   exclaim: {fill: '#e8475f', stroke: '#c4324a', sw: 2},
   heart: {fill: '#f47c96', stroke: '#d65a76', sw: 2},
   note: {fill: '#6aa0d8', stroke: '#6aa0d8', sw: 0.01},
+  sweat: {fill: '#8fd0f5', stroke: '#5aa9d8', sw: 2},
 };
 
 /** Paper-Mario style reaction icon: a die-cut paper sticker that pops above the head. */

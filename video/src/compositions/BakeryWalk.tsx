@@ -38,7 +38,7 @@ export const BakeryWalk: React.FC = () => {
   return (
     <AbsoluteFill style={{backgroundColor: PAPER, overflow: 'hidden'}}>
       <AbsoluteFill style={{transform: `scale(${zoom})`, transformOrigin: `${originX * 100}% ${CAMERA.zoomOriginY * 100}%`}}>
-        <PaperStage placements={STAGES[stage]} cameraX={cam} frame={frame} />
+        <PaperStage placements={STAGES[stage]} cameraX={cam} frame={frame} cameraXAt={cameraX} anchorXAt={(_, f) => girlScreenX(f)} />
         {frame >= GIRL_TRACK.enterFrame && (
           <WalkingGirl
             x={gx}
