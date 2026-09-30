@@ -11,7 +11,7 @@
     "render": "remotion render src/index.ts BakeryWalk out/bakery-walk.mp4 --crf=20",
     "typecheck": "tsc --noEmit",
     "stills": "node scripts/stills.mjs",
-    "render:mansion": "remotion render src/index.ts MansionPatrol out/mansion-patrol.mp4 --crf=20"
+    "render:mansion": "remotion render src/index.ts MansionPatrol out/mansion-patrol.mp4 --crf=26 --x264-preset=slow"
   },
   "dependencies": {
     "@remotion/cli": "^4.0.529",
