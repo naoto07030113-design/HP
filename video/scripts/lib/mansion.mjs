@@ -91,6 +91,12 @@ export const buildMansion = () => {
       s += ink(`M0,${y}H${TILE}`, M.woodDark, 3, {opacity: 0.7});
       for (let x = (y / 40) % 2 ? 0 : 160; x < TILE; x += 320) s += ink(`M${x},${y}V${y + 40}`, M.woodDark, 3, {opacity: 0.6});
     }
+    // wood grain on every plank
+    const GR = rng(808);
+    for (let y = 4; y < H; y += 40) for (let k = 0; k < 26; k++) {
+      const x = GR() * TILE, len = 60 + GR() * 160, yy = y + 6 + GR() * 28;
+      s += `<path d="M${x.toFixed(0)},${yy.toFixed(1)}q${(len / 2).toFixed(0)},${(GR() * 6 - 3).toFixed(1)} ${len.toFixed(0)},0" stroke="${M.woodDark}" stroke-width="1.4" fill="none" opacity="0.45"/>`;
+    }
     s += piece(`M-10,110H${TILE + 10}V250H-10Z`, M.carpet, {edge: 4, shadow: 'big', stroke: M.carpetDark});
     s += ink(`M-10,124H${TILE + 10}M-10,236H${TILE + 10}`, M.gold, 5, {opacity: 0.9});
     for (let x = 0; x < TILE; x += 96) s += piece(poly([[x + 48, 150], [x + 70, 180], [x + 48, 210], [x + 26, 180]]), M.carpetDark, {edge: 0, shadow: false, stroke: false});

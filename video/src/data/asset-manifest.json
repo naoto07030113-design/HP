@@ -75,6 +75,10 @@
     "w": 560,
     "h": 900
   },
+  "assets/fx/film_grain.png": {
+    "w": 512,
+    "h": 512
+  },
   "assets/mansion/armor.png": {
     "w": 260,
     "h": 640
@@ -160,44 +164,44 @@
     "h": 300
   },
   "assets/police/junior_cling.png": {
-    "w": 560,
-    "h": 760
+    "w": 640,
+    "h": 1000
   },
   "assets/police/junior_flee.png": {
-    "w": 560,
-    "h": 760
+    "w": 640,
+    "h": 1000
   },
   "assets/police/junior_scared.png": {
-    "w": 560,
-    "h": 760
+    "w": 640,
+    "h": 1000
   },
   "assets/police/junior_shock.png": {
-    "w": 560,
-    "h": 760
+    "w": 640,
+    "h": 1000
   },
   "assets/police/junior_walk.png": {
-    "w": 560,
-    "h": 760
+    "w": 640,
+    "h": 1000
   },
   "assets/police/police_ref.png": {
     "w": 1920,
     "h": 1080
   },
   "assets/police/senior_alert.png": {
-    "w": 560,
-    "h": 760
+    "w": 640,
+    "h": 1000
   },
   "assets/police/senior_brave.png": {
-    "w": 560,
-    "h": 760
+    "w": 640,
+    "h": 1000
   },
   "assets/police/senior_flee.png": {
-    "w": 560,
-    "h": 760
+    "w": 640,
+    "h": 1000
   },
   "assets/police/senior_walk.png": {
-    "w": 560,
-    "h": 760
+    "w": 640,
+    "h": 1000
   },
   "assets/street/clouds.png": {
     "w": 3840,

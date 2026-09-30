@@ -12,6 +12,8 @@ type Props = {
   anchorXAt?: (anchor: string, frame: number) => number;
   /** per-frame overrides for animated props, looked up by placement id */
   animate?: (id: string, frame: number) => LayerAnim | null;
+  /** depth-of-field: blur (px) for a layer moving at this parallax speed */
+  depthBlur?: (speed: number) => number;
   /** filter placements by depth, so the character can be slotted in between */
   zRange?: [number, number];
 };
@@ -32,7 +34,7 @@ export const placementLeft = (
 };
 
 /** Renders one stage (a list of depth layers) for the current camera position. */
-export const PaperStage: React.FC<Props> = ({placements, cameraX, frame, cameraXAt, anchorXAt, animate, zRange = [-Infinity, Infinity]}) => (
+export const PaperStage: React.FC<Props> = ({placements, cameraX, frame, cameraXAt, anchorXAt, animate, depthBlur, zRange = [-Infinity, Infinity]}) => (
   <>
     {placements
       .filter((p) => p.z >= zRange[0] && p.z < zRange[1])
@@ -71,6 +73,7 @@ export const PaperStage: React.FC<Props> = ({placements, cameraX, frame, cameraX
             transform={transform}
             transformOrigin={a?.origin}
             brightness={p.brightness}
+            blur={depthBlur ? depthBlur(p.speed) : undefined}
           />
         );
       })}

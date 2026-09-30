@@ -2,11 +2,11 @@ import React from 'react';
 import {AbsoluteFill, interpolate, random, useCurrentFrame} from 'remotion';
 import {BatSwarm} from '../components/BatSwarm';
 import {DarkRoom, type Light} from '../components/DarkRoom';
-import {Emote} from '../components/Emote';
+import {FilmLook} from '../components/FilmLook';
 import {dollMotion, PaperDoll} from '../components/PaperDoll';
 import {PaperStage, placementLeft} from '../components/PaperStage';
 import {MansionSoundtrack} from '../components/MansionSoundtrack';
-import {ACTORS, CAMERA, DARKNESS, EVENTS, GROUND_Y, POLICE, STAGE, WINDOW_GLOWS, type ActorId} from '../data/mansion/story';
+import {ACTORS, CAMERA, DARKNESS, depthBlur, EVENTS, GROUND_Y, POLICE, STAGE, WINDOW_GLOWS, type ActorId} from '../data/mansion/story';
 import {actorDistance, actorLook, actorScreenX, cameraX} from '../data/mansion/timeline';
 import {sampleKeys} from '../lib/motion';
 import type {LayerAnim} from '../lib/stage';
@@ -62,6 +62,10 @@ export const MansionPatrol: React.FC = () => {
   const amp = sampleKeys(CAMERA.shake, frame);
   const shakeX = amp * (random(`sx${frame}`) - 0.5) * 2;
   const shakeY = amp * (random(`sy${frame}`) - 0.5) * 2;
+  // hand-held camera drift: the miniature is being filmed, not animated
+  const driftX = Math.sin(frame / 47) * 3 + Math.sin(frame / 23) * 1.2;
+  const driftY = Math.cos(frame / 53) * 2.4 + Math.sin(frame / 31) * 0.8;
+  const driftR = Math.sin(frame / 61) * 0.15;
   const anchorX = (a: string, f: number) => actorScreenX(a as ActorId, f);
 
   // lightning
@@ -71,7 +75,6 @@ export const MansionPatrol: React.FC = () => {
   // ---- characters
   const lights: Light[] = [];
   const dolls: React.ReactNode[] = [];
-  const emotes: React.ReactNode[] = [];
   (['junior', 'senior'] as ActorId[]).forEach((id, i) => {
     const a = ACTORS[id];
     const look = actorLook(id, frame);
@@ -84,6 +87,7 @@ export const MansionPatrol: React.FC = () => {
       hopHeight: a.hopHeight,
       hop: look.hop,
       tremble: look.tremble,
+      bounce: a.bounce,
     });
     const dir = look.facing === 'left' ? -1 : 1;
     dolls.push(
@@ -95,17 +99,33 @@ export const MansionPatrol: React.FC = () => {
         scale={a.scale}
         canvas={POLICE.canvas}
         anchor={POLICE.anchor}
-        headTopY={150}
+        headTopY={140}
         motion={motion}
         flip={look.flip}
         direction={dir}
         zIndex={id === 'senior' ? 211 : 210}
         brightness={0.92}
-        shadowColor="rgba(10,6,20,0.45)"
+        shadowColor="rgba(10,6,20,0.5)"
+      />,
+      // its shadow thrown up onto the back wall (under the darkness)
+      <PaperDoll
+        key={`${id}-wallshadow`}
+        src={`assets/police/${look.pose}.png`}
+        x={x}
+        y={GROUND_Y}
+        scale={a.scale}
+        canvas={POLICE.canvas}
+        anchor={POLICE.anchor}
+        headTopY={140}
+        motion={motion}
+        flip={look.flip}
+        direction={dir}
+        zIndex={150}
+        silhouette={{dx: -70, dy: -60, scale: 1.18, blur: 9, opacity: 0.42}}
       />,
     );
     // faint glow around each officer so they stay readable in the dark
-    lights.push({kind: 'glow', x: x + motion.shakeX, y: GROUND_Y - 220 * a.scale - motion.lift, r: 380 * a.scale, strength: 0.6});
+    lights.push({kind: 'glow', x: x + motion.shakeX, y: GROUND_Y - 220 * a.scale - motion.lift, r: 480 * a.scale, strength: 0.45});
     // flashlight beam from the lens of the current pose
     const beam = POLICE.beams[look.pose];
     const facing = Math.cos(((look.flip + motion.flutter) * Math.PI) / 180);
@@ -115,19 +135,6 @@ export const MansionPatrol: React.FC = () => {
       const jitter = Math.sin(frame * 1.7 + i) * a.beam.jitter + Math.sin(frame / 13 + i) * 3;
       const angle = dir === 1 ? beam.angle + jitter : 180 - beam.angle - jitter;
       lights.push({kind: 'cone', x: bx, y: by, angle, spread: a.beam.spread, length: a.beam.length, strength: 0.95});
-    }
-    for (const e of a.emotes) {
-      emotes.push(
-        <Emote
-          key={`${id}-${e.frame}`}
-          type={e.type}
-          from={e.frame}
-          duration={e.duration}
-          x={x + 60 * dir}
-          y={GROUND_Y - (POLICE.anchor.y - 120) * a.scale - motion.lift}
-          zIndex={400}
-        />,
-      );
     }
   });
 
@@ -158,26 +165,26 @@ export const MansionPatrol: React.FC = () => {
 
   return (
     <AbsoluteFill style={{backgroundColor: '#0b0a1d', overflow: 'hidden'}}>
-      <AbsoluteFill style={{transform: `translate(${shakeX}px, ${shakeY}px) scale(${zoom})`, transformOrigin: '50% 62%'}}>
-        <PaperStage placements={STAGE} cameraX={cam} frame={frame} cameraXAt={cameraX} anchorXAt={anchorX} animate={animate} />
+      <AbsoluteFill style={{transform: `translate(${shakeX + driftX}px, ${shakeY + driftY}px) rotate(${driftR}deg) scale(${zoom * 1.01})`, transformOrigin: '50% 62%', filter: 'contrast(1.14) saturate(1.06)'}}>
+        <PaperStage placements={STAGE} cameraX={cam} frame={frame} cameraXAt={cameraX} anchorXAt={anchorX} animate={animate} depthBlur={depthBlur} />
         {eyesOn &&
           [[-70, -40], [40, -90], [90, 10], [-20, 60], [-110, 40], [120, -60]].map(([dx, dy], i) => {
             const on = frame >= EVENTS.door.eyes + i * 4;
             const blink = Math.sin(frame / 5 + i * 2) > -0.9 ? 1 : 0.1;
             return on ? (
-              <div key={i} style={{position: 'absolute', left: doorway.x + dx, top: doorway.y + dy, zIndex: 205, display: 'flex', gap: 10}}>
+              <div key={i} style={{position: 'absolute', left: doorway.x + dx, top: doorway.y + dy, zIndex: 205, display: 'flex', gap: 7}}>
                 {[0, 1].map((k) => (
-                  <div key={k} style={{width: 16, height: 11 * blink, borderRadius: '50%', background: '#ffe36b', boxShadow: '0 0 12px #ffcf3d'}} />
+                  <div key={k} style={{width: 9, height: 6 * blink, borderRadius: '50%', background: '#ffcf6b', boxShadow: '0 0 8px #ffb53d'}} />
                 ))}
               </div>
             ) : null;
           })}
         {dolls}
-        <DarkRoom lights={lights} darkness={darkness} zIndex={200} />
-        {emotes}
-        <BatSwarm from={EVENTS.bats.from} origin={doorway} count={40} spawnFrames={80} finale={{from: EVENTS.bats.finale, count: 26}} zIndex={390} />
+        <DarkRoom lights={lights} darkness={darkness} zIndex={200} frame={frame} bloom={0.8} />
+        <BatSwarm from={EVENTS.bats.from} origin={doorway} count={40} spawnFrames={80} finale={{from: EVENTS.bats.finale, count: 26}} zIndex={390} variant="real" />
       </AbsoluteFill>
       <AbsoluteFill style={{backgroundColor: '#e8ecff', opacity: flash * 0.35, mixBlendMode: 'screen'}} />
+      <FilmLook />
       <AbsoluteFill style={{backgroundColor: '#05040c', opacity: Math.max(fade, fadeIn)}} />
       <MansionSoundtrack />
     </AbsoluteFill>

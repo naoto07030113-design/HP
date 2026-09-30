@@ -115,6 +115,14 @@ export const capsule = (p0, p1, w0, w1 = w0) => {
 
 // ---------- paper pieces ----------
 let uid = 0;
+
+/**
+ * Global paper style. `real` = look of photographed real card: every sheet
+ * gets a slight curl (light-to-shade gradient), a lit cut edge, visible
+ * fibres and softer, longer shadows. Off by default (the bakery film).
+ */
+const STYLE = {real: false};
+export const setPaperStyle = (o) => Object.assign(STYLE, o);
 /**
  * One cut-paper piece.
  * edge: thickness of the visible card edge (px), shadow: soft contact shadow.
@@ -134,7 +142,11 @@ export const piece = (d, fill, o = {}) => {
     ? `<path d="${d}" fill="${shade(fill, 0.7)}" transform="translate(${edge * 0.45},${edge})"/>`
     : '';
   const strokeAttr = stroke ? ` stroke="${stroke}" stroke-width="${sw}" stroke-linejoin="round"` : '';
-  return `<g${tr}${flt}${opacity < 1 ? ` opacity="${opacity}"` : ''}>${edgeEl}<path d="${d}" fill="${fill}"${strokeAttr}/></g>`;
+  // real card: the sheet bows a little (gradient) and its cut edge catches the light
+  const curl = STYLE.real && o.curl !== false
+    ? `<path d="${d}" fill="url(#curl)"/><path d="${d}" fill="none" stroke="#ffffff" stroke-width="1.2" stroke-opacity="0.35" transform="translate(-0.7,-0.9)"/>`
+    : '';
+  return `<g${tr}${flt}${opacity < 1 ? ` opacity="${opacity}"` : ''}>${edgeEl}<path d="${d}" fill="${fill}"${strokeAttr}/>${curl}</g>`;
 };
 
 /** Thin decorative stroke drawn on top of paper (seams, folds, facial lines). */
@@ -152,8 +164,16 @@ export const clipped = (clipD, content) => {
 // ---------- document ----------
 const defs = (W, H, grain) => `
 <defs>
+  <linearGradient id="curl" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#fff" stop-opacity="0.16"/>
+    <stop offset="0.45" stop-color="#fff" stop-opacity="0"/>
+    <stop offset="0.7" stop-color="#000" stop-opacity="0"/>
+    <stop offset="1" stop-color="#000" stop-opacity="0.2"/>
+  </linearGradient>
   <filter id="ps" x="-20%" y="-20%" width="140%" height="140%">
-    <feDropShadow dx="2" dy="3" stdDeviation="2.2" flood-color="#3a2a1e" flood-opacity="0.2"/>
+    ${STYLE.real
+      ? '<feDropShadow dx="2.5" dy="4" stdDeviation="3.2" flood-color="#1e140c" flood-opacity="0.32"/>'
+      : '<feDropShadow dx="2" dy="3" stdDeviation="2.2" flood-color="#3a2a1e" flood-opacity="0.2"/>'}
   </filter>
   <filter id="diecut" x="-10%" y="-10%" width="120%" height="120%">
     <feMorphology in="SourceAlpha" operator="dilate" radius="11" result="d2"/>
@@ -164,7 +184,9 @@ const defs = (W, H, grain) => `
     <feMerge><feMergeNode in="rimOff"/><feMergeNode in="white"/><feMergeNode in="SourceGraphic"/></feMerge>
   </filter>
   <filter id="psBig" x="-20%" y="-20%" width="140%" height="140%">
-    <feDropShadow dx="4" dy="6" stdDeviation="5" flood-color="#3a2a1e" flood-opacity="0.2"/>
+    ${STYLE.real
+      ? '<feDropShadow dx="5" dy="9" stdDeviation="8" flood-color="#1e140c" flood-opacity="0.34"/>'
+      : '<feDropShadow dx="4" dy="6" stdDeviation="5" flood-color="#3a2a1e" flood-opacity="0.2"/>'}
   </filter>
   <filter id="grain" filterUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}">
     <feTurbulence type="fractalNoise" baseFrequency="${grain.fine}" numOctaves="2" seed="11" result="n1"/>
@@ -173,7 +195,10 @@ const defs = (W, H, grain) => `
     <feTurbulence type="fractalNoise" baseFrequency="${grain.coarse}" numOctaves="3" seed="4" result="n2"/>
     <feColorMatrix in="n2" type="matrix" values="0 0 0 0 1  0 0 0 0 0.98  0 0 0 0 0.94  0 0.28 0 0 -0.1" result="mottle"/>
     <feComposite in="mottle" in2="SourceAlpha" operator="in" result="mottleM"/>
-    <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="mottleM"/><feMergeNode in="fineM"/></feMerge>
+    ${STYLE.real ? `<feTurbulence type="fractalNoise" baseFrequency="0.012 0.35" numOctaves="2" seed="21" result="n3"/>
+    <feColorMatrix in="n3" type="matrix" values="0 0 0 0 1  0 0 0 0 0.99  0 0 0 0 0.96  0.45 0 0 0 -0.3" result="fib"/>
+    <feComposite in="fib" in2="SourceAlpha" operator="in" result="fibM"/>` : ''}
+    <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="mottleM"/><feMergeNode in="fineM"/>${STYLE.real ? '<feMergeNode in="fibM"/>' : ''}</feMerge>
   </filter>
 </defs>`;
 

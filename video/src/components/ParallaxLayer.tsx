@@ -27,10 +27,12 @@ export type ParallaxLayerProps = {
   transform?: string;
   transformOrigin?: string;
   brightness?: number;
+  /** depth-of-field blur, px */
+  blur?: number;
 };
 
 export const ParallaxLayer: React.FC<ParallaxLayerProps> = ({
-  src, cameraX, speed, x = 0, y, scale = 1, zIndex, opacity = 1, tile = false, shadow = 'mid', flip = false, rotate = 0, transform, transformOrigin = '50% 0%', brightness,
+  src, cameraX, speed, x = 0, y, scale = 1, zIndex, opacity = 1, tile = false, shadow = 'mid', flip = false, rotate = 0, transform, transformOrigin = '50% 0%', brightness, blur,
 }) => {
   const size = sizes[src];
   if (!size) throw new Error(`Unknown asset ${src}; run npm run assets`);
@@ -65,7 +67,7 @@ export const ParallaxLayer: React.FC<ParallaxLayerProps> = ({
     copies = [img(0, left)];
   }
   return (
-    <div style={{position: 'absolute', left: 0, top: y, width: VIEW_W, height: h, zIndex, opacity, filter: `${brightness != null ? `brightness(${brightness}) ` : ''}${SHADOWS[shadow] === 'none' ? '' : SHADOWS[shadow]}`.trim() || undefined}}>
+    <div style={{position: 'absolute', left: 0, top: y, width: VIEW_W, height: h, zIndex, opacity, filter: `${brightness != null ? `brightness(${brightness}) ` : ''}${blur ? `blur(${blur.toFixed(2)}px) ` : ''}${SHADOWS[shadow] === 'none' ? '' : SHADOWS[shadow]}`.trim() || undefined}}>
       {copies}
     </div>
   );

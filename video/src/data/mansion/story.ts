@@ -45,6 +45,8 @@ export type Actor = {
   scale: number;
   hopDistance: number;
   hopHeight: number;
+  /** 1 = Paper-Mario bounce, lower = calmer gait */
+  bounce: number;
   /** screen x of the senior at frame 0; the junior follows at `gap` behind */
   poses: {from: number; pose: OfficerPose; facing?: Facing; tremble?: number}[];
   hops: [number, number, number][];
@@ -64,9 +66,10 @@ export const JUNIOR_GAP: Keyframes = [
 export const ACTORS: Record<ActorId, Actor> = {
   senior: {
     id: 'senior',
-    scale: 0.7,
-    hopDistance: 95,
-    hopHeight: 14,
+    scale: 0.52,
+    hopDistance: 105,
+    hopHeight: 5,
+    bounce: 0.35,
     poses: [
       {from: 0, pose: 'senior_walk'},
       {from: 264, pose: 'senior_alert'},
@@ -79,23 +82,16 @@ export const ACTORS: Record<ActorId, Actor> = {
       {from: 882, pose: 'senior_alert'},
       {from: 906, pose: 'senior_flee', facing: 'left'},
     ],
-    hops: [[264, 34, 12], [548, 40, 12], [882, 52, 14]],
-    emotes: [
-      {frame: 18, type: 'sweat', duration: 40},
-      {frame: 264, type: 'exclaim', duration: 36},
-      {frame: 300, type: 'sweat', duration: 44},
-      {frame: 548, type: 'exclaim', duration: 36},
-      {frame: 584, type: 'sweat', duration: 44},
-      {frame: 822, type: 'sweat', duration: 44},
-      {frame: 882, type: 'exclaim', duration: 30},
-    ],
+    hops: [[264, 16, 10], [548, 20, 10], [882, 24, 12]],
+    emotes: [],
     beam: {length: 1150, spread: 13, jitter: 0.6},
   },
   junior: {
     id: 'junior',
-    scale: 0.64,
-    hopDistance: 60,
-    hopHeight: 10,
+    scale: 0.5,
+    hopDistance: 72,
+    hopHeight: 4,
+    bounce: 0.4,
     poses: [
       {from: 0, pose: 'junior_scared', tremble: 2.5},
       {from: 50, pose: 'junior_walk', tremble: 1.2},
@@ -109,12 +105,8 @@ export const ACTORS: Record<ActorId, Actor> = {
       {from: 880, pose: 'junior_shock'},
       {from: 904, pose: 'junior_flee', facing: 'left'},
     ],
-    hops: [[262, 95, 18], [546, 105, 20], [880, 115, 20]],
-    emotes: [
-      {frame: 262, type: 'exclaim', duration: 40},
-      {frame: 546, type: 'exclaim', duration: 40},
-      {frame: 880, type: 'exclaim', duration: 30},
-    ],
+    hops: [[262, 44, 14], [546, 50, 15], [880, 56, 15]],
+    emotes: [],
     beam: {length: 760, spread: 10, jitter: 3},
   },
 };
@@ -172,17 +164,20 @@ export const STAGE: Placement[] = [
   {src: A + 'fg_pillar.png', speed: 1.35, y: -40, brightness: FG_DIM, z: Z + 8, scale: 0.95, at: {frame: 130, x: 760}, shadow: 'deep'},
   {src: A + 'fg_vase.png', speed: 1.25, y: 700, brightness: FG_DIM, z: Z + 6, scale: 0.8, at: {frame: 420, x: 1500}, shadow: 'mid'},
   {src: A + 'fg_candelabra.png', speed: 1.25, y: 470, brightness: 0.8, z: Z + 4, scale: 0.8, at: {frame: 470, x: 1600}, shadow: 'mid', glow: {dx: 180, dy: 170, r: 230, strength: 0.8}},
-  {src: A + 'fg_pillar.png', speed: 1.35, y: -40, brightness: FG_DIM, z: Z + 8, scale: 0.95, at: {frame: 700, x: 1000}, shadow: 'deep'},
   {src: A + 'fg_chair.png', speed: 1.2, y: 800, brightness: FG_DIM, z: Z + 5, scale: 0.75, at: {frame: 812, x: -120}, shadow: 'mid', flip: true},
   // --- front-most ---
   {src: A + 'front_curtain.png', speed: 1.6, y: -60, brightness: FG_DIM, z: Z + 20, scale: 0.9, at: {frame: 0, x: -250}, shadow: 'deep'},
   {src: A + 'front_cobweb.png', speed: 1.5, y: -20, brightness: FG_DIM, z: Z + 21, scale: 0.9, at: {frame: 0, x: -20}, shadow: 'soft'},
   {src: A + 'front_chandelier.png', speed: 1.4, y: -120, brightness: 0.8, z: Z + 22, scale: 0.9, at: {frame: 330, x: 700}, shadow: 'deep', glow: {dx: 350, dy: 170, r: 330, strength: 0.7}},
-  {src: A + 'front_curtain.png', speed: 1.6, y: -60, brightness: FG_DIM, z: Z + 20, scale: 0.9, at: {frame: 600, x: 900}, shadow: 'deep', flip: true},
   {src: A + 'front_cobweb.png', speed: 1.5, y: -20, brightness: FG_DIM, z: Z + 21, scale: 0.9, at: {frame: 812, x: 1500}, shadow: 'soft', flip: true},
 ];
 
 /** moonlit windows are painted on the wall tile at these x (tile px) */
 export const WINDOW_GLOWS = {tile: 3840, xs: [440, 1720, 3000], y: 300, r: 260, strength: 0.55};
-export const DARKNESS = 0.7;
+export const DARKNESS = 0.72;
+/** depth of field: sharp on the officers' plane (speed 1), softer the further away */
+export const depthBlur = (speed: number) => {
+  const d = speed - 1;
+  return d < 0 ? Math.min(2.2, -d * 5) : Math.min(9, d * 12);
+};
 export const POLICE = meta;

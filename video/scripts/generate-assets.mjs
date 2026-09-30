@@ -3,7 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {doc, renderPng} from './lib/paper.mjs';
+import {doc, renderPng, setPaperStyle} from './lib/paper.mjs';
 import {drawBody, DIM, POSES} from './lib/character.mjs';
 import {characterSheet} from './lib/sheet.mjs';
 
@@ -38,6 +38,7 @@ if (which === 'all' || which === 'bakery') {
   for (const [name, [w, h, svg]] of Object.entries(buildBakery())) save(doc(w, h, svg), out('bakery', `${name}.png`));
 }
 if (which === 'all' || which === 'police') {
+  setPaperStyle({real: true}); // photographed-real-card look for the mansion film
   const {drawOfficer, OFFICER_POSES, ADIM} = await import('./lib/animals.mjs');
   const {policeSheet} = await import('./lib/sheet.mjs');
   console.log('police');
@@ -51,9 +52,12 @@ if (which === 'all' || which === 'police') {
   fs.writeFileSync(path.join(root, 'src', 'data', 'mansion', 'police-meta.json'), JSON.stringify(meta, null, 2) + '\n');
 }
 if (which === 'all' || which === 'mansion') {
+  setPaperStyle({real: true});
   const {buildMansion} = await import('./lib/mansion.mjs');
   console.log('mansion');
   for (const [name, [w, h, svg]] of Object.entries(buildMansion())) save(doc(w, h, svg), out('mansion', `${name}.png`));
+  // film grain tile (overlaid and jittered every frame for the photographed look)
+  save(`<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512"><filter id="n" color-interpolation-filters="sRGB"><feTurbulence type="fractalNoise" baseFrequency="0.95" numOctaves="2" seed="3"/><feColorMatrix type="matrix" values="0 0 0 1 0  0 0 0 1 0  0 0 0 1 0  0 0 0 0 1"/></filter><rect width="512" height="512" filter="url(#n)"/></svg>`, out('fx', 'film_grain.png'));
 }
 fs.mkdirSync(path.dirname(manifestPath), {recursive: true});
 fs.writeFileSync(manifestPath, JSON.stringify(Object.fromEntries(Object.entries(manifest).sort()), null, 2) + '\n');
