@@ -1,5 +1,5 @@
 // Parametric paper-doll character.
-// Every pose (walk_01..04, stop, surprised, happy, reference sheet) is drawn
+// Every pose (stroll, stop, surprised, happy, reference sheet) is drawn
 // by the same code with different joint angles, so face / hair / outfit /
 // proportions can never drift between images.
 import {piece, ink, g, clipped, shade, capsule, smooth, ell, circ, rrect, rng} from './paper.mjs';
@@ -306,30 +306,15 @@ const drawBodyRaw = (pose) => {
 };
 
 // ---------- poses ----------
-const WALK_ARM_F = {upper: 10, fore: 22};
-const WALK_ARM_B = {upper: -9, fore: -4};
 const base = {view: 'side', turn: 0.8, face: 'neutral', lean: 2};
 
 export const POSES = {
-  walk_01: {
-    ...base, skirtSway: -8, hairLag: 4, bagLag: 3,
-    legs: {near: {thigh: 9, shin: 8, foot: 6}, far: {thigh: -8, shin: -16, foot: -10}},
-    arms: {near: WALK_ARM_B, far: WALK_ARM_F},
-  },
-  walk_02: {
-    ...base, skirtSway: -4, hairLag: 7, bagLag: 5,
-    legs: {near: {thigh: 0, shin: 0, foot: 0}, far: {thigh: 8, shin: -22, foot: -8}},
-    arms: {near: {upper: -4, fore: 6}, far: {upper: 4, fore: 12}},
-  },
-  walk_03: {
-    ...base, skirtSway: -8, hairLag: 4, bagLag: 3,
-    legs: {far: {thigh: 9, shin: 8, foot: 6}, near: {thigh: -8, shin: -16, foot: -10}},
-    arms: {far: WALK_ARM_B, near: WALK_ARM_F},
-  },
-  walk_04: {
-    ...base, skirtSway: -4, hairLag: 9, bagLag: 7, lift: -3,
-    legs: {far: {thigh: 0, shin: 0, foot: 0}, near: {thigh: 8, shin: -22, foot: -8}},
-    arms: {far: {upper: -4, fore: 6}, near: {upper: 4, fore: 12}},
+  // The one sprite used while walking: a paper doll doesn't move its legs,
+  // the whole sheet hops along (see WalkingGirl.tsx).
+  stroll: {
+    ...base, lean: 3, skirtSway: -5, hairLag: 4, bagLag: 3,
+    legs: {far: {thigh: -6, shin: -8, foot: -4}, near: {thigh: 7, shin: 6, foot: 4}},
+    arms: {far: {upper: 6, fore: 16}, near: {upper: -5, fore: 2}},
   },
   stop: {
     ...base, face: 'curious', lean: 5, turn: 0.82, headTilt: -3,
@@ -369,12 +354,4 @@ export const POSES = {
     legs: {far: {thigh: -2, shin: -2, foot: 0}, near: {thigh: 2, shin: 2, foot: 0}},
     arms: {far: {upper: -4, fore: 0}, near: {upper: 4, fore: 6}},
   },
-};
-
-/** Horizontal stride of one step (canvas px): distance between feet at contact. */
-export const stepLength = () => {
-  const p = POSES.walk_01.legs;
-  const a = legGeom([0, 0], p.near).ankle[0];
-  const b = legGeom([0, 0], p.far).ankle[0];
-  return a - b;
 };

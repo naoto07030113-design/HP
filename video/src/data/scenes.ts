@@ -1,7 +1,7 @@
 // All timing and staging for BakeryWalk lives here, not in the components.
 // Swap the stages / keyframes / sprites to make a different story with the
 // same machinery.
-import {GIRL, naturalWalkSpeed, type CharacterState} from './characters';
+import {GIRL, type CharacterState} from './characters';
 
 export const VIDEO = {width: 1920, height: 1080, fps: 30, durationInFrames: 900};
 
@@ -9,7 +9,7 @@ export const VIDEO = {width: 1920, height: 1080, fps: 30, durationInFrames: 900}
 export type Keyframes = [number, number][];
 
 export const GIRL_SCALE = 0.7;
-export const WALK = naturalWalkSpeed(GIRL, GIRL_SCALE); // ≈12.2 px/frame
+export const WALK = GIRL.walkSpeed; // px/frame
 export const GROUND_Y = 985; // screen y of the girl's soles
 
 // ---------------------------------------------------------------------------

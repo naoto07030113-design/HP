@@ -1,11 +1,11 @@
 import React from 'react';
 import {Audio, interpolate, Sequence, staticFile} from 'remotion';
 import {BGM, FOOTSTEP, SFX} from '../data/audio';
-import {distancePerPose, GIRL} from '../data/characters';
-import {GIRL_SCALE, VIDEO} from '../data/scenes';
-import {footstepFrames} from '../lib/timeline';
+import {GIRL} from '../data/characters';
+import {VIDEO} from '../data/scenes';
+import {landingFrames} from '../lib/timeline';
 
-const STEPS = footstepFrames(distancePerPose(GIRL, GIRL_SCALE), GIRL.walkCycle.length);
+const STEPS = landingFrames(GIRL.hopDistance);
 
 export const Soundtrack: React.FC = () => (
   <>

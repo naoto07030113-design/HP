@@ -1,6 +1,6 @@
 import React from 'react';
 import {Img, staticFile, useCurrentFrame} from 'remotion';
-import {distancePerPose, GIRL, type CharacterSprites, type CharacterState} from '../data/characters';
+import {GIRL, type CharacterSprites, type CharacterState} from '../data/characters';
 
 export type WalkingGirlProps = {
   /** screen x of the character anchor (hip line) */
@@ -11,7 +11,7 @@ export type WalkingGirlProps = {
   state: CharacterState;
   /** px per frame; used to pick walk frames when `distance` is not given */
   walkingSpeed?: number;
-  /** distance walked so far; keeps the steps in sync with the scrolling ground */
+  /** distance walked so far; hops are spaced by distance so they match the scrolling ground */
   distance?: number;
   direction?: 1 | -1;
   /** paper flip angle around the vertical axis (deg), 0 = flat to camera */
@@ -23,41 +23,39 @@ export type WalkingGirlProps = {
 };
 
 /**
- * Paper-Mario style paper doll: one flat die-cut sheet that
- * - bounces with a small hop on every step and squashes on landing,
- * - rocks side to side and flutters a little (it's paper),
+ * Paper-Mario style paper doll: one flat die-cut sheet (no leg animation) that
+ * - walks by hopping along, squashing a little on every landing,
+ * - waddles side to side and flutters a little (it's paper),
  * - turns by flipping around its vertical axis, showing the paper edge.
  */
 export const WalkingGirl: React.FC<WalkingGirlProps> = ({
   x, y, scale, state, walkingSpeed = 0, distance, direction = 1, flip = 0, hop = 0, zIndex = 100, sprites = GIRL,
 }) => {
   const frame = useCurrentFrame();
-  const perPose = distancePerPose(sprites, scale);
 
-  let name: string;
   let lift = hop;
   let rock = 0; // rotateZ
   let flutter = 0; // rotateY wobble
   let sx = 1;
   let sy = 1;
 
+  const name = sprites.poses[state];
   if (state === 'walking') {
+    // No leg animation: the single paper sheet hops along ("hyoko hyoko").
     const d = distance ?? frame * walkingSpeed;
-    const i = Math.floor(d / perPose) % sprites.walkCycle.length;
-    name = sprites.walkCycle[i];
-    // one step = two walk images; p goes 0 -> 1 across a step
-    const stepPos = d / (perPose * 2);
-    const step = Math.floor(stepPos);
-    const p = stepPos - step;
+    const hopPos = d / sprites.hopDistance;
+    const n = Math.floor(hopPos);
+    const p = hopPos - n; // 0 = just landed, 1 = about to land again
     const arc = Math.sin(Math.PI * p);
-    lift += sprites.hopHeight * arc;
-    rock = 2 + (step % 2 ? 2.8 : -2.8) * arc; // lean into the walk + side-to-side rock
-    flutter = Math.sin(2 * Math.PI * p) * 7;
-    const landing = Math.max(0, 1 - p / 0.22) ** 2; // squash right after the foot lands
-    sy = 1 - 0.07 * landing + 0.025 * arc;
-    sx = 1 + 0.05 * landing - 0.015 * arc;
+    lift += sprites.hopHeight * Math.pow(arc, 0.85);
+    // waddle: tip to one side on this hop, the other side on the next
+    rock = 2 + (n % 2 ? 1 : -1) * 4 * arc;
+    flutter = (n % 2 ? 1 : -1) * 6 * arc;
+    // squash on landing, stretch at the top
+    const landing = Math.max(0, 1 - p / 0.25) ** 2;
+    sy = 1 - 0.09 * landing + 0.035 * arc;
+    sx = 1 + 0.06 * landing - 0.02 * arc;
   } else {
-    name = sprites.poses[state];
     // idle: gentle breathing and a slow paper sway so it never looks frozen
     sy = 1 + Math.sin(frame / 8) * 0.012;
     sx = 1 - Math.sin(frame / 8) * 0.006;

@@ -67,23 +67,11 @@
     "w": 560,
     "h": 900
   },
+  "assets/character/stroll.png": {
+    "w": 560,
+    "h": 900
+  },
   "assets/character/surprised.png": {
-    "w": 560,
-    "h": 900
-  },
-  "assets/character/walk_01.png": {
-    "w": 560,
-    "h": 900
-  },
-  "assets/character/walk_02.png": {
-    "w": 560,
-    "h": 900
-  },
-  "assets/character/walk_03.png": {
-    "w": 560,
-    "h": 900
-  },
-  "assets/character/walk_04.png": {
     "w": 560,
     "h": 900
   },

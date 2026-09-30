@@ -47,18 +47,12 @@ export const characterStateAt = (frame: number): CharacterState => {
   return s;
 };
 
-/** Frames where a foot touches the ground (walk_01 / walk_03), for footstep sounds. */
-export const footstepFrames = (distancePerPose: number, cycleLength: number): number[] => {
+/** Frames where a walking hop lands, for the soft paper "tap" sound. */
+export const landingFrames = (hopDistance: number): number[] => {
   const frames: number[] = [];
-  let prev = -1;
-  for (let f = GIRL_TRACK.enterFrame; f < VIDEO.durationInFrames; f++) {
-    if (characterStateAt(f) !== 'walking') {
-      prev = -1;
-      continue;
-    }
-    const i = Math.floor(girlDistance(f) / distancePerPose) % cycleLength;
-    if (i !== prev && i % 2 === 0 && prev !== -1) frames.push(f);
-    prev = i;
+  for (let f = GIRL_TRACK.enterFrame + 1; f < VIDEO.durationInFrames; f++) {
+    if (characterStateAt(f) !== 'walking') continue;
+    if (Math.floor(girlDistance(f) / hopDistance) > Math.floor(girlDistance(f - 1) / hopDistance)) frames.push(f);
   }
   return frames;
 };

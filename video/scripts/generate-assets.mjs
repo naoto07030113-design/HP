@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {doc, renderPng} from './lib/paper.mjs';
-import {drawBody, DIM, POSES, stepLength} from './lib/character.mjs';
+import {drawBody, DIM, POSES} from './lib/character.mjs';
 import {characterSheet} from './lib/sheet.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -23,10 +23,9 @@ const save = (svg, file) => {
 if (which === 'all' || which === 'character') {
   console.log('character');
   save(characterSheet(), out('character', 'char_ref.png'));
-  for (const name of ['walk_01', 'walk_02', 'walk_03', 'walk_04', 'stop', 'surprised', 'happy', 'happy_front']) {
+  for (const name of ['stroll', 'stop', 'surprised', 'happy', 'happy_front']) {
     save(doc(DIM.W, DIM.H, drawBody(POSES[name])), out('character', `${name}.png`));
   }
-  console.log(`  step length: ${stepLength().toFixed(1)} canvas px (canvas ${DIM.W}x${DIM.H}, ground y=${DIM.ground})`);
 }
 if (which === 'all' || which === 'street') {
   const {buildStreet} = await import('./lib/street.mjs');
