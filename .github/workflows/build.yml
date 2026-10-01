@@ -2,7 +2,7 @@ name: Build
 
 on:
   push:
-    branches: [main]
+    branches: [main, ito-claude-deskmate]
   pull_request:
     branches: [main]
 

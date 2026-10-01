@@ -25,6 +25,7 @@ struct IslandViewContent: View {
         case .note:      NoteView(state: state)
         case .settings:  SettingsIslandView(state: state)
         case .greeting:  EmptyView()  // GreetingCanvasView overlaid in IslandRootView
+        case .task:      TaskComposerView(state: state)
         }
     }
 }
@@ -140,6 +141,11 @@ struct OverviewView: View {
         case "integration_calcom":
             NSWorkspace.shared.open(URL(string: "https://app.cal.com/bookings")!)
         default:
+            // Tasks started from Coucou: open their folder
+            if task.id.hasPrefix("runner_"), let cwd = task.sessionCwd {
+                NSWorkspace.shared.open(URL(fileURLWithPath: cwd))
+                return
+            }
             // Non-integration real tasks
             if task.source == .n8n {
                 if let urlStr = KeychainStore.shared.get("n8n-url"), let url = URL(string: urlStr) {
@@ -194,21 +200,45 @@ struct ApprovalView: View {
 
     var approval: ApprovalInfo? { state.pendingApproval }
 
+    /// Approval for a task started from Coucou (LocalTaskRunner).
+    private var isRunnerTask: Bool { approval?.taskId != nil }
+
+    private var whoLabel: String {
+        guard isRunnerTask else { return "needs permission" }
+        if let reason = approval?.guardReason { return "⚠ \(reason) — 承認が必要です" }
+        return "Claude Codeが以下の操作を要求しています"
+    }
+
     var body: some View {
         ZStack {
             CardBackground(wash: .amber)
             VStack(alignment: .leading, spacing: 5) {
-                AgentWho(task: state.focusTask, label: "needs permission")
+                AgentWho(task: state.focusTask, label: whoLabel)
                 CodeBlock(text: approval?.command ?? approval?.tool ?? "…")
+                    .lineLimit(2)
                 HStack(spacing: 8) {
-                    SecondaryButton("Deny") {
-                        HookServer.shared.sendApprovalDecision("deny")
-                    }
-                    PrimaryButton("Allow") {
-                        HookServer.shared.sendApprovalDecision("allow")
-                    }
-                    SecondaryButton("Always") {
-                        HookServer.shared.sendApprovalDecision("always")
+                    if isRunnerTask {
+                        SecondaryButton("拒否") {
+                            HookServer.shared.sendApprovalDecision("deny")
+                        }
+                        PrimaryButton("今回許可") {
+                            HookServer.shared.sendApprovalDecision("allow")
+                        }
+                        if approval?.guardReason == nil {
+                            SecondaryButton("常に許可") {
+                                HookServer.shared.sendApprovalDecision("always")
+                            }
+                        }
+                    } else {
+                        SecondaryButton("Deny") {
+                            HookServer.shared.sendApprovalDecision("deny")
+                        }
+                        PrimaryButton("Allow") {
+                            HookServer.shared.sendApprovalDecision("allow")
+                        }
+                        SecondaryButton("Always") {
+                            HookServer.shared.sendApprovalDecision("always")
+                        }
                     }
                 }
             }
@@ -224,8 +254,17 @@ struct ApprovalView: View {
 
 struct QuestionView: View {
     @ObservedObject var state: AppState
+    @ObservedObject private var bridge = TaskRunnerBridge.shared
 
     var body: some View {
+        if let s = bridge.session(forAgentTask: state.focusId), s.status == .waitingHuman {
+            RunnerQuestionView(state: state, session: s)
+        } else {
+            demoQuestion
+        }
+    }
+
+    private var demoQuestion: some View {
         ZStack {
             CardBackground(wash: .cyan)
             VStack(alignment: .leading, spacing: 5) {
@@ -250,8 +289,17 @@ struct QuestionView: View {
 
 struct ErrorView: View {
     @ObservedObject var state: AppState
+    @ObservedObject private var bridge = TaskRunnerBridge.shared
 
     var body: some View {
+        if let s = bridge.session(forAgentTask: state.focusId), s.status == .failed {
+            RunnerErrorView(state: state, session: s)
+        } else {
+            demoError
+        }
+    }
+
+    private var demoError: some View {
         ZStack {
             CardBackground(wash: .red)
             VStack(alignment: .leading, spacing: 5) {
@@ -278,8 +326,17 @@ struct ErrorView: View {
 
 struct FinishedView: View {
     @ObservedObject var state: AppState
+    @ObservedObject private var bridge = TaskRunnerBridge.shared
 
     var body: some View {
+        if let s = bridge.session(forAgentTask: state.focusId), s.status == .completed {
+            RunnerFinishedView(state: state, session: s)
+        } else {
+            claudeCodeFinished
+        }
+    }
+
+    private var claudeCodeFinished: some View {
         ZStack {
             CardBackground(wash: .green)
             VStack(alignment: .leading, spacing: 5) {

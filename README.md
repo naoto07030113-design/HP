@@ -53,6 +53,10 @@ Meet **Mochi**: a soft little squircle with big eyes that pops out of your notch
 </tr>
 </table>
 
+## ITO Claude Deskmate (this branch)
+
+Hand a job to Claude Code from the notch: it runs headless with your own `claude` login, asks only for approvals, and is marked done only after the project's own checks pass. See [`docs/DESKMATE.md`](docs/DESKMATE.md) (Japanese).
+
 ## Install
 
 ### Download for macOS

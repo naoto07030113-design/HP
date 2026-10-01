@@ -28,6 +28,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let menu = NSMenu()
         menu.addItem(withTitle: "Open Coucou", action: #selector(openIsland), keyEquivalent: "")
+        #if !APPSTORE
+        menu.addItem(withTitle: "Claude に仕事を頼む…", action: #selector(openTaskComposer), keyEquivalent: "")
+        #endif
         menu.addItem(.separator())
         menu.addItem(withTitle: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
         menu.addItem(.separator())
@@ -40,6 +43,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func openIsland() {
         islandController?.expand(to: .overview)
+    }
+
+    @objc private func openTaskComposer() {
+        islandController?.expand(to: .task)
     }
 
     private var settingsWindow: NSWindow?
@@ -64,6 +71,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         islandController?.showWindow(nil)
         islandController?.fsm.launch()
         HookServer.shared.start()
+        TaskRunnerBridge.shared.setup()
         N8nPoller.shared.start()
         VercelPoller.shared.start()
         ResendPoller.shared.start()

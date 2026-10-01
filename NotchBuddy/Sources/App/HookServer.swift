@@ -33,6 +33,11 @@ final class HookServer: @unchecked Sendable {
     private var pendingApprovalFD: Int32 = -1   // held open while user decides
     private var activeSessionId: String? = nil  // current Claude Code session
 
+    // Approvals for tasks started from Coucou (LocalTaskRunner): answered through a closure
+    // instead of a held fd; queued while another approval is on screen.
+    private var pendingRunnerResponder: (@Sendable (String) -> Void)? = nil
+    private var runnerApprovalQueue: [(info: ApprovalInfo, respond: @Sendable (String) -> Void)] = []
+
     private init() {}
 
     // MARK: - Start
@@ -105,6 +110,18 @@ final class HookServer: @unchecked Sendable {
         }
 
         let eventName = payload["hook_event_name"] as? String ?? ""
+
+        // Tasks started from Coucou: `nb-hook runner` tags them with coucou_task_id.
+        // The runner answers every one of them (PreToolUse / PermissionRequest / Stop block on it).
+        if let taskId = payload["coucou_task_id"] as? String, !taskId.isEmpty {
+            Task { @MainActor in
+                TaskRunnerBridge.shared.runner.handleHook(event: eventName, payload: payload) { [weak self] text in
+                    self?.sendLine(fd: fd, text: text)
+                    close(fd)
+                }
+            }
+            return
+        }
 
         if eventName == "PermissionRequest" {
             // Hold fd open — Claude Code waits for our decision (up to 120s)
@@ -231,7 +248,7 @@ final class HookServer: @unchecked Sendable {
     // MARK: - Helpers
 
     @MainActor
-    private func expandIfNeeded(to view: IslandView) {
+    func expandIfNeeded(to view: IslandView) {
         let state = AppState.shared
         let isAlert: Bool
         switch view {
@@ -288,6 +305,10 @@ final class HookServer: @unchecked Sendable {
                 close(old)
             }
         }
+        if let responder = pendingRunnerResponder, let shown = state.pendingApproval {
+            runnerApprovalQueue.insert((info: shown, respond: responder), at: 0)
+            pendingRunnerResponder = nil
+        }
         pendingApprovalFD = fd
         activeSessionId = sessionId
 
@@ -312,6 +333,19 @@ final class HookServer: @unchecked Sendable {
     /// Called by ApprovalView buttons. Writes the decision to the waiting nb-hook and cleans up.
     @MainActor
     func sendApprovalDecision(_ decision: String) {
+        if let responder = pendingRunnerResponder {
+            pendingRunnerResponder = nil
+            responder(decision)
+            let state = AppState.shared
+            let taskId = state.pendingApproval?.taskId
+            state.pendingApproval = nil
+            state.isPinned = false
+            if let taskId { clearPillBadge(id: taskId) }
+            if !presentNextRunnerApproval() {
+                state.view = state.tasks.isEmpty ? .empty : .overview
+            }
+            return
+        }
         let fd = pendingApprovalFD
         pendingApprovalFD = -1
 
@@ -335,7 +369,54 @@ final class HookServer: @unchecked Sendable {
         state.isPinned = false
         state.updateTask(id: "integration_claude", state: .working)
         clearPillBadge(id: "integration_claude")
-        state.view = state.tasks.isEmpty ? .empty : .overview
+        if !presentNextRunnerApproval() {
+            state.view = state.tasks.isEmpty ? .empty : .overview
+        }
+    }
+
+    // MARK: - Runner approvals (tasks started from Coucou)
+
+    /// Shows an approval for a LocalTaskRunner task in the existing approval view.
+    /// `respond` receives "allow" / "always" / "deny" (or "ask" if dropped).
+    @MainActor
+    func presentRunnerApproval(_ info: ApprovalInfo, respond: @escaping @Sendable (String) -> Void) {
+        runnerApprovalQueue.append((info: info, respond: respond))
+        let state = AppState.shared
+        if state.pendingApproval == nil {
+            _ = presentNextRunnerApproval()
+        } else if let taskId = info.taskId {
+            setPillBadge(id: taskId, badge: .approval)
+        }
+    }
+
+    /// Drops queued/visible approvals of a task (cancelled or exited) — answers them "deny".
+    @MainActor
+    func withdrawRunnerApprovals(taskId: String) {
+        let state = AppState.shared
+        let dropped = runnerApprovalQueue.filter { $0.info.taskId == taskId }
+        runnerApprovalQueue.removeAll { $0.info.taskId == taskId }
+        dropped.forEach { $0.respond("deny") }
+        if state.pendingApproval?.taskId == taskId, pendingRunnerResponder != nil {
+            sendApprovalDecision("deny")
+        }
+    }
+
+    @MainActor
+    private func presentNextRunnerApproval() -> Bool {
+        guard pendingApprovalFD < 0, !runnerApprovalQueue.isEmpty else { return false }
+        let next = runnerApprovalQueue.removeFirst()
+        let state = AppState.shared
+        pendingRunnerResponder = next.respond
+        state.pendingApproval = next.info
+        state.isPinned = true
+        if let taskId = next.info.taskId {
+            state.updateTask(id: taskId, state: .approval)
+            state.focusId = taskId
+            clearPillBadge(id: taskId)
+        }
+        SoundEngine.shared.play("approval")
+        expandIfNeeded(to: .approval)
+        return true
     }
 
     /// Updates integration_claude with the current session project name and cwd.
@@ -698,7 +779,7 @@ private let nbHookShellWrapper = """
 # Coucou hook relay — always exits 0, never blocks Claude Code
 HOOK_DIR="$(dirname "$0")"
 if xcode-select -p >/dev/null 2>&1; then
-    out=$(/usr/bin/python3 "$HOOK_DIR/nb-hook.py" 2>/dev/null)
+    out=$(/usr/bin/python3 "$HOOK_DIR/nb-hook.py" "$@" 2>/dev/null)
     rc=$?
     if [ "$rc" -eq 0 ] && [ -n "$out" ]; then
         printf '%s\\n' "$out"
@@ -713,7 +794,46 @@ private let nbHookPythonGitHub = """
 #!/usr/bin/env python3
 # nb-hook.py — Coucou hook relay for Claude Code (GitHub version)
 # Reads JSON from stdin, forwards to Coucou via Unix socket, translates response.
+# `nb-hook runner` is the hook of tasks Coucou starts itself (LocalTaskRunner, COUCOU_TASK_ID set):
+# it also waits for Coucou on PreToolUse (safety guard) and Stop (finish loop).
 import sys, json, os, socket
+
+def ask_coucou(socket_path, payload, timeout):
+    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    s.settimeout(timeout)
+    s.connect(socket_path)
+    s.sendall((json.dumps(payload) + '\\n').encode())
+    chunks = []
+    while True:
+        chunk = s.recv(4096)
+        if not chunk:
+            break
+        chunks.append(chunk)
+        if b'\\n' in chunk:
+            break
+    s.close()
+    response = b''.join(chunks).decode().strip()
+    if not response:
+        return {}
+    try:
+        return json.loads(response)
+    except Exception:
+        return {}
+
+def emit(obj):
+    sys.stdout.write(json.dumps(obj) + '\\n')
+    sys.stdout.flush()
+
+def emit_permission(decision, payload):
+    if decision == 'allow':
+        emit({'hookSpecificOutput': {'hookEventName': 'PermissionRequest', 'decision': {'behavior': 'allow'}}})
+    elif decision == 'always':
+        # Let Claude Code persist the rule via updatedPermissions
+        suggestions = payload.get('permission_suggestions', [])
+        emit({'hookSpecificOutput': {'hookEventName': 'PermissionRequest', 'decision': {'behavior': 'allow', 'updatedPermissions': suggestions}}})
+    elif decision == 'deny':
+        emit({'hookSpecificOutput': {'hookEventName': 'PermissionRequest', 'decision': {'behavior': 'deny', 'message': 'Denied from Coucou'}}})
+    # 'ask' or unknown: no output → Claude Code re-asks
 
 def main():
     try:
@@ -734,56 +854,49 @@ def main():
         payload['cwd'] = os.getcwd()
 
     event = payload.get('hook_event_name', '')
-    socket_path = os.path.expanduser(
+    socket_path = env.get('COUCOU_SOCKET') or os.path.expanduser(
         '~/Library/Application Support/NotchBuddy/nb.sock'
     )
+
+    runner = 'runner' in sys.argv[1:]
+    task_id = env.get('COUCOU_TASK_ID', '')
+    if task_id and not runner:
+        # Task started from Coucou: its runner hook reports it, the global hook stays silent.
+        return
+    if runner:
+        if not task_id:
+            return
+        payload['coucou_task_id'] = task_id
+        if event in ('PreToolUse', 'PermissionRequest', 'Stop'):
+            # Block until Coucou answers (approval click, verification run). Hook timeout is 3600s.
+            try:
+                resp = ask_coucou(socket_path, payload, 3590)
+            except Exception:
+                return  # app unreachable: no output, Claude Code's default behaviour
+            if event == 'Stop':
+                if resp.get('decision') == 'block' and resp.get('reason'):
+                    emit({'decision': 'block', 'reason': resp['reason']})
+            elif event == 'PreToolUse':
+                decision = resp.get('permissionDecision', '')
+                if decision in ('allow', 'deny'):
+                    out = {'hookEventName': 'PreToolUse', 'permissionDecision': decision}
+                    if resp.get('reason'):
+                        out['permissionDecisionReason'] = resp['reason']
+                    emit({'hookSpecificOutput': out})
+            else:
+                emit_permission(resp.get('permissionDecision', ''), payload)
+            return
 
     if event == 'PermissionRequest':
         # Block and wait for Coucou's decision (Claude Code allows up to 120s)
         try:
-            s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            s.settimeout(118)
-            s.connect(socket_path)
-            s.sendall((json.dumps(payload) + '\\n').encode())
-            chunks = []
-            while True:
-                chunk = s.recv(4096)
-                if not chunk:
-                    break
-                chunks.append(chunk)
-                if b'\\n' in chunk:
-                    break
-            s.close()
-            response = b''.join(chunks).decode().strip()
-            if response:
-                try:
-                    resp_obj = json.loads(response)
-                    decision = resp_obj.get('permissionDecision', '')
-                except Exception:
-                    decision = ''
-                if decision == 'allow':
-                    out = {'hookSpecificOutput': {'hookEventName': 'PermissionRequest', 'decision': {'behavior': 'allow'}}}
-                    sys.stdout.write(json.dumps(out) + '\\n')
-                    sys.stdout.flush()
-                    sys.exit(0)
-                elif decision == 'always':
-                    # Let Claude Code persist the rule via updatedPermissions
-                    suggestions = payload.get('permission_suggestions', [])
-                    out = {'hookSpecificOutput': {'hookEventName': 'PermissionRequest', 'decision': {'behavior': 'allow', 'updatedPermissions': suggestions}}}
-                    sys.stdout.write(json.dumps(out) + '\\n')
-                    sys.stdout.flush()
-                    sys.exit(0)
-                elif decision == 'deny':
-                    out = {'hookSpecificOutput': {'hookEventName': 'PermissionRequest', 'decision': {'behavior': 'deny', 'message': 'Denied from Coucou'}}}
-                    sys.stdout.write(json.dumps(out) + '\\n')
-                    sys.stdout.flush()
-                    sys.exit(0)
-                # 'ask' or unknown: fall through → no output → Claude Code re-asks
+            resp = ask_coucou(socket_path, payload, 118)
+            emit_permission(resp.get('permissionDecision', ''), payload)
         except Exception:
             pass
         # App unreachable, timed out, or no explicit decision — print nothing
         # Claude Code will handle the absence of output (re-ask or default behaviour)
-        sys.exit(0)
+        return
 
     # All other events: fire-and-forget (0.3s timeout, never blocks)
     try:

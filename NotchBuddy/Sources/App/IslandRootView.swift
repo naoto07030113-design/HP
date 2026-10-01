@@ -468,6 +468,9 @@ struct IslandHeader: View {
                     #endif
                 })
                 TabButton(icon: "plus", view: .upload, state: state)
+                #if !APPSTORE
+                TabButton(icon: "hammer.fill", view: .task, state: state)
+                #endif
             }
             .padding(.leading, 14)
 

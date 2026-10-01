@@ -12,6 +12,7 @@ enum IslandView: String, CaseIterable {
     case overview, empty, approval, question, error, finished
     case confused, upload, uploading, choose, mail, prompt
     case searching, result, note, settings, greeting
+    case task       // TaskComposerView — hand a job to Claude Code
 }
 
 // MARK: - Bot State
@@ -34,6 +35,10 @@ struct ApprovalInfo: Sendable {
     var sessionId: String
     var tool: String
     var command: String
+    /// AgentTask id when the request comes from a task started in Coucou (LocalTaskRunner).
+    var taskId: String? = nil
+    /// Set when SafetyGuard forced this approval (git push, deploy, rm -rf…): no "Always".
+    var guardReason: String? = nil
 }
 
 // MARK: - Pill badge (shown on pill edge when non-focused task has an alert)
@@ -101,6 +106,7 @@ enum IslandConst {
         .choose:    ViewLayout(height: 176, botX: 60,  botY: 101, botDiameter: 52, agentMode: .column),
         .mail:      ViewLayout(height: 240, botX: 56,  botY: nil, botDiameter: 46, agentMode: .column),
         .prompt:    ViewLayout(height: 160, botX: 52,  botY: nil, botDiameter: 44, agentMode: .column),
+        .task:      ViewLayout(height: 160, botX: 52,  botY: nil, botDiameter: 44, agentMode: .column),
         .searching: ViewLayout(height: 160, botX: 52,  botY: nil, botDiameter: 44, agentMode: .column),
         .result:    ViewLayout(height: 160, botX: 52,  botY: nil, botDiameter: 44, agentMode: .column),
         .note:      ViewLayout(height: 160, botX: 60,  botY: nil, botDiameter: 50, agentMode: .column),
@@ -160,5 +166,6 @@ enum IslandConst {
         .searching: "rgba(99,102,241,0.5)",
         .result:    "rgba(52,211,153,0.22)",
         .prompt:    "rgba(99,102,241,0.22)",
+        .task:      "rgba(99,102,241,0.22)",
     ]
 }
