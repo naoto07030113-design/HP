@@ -4,6 +4,13 @@ Coucou の既存体験（Mochi の外観・アニメーション・Hooks 連携�
 **キャラクターへ仕事を頼むと Claude Code がバックグラウンドで起動し、最後まで自律実行する**機能を追加したもの。
 Anthropic API は使わない。ユーザーの `claude` CLI のログイン（Claude サブスクリプション）で動く。
 
+## いちばん簡単な始め方
+ターミナルで次の1行を貼り付けて Enter（取得・ビルド・起動・ログイン確認まで全部やります。何度実行してもOK）:
+
+```bash
+D="$(ls -d ~/coucou-deskmate ~/*/coucou-deskmate ~/*/*/coucou-deskmate 2>/dev/null | head -1)"; [ -z "$D" ] && D=~/coucou-deskmate && git clone -b ito-claude-deskmate https://github.com/naoto07030113-design/HP.git "$D"; cd "$D" && git pull -q; bash scripts/deskmate-setup.sh
+```
+
 ## 使い方
 
 1. Coucou を開く（ノッチをクリック／メニューバー →「Claude に仕事を頼む…」）。
