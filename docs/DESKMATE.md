@@ -44,7 +44,8 @@ API キー不要・ChatGPT プランの Codex 利用枠を消費。会話の続�
 初期値: Anthropic API キーがあれば Claude、なければ Codex が入っていれば GPT。
 
 ## ピル（Resend / n8n / Vercel / GitHub など）
-初期状態ですべてオフ（このブランチの初回起動時に一度だけオフにする）。必要なものは Settings で再度オンにできる。
+元の Coucou と同じく Resend・n8n・Vercel・GitHub がオン（Settings で切り替え可）。
+以前の版で一度オフにした環境は、次回起動時に一度だけ元に戻す。
 
 ## 構成
 
