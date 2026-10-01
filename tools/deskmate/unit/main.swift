@@ -37,4 +37,38 @@ let a = ClaudeProcess.arguments(sessionId: "abc", resume: true, settingsPath: "/
 expect(a.contains("--resume") && !a.contains("--session-id") && a.last == "--chrome", "args")
 let e = ClaudeProcess.environment(base: ["ANTHROPIC_API_KEY": "k", "HOME": "/h", "CLAUDECODE": "1"], taskId: "t", path: "/bin")
 expect(e["ANTHROPIC_API_KEY"] == nil && e["CLAUDECODE"] == nil && e["COUCOU_TASK_ID"] == "t" && e["PATH"] == "/bin", "env")
+// Codex
+let codexArgs = ClaudeProcess.codexArguments(resumeThread: nil, cwd: "/p")
+expect(codexArgs.starts(with: ["exec", "--json"]) && codexArgs.contains("--approve-for-me") && codexArgs.last == "-", "codex new args")
+let codexResume = ClaudeProcess.codexArguments(resumeThread: "th1", cwd: "/p")
+expect(codexResume.starts(with: ["exec", "resume", "th1"]) && codexResume.contains("approval_policy=\"on-request\""), "codex resume args")
+expect(ClaudeProcess.environment(base: ["OPENAI_API_KEY": "x", "CODEX_API_KEY": "y"], taskId: "t", path: nil)["OPENAI_API_KEY"] == nil, "strip openai key")
+let started = LocalTaskRunner.parseStreamLine(#"{"type":"thread.started","thread_id":"abc"}"#)
+expect(started?.kind == .sessionId && started?.text == "abc", "codex thread id")
+let msg = LocalTaskRunner.parseStreamLine(#"{"type":"item.completed","item":{"id":"i","type":"agent_message","text":"done"}}"#)
+expect(msg?.kind == .assistantText && msg?.text == "done", "codex agent message")
+expect(LocalTaskRunner.parseStreamLine(#"{"type":"item.completed","item":{"type":"error","message":"warn"}}"#) == nil, "codex warning ignored")
+expect(LocalTaskRunner.parseStreamLine(#"{"type":"turn.failed","error":{"message":"usage limit"}}"#)?.isError == true, "codex turn failed")
+let chat = CodexChat.parse("""
+{"type":"thread.started","thread_id":"t9"}
+{"type":"item.completed","item":{"type":"agent_message","text":"first"}}
+{"type":"item.completed","item":{"type":"agent_message","text":"こんにちは"}}
+""")
+expect(chat.text == "こんにちは" && chat.thread == "t9" && chat.error == nil, "chat parse")
+expect(CodexChat.prompt(message: "q", context: nil, firstMessage: false) == "q", "follow-up prompt is raw")
+expect(CodexChat.arguments(thread: nil, workdir: "/w").contains("read-only"), "chat read-only")
+// hooks.json install: keeps other hooks, idempotent, replaces old Coucou entries
+let ch = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("codexhome-\(UUID())")
+try! FileManager.default.createDirectory(at: ch, withIntermediateDirectories: true)
+setenv("CODEX_HOME", ch.path, 1)
+try! #"{"hooks":{"PreToolUse":[{"hooks":[{"type":"command","command":"my-own-hook"}]},{"hooks":[{"type":"command","command":"\"/old/NotchBuddy/nb-hook\" runner"}]}]}}"#.write(to: ch.appendingPathComponent("hooks.json"), atomically: true, encoding: .utf8)
+let cmd = "\"/Users/me/Library/Application Support/NotchBuddy/nb-hook\" runner"
+expect(!CodexSetup.hooksInstalled(hookCommand: cmd), "not installed yet")
+let backup = try! CodexSetup.installHooks(hookCommand: cmd)
+expect(backup != nil && CodexSetup.hooksInstalled(hookCommand: cmd), "installed with backup")
+let saved = try! JSONSerialization.jsonObject(with: Data(contentsOf: ch.appendingPathComponent("hooks.json"))) as! [String: Any]
+let pre = (saved["hooks"] as! [String: Any])["PreToolUse"] as! [[String: Any]]
+let cmds = pre.flatMap { ($0["hooks"] as! [[String: Any]]).map { $0["command"] as! String } }
+expect(cmds == ["my-own-hook", cmd], "kept own hook, replaced old coucou entry: \(cmds)")
+expect((try! CodexSetup.installHooks(hookCommand: cmd)) == nil, "second install is a no-op")
 print("\(total - fails)/\(total) passed"); exit(fails == 0 ? 0 : 1)

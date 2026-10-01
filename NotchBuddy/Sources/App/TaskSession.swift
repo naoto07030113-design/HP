@@ -1,5 +1,19 @@
 import Foundation
 
+// MARK: - Engine
+
+/// Which coding agent runs the task. Both are driven headless with the user's own login.
+enum TaskEngine: String, Codable, Sendable, CaseIterable {
+    case claude, codex
+
+    var label: String {
+        switch self {
+        case .claude: return "Claude Code"
+        case .codex:  return "Codex"
+        }
+    }
+}
+
 // MARK: - TaskSession
 // One job handed to Claude Code from Coucou ("このアプリのバグを直しておいて").
 // Foundation only — no AppKit/SwiftUI — so the runner core stays testable headless.
@@ -42,6 +56,7 @@ struct TaskSession: Codable, Identifiable, Sendable, Equatable {
     let cwd: String
     var status: TaskStatus
     var pid: Int32?
+    /// Agent session to resume: our UUID for Claude Code (`--session-id`), the thread id Codex reports.
     var claudeSessionId: String?
     var createdAt: Date
     var finishedAt: Date?
@@ -52,8 +67,13 @@ struct TaskSession: Codable, Identifiable, Sendable, Equatable {
     var detail: String?
     /// Whether the last completion was backed by a passing verification run.
     var verified: Bool?
+    /// nil in tasks saved before Codex support = Claude Code.
+    var engine: TaskEngine?
 
-    init(id: UUID = UUID(), prompt: String, cwd: String, status: TaskStatus = .queued, createdAt: Date = Date()) {
+    var engineKind: TaskEngine { engine ?? .claude }
+
+    init(id: UUID = UUID(), prompt: String, cwd: String, status: TaskStatus = .queued,
+         engine: TaskEngine = .claude, createdAt: Date = Date()) {
         self.id = id
         self.prompt = prompt
         self.cwd = cwd
@@ -65,6 +85,7 @@ struct TaskSession: Codable, Identifiable, Sendable, Equatable {
         self.verifyRounds = 0
         self.detail = nil
         self.verified = nil
+        self.engine = engine
     }
 
     /// Lowercase UUID string — what we pass to `claude --session-id`, and what hooks echo back.

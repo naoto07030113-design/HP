@@ -33,14 +33,25 @@ struct TaskComposerView: View {
                         }
                         .foregroundColor(Color(hex: "#C7C9FF"))
                     } else {
-                        projectMenu
-                        Button(action: { bridge.useChrome.toggle() }) {
-                            Image(systemName: "globe")
-                                .font(.system(size: 11))
-                                .foregroundColor(bridge.useChrome ? Color(hex: "#C7C9FF") : Color(hex: "#5F646D"))
+                        Picker("", selection: $bridge.engine) {
+                            Text("Claude").tag(TaskEngine.claude)
+                            Text("Codex").tag(TaskEngine.codex)
                         }
-                        .buttonStyle(.plain)
-                        .help(bridge.useChrome ? "ブラウザ確認に Claude in Chrome を使う（オン）" : "Claude in Chrome を使わない（オフ）")
+                        .pickerStyle(.segmented)
+                        .labelsHidden()
+                        .controlSize(.mini)
+                        .fixedSize()
+                        .help("この仕事を担当するエージェント")
+                        projectMenu
+                        if bridge.engine == .claude {
+                            Button(action: { bridge.useChrome.toggle() }) {
+                                Image(systemName: "globe")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(bridge.useChrome ? Color(hex: "#C7C9FF") : Color(hex: "#5F646D"))
+                            }
+                            .buttonStyle(.plain)
+                            .help(bridge.useChrome ? "ブラウザ確認に Claude in Chrome を使う（オン）" : "Claude in Chrome を使わない（オフ）")
+                        }
                     }
                     Spacer(minLength: 4)
                     if let active = bridge.activeSessions.first {
@@ -49,7 +60,7 @@ struct TaskComposerView: View {
                 }
 
                 HStack(spacing: 8) {
-                    TextField(replySession == nil ? "Claude に任せたい仕事を書いてください…" : "返信を書いてください…", text: $text)
+                    TextField(replySession == nil ? "\(bridge.engine == .codex ? "Codex" : "Claude") に任せたい仕事を書いてください…" : "返信を書いてください…", text: $text)
                         .textFieldStyle(.plain)
                         .font(.system(size: 13))
                         .focused($focused)
@@ -68,7 +79,28 @@ struct TaskComposerView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 .simultaneousGesture(TapGesture().onEnded { focused = true })
 
-                if let err = bridge.composerError {
+                if bridge.codexSetupPrompt {
+                    HStack(spacing: 10) {
+                        Text("Codex に Coucou の Hook を登録します（~/.codex/hooks.json・バックアップあり）")
+                            .font(.system(size: 11))
+                            .foregroundColor(Color(hex: "#C7C9FF"))
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                        Spacer(minLength: 4)
+                        Button("登録して開始") { bridge.confirmCodexSetup() }
+                            .buttonStyle(.plain)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(Color(hex: "#F5F6F8"))
+                        Button("やめる") { bridge.cancelCodexSetup() }
+                            .buttonStyle(.plain)
+                            .font(.system(size: 11))
+                            .foregroundColor(Color(hex: "#8E939C"))
+                    }
+                } else if bridge.codexBusy {
+                    Text("Codex を準備中…")
+                        .font(.system(size: 11))
+                        .foregroundColor(Color(hex: "#9398A1"))
+                } else if let err = bridge.composerError {
                     Text(err)
                         .font(.system(size: 11))
                         .foregroundColor(Color(hex: "#FF8D97"))

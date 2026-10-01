@@ -19,6 +19,8 @@ struct RunnerApprovalRequest: Sendable, Equatable {
     let command: String
     /// Set when SafetyGuard forced the approval. "Always allow" must not be offered then.
     let guardReason: String?
+    /// "Always allow" persists a Claude Code permission rule; Codex hooks have no equivalent.
+    var allowsAlways: Bool = true
 }
 
 struct TaskUpdate: Sendable {
@@ -47,15 +49,18 @@ final class LocalTaskRunner {
         var useChrome: Bool = false
         var maxVerifyRounds: Int = 3
         var claudePathOverride: String? = nil
+        var codexPathOverride: String? = nil
         /// Seconds without any hook before warning that hooks don't reach Coucou.
         var hookWatchdog: TimeInterval = 45
     }
 
     enum RunnerError: LocalizedError {
-        case claudeNotFound, notFound, alreadyRunning, emptyPrompt, badFolder(String)
+        case claudeNotFound, codexNotFound, noSessionToResume, notFound, alreadyRunning, emptyPrompt, badFolder(String)
         var errorDescription: String? {
             switch self {
             case .claudeNotFound: return "Claude Code CLI（claude）が見つかりません。インストールしてログインしてください。"
+            case .codexNotFound:  return "Codex CLI（codex）が見つかりません。インストールして ChatGPT でログインしてください。"
+            case .noSessionToResume: return "再開できる Codex のセッションがありません。新しく依頼してください。"
             case .notFound:       return "タスクが見つかりません。"
             case .alreadyRunning: return "このタスクはまだ実行中です。"
             case .emptyPrompt:    return "依頼内容を入力してください。"
@@ -91,24 +96,35 @@ final class LocalTaskRunner {
 
     func isRunning(_ id: UUID) -> Bool { processes[id] != nil }
 
+    /// Path of the CLI for `engine`, or the matching error.
+    func cliPath(for engine: TaskEngine) throws -> String {
+        switch engine {
+        case .claude:
+            guard let p = ClaudeProcess.locateClaude(override: config.claudePathOverride) else { throw RunnerError.claudeNotFound }
+            return p
+        case .codex:
+            guard let p = ClaudeProcess.locateCodex(override: config.codexPathOverride) else { throw RunnerError.codexNotFound }
+            return p
+        }
+    }
+
     @discardableResult
-    func start(prompt: String, cwd: String) throws -> TaskSession {
+    func start(prompt: String, cwd: String, engine: TaskEngine = .claude) throws -> TaskSession {
         let goal = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !goal.isEmpty else { throw RunnerError.emptyPrompt }
         var isDir: ObjCBool = false
         guard FileManager.default.fileExists(atPath: cwd, isDirectory: &isDir), isDir.boolValue else {
             throw RunnerError.badFolder(cwd)
         }
-        guard let claude = ClaudeProcess.locateClaude(override: config.claudePathOverride) else {
-            throw RunnerError.claudeNotFound
-        }
-        var s = TaskSession(prompt: goal, cwd: cwd, status: .starting)
-        s.claudeSessionId = s.idString
+        let cli = try cliPath(for: engine)
+        var s = TaskSession(prompt: goal, cwd: cwd, status: .starting, engine: engine)
+        // Claude Code takes our id (--session-id); Codex reports its thread id once started.
+        s.claudeSessionId = engine == .claude ? s.idString : nil
         store.upsert(s)
         store.noteProject(cwd)
         notify(s, step: "依頼: \(goal.prefix(50))")
         do {
-            try launch(s.id, claude: claude, resume: false, input: TaskPrompt.build(goal: goal))
+            try launch(s.id, cli: cli, resume: false, input: TaskPrompt.build(goal: goal))
         } catch {
             finish(s.id, status: .failed, detail: error.localizedDescription)
             throw error
@@ -120,9 +136,8 @@ final class LocalTaskRunner {
     func resume(id: UUID, message: String) throws {
         guard var s = store.session(id: id) else { throw RunnerError.notFound }
         guard processes[id] == nil else { throw RunnerError.alreadyRunning }
-        guard let claude = ClaudeProcess.locateClaude(override: config.claudePathOverride) else {
-            throw RunnerError.claudeNotFound
-        }
+        let cli = try cliPath(for: s.engineKind)
+        if s.engineKind == .codex && s.claudeSessionId == nil { throw RunnerError.noSessionToResume }
         let text = message.trimmingCharacters(in: .whitespacesAndNewlines)
         s.status = .starting
         s.verifyRounds = 0
@@ -132,7 +147,7 @@ final class LocalTaskRunner {
         store.upsert(s)
         notify(s, step: "↩︎ \(text.isEmpty ? "再開" : String(text.prefix(50)))")
         do {
-            try launch(id, claude: claude, resume: true,
+            try launch(id, cli: cli, resume: true,
                        input: TaskPrompt.followUp(text.isEmpty ? "対応しました。作業を再開してください。" : text))
         } catch {
             finish(id, status: .failed, detail: error.localizedDescription)
@@ -156,19 +171,26 @@ final class LocalTaskRunner {
 
     // MARK: - Launch
 
-    private func launch(_ id: UUID, claude: String, resume: Bool, input: String) throws {
+    private func launch(_ id: UUID, cli: String, resume: Bool, input: String) throws {
         guard var s = store.session(id: id) else { throw RunnerError.notFound }
-        let settingsURL = try writeRunnerSettings()
         let path = ClaudeProcess.loginShellPATH()
-        let args = ClaudeProcess.arguments(sessionId: s.claudeSessionId ?? s.idString,
+        let args: [String]
+        switch s.engineKind {
+        case .claude:
+            let settingsURL = try writeRunnerSettings()
+            args = ClaudeProcess.arguments(sessionId: s.claudeSessionId ?? s.idString,
                                            resume: resume,
                                            settingsPath: settingsURL.path,
                                            permissionMode: config.permissionMode,
                                            chrome: config.useChrome)
+        case .codex:
+            // Hooks come from ~/.codex/hooks.json (CodexSetup), trusted once by the user.
+            args = ClaudeProcess.codexArguments(resumeThread: resume ? s.claudeSessionId : nil, cwd: s.cwd)
+        }
         let env = ClaudeProcess.environment(base: ProcessInfo.processInfo.environment,
                                             taskId: s.idString, path: path)
         let proc = ClaudeProcess(
-            executable: claude, arguments: args, cwd: s.cwd, environment: env,
+            executable: cli, arguments: args, cwd: s.cwd, environment: env,
             logURL: logURL(for: id),
             onLine: { [weak self] line in
                 guard let event = Self.parseStreamLine(line) else { return }
@@ -227,7 +249,7 @@ final class LocalTaskRunner {
     // MARK: - stream-json (stdout)
 
     struct StreamEvent: Sendable {
-        enum Kind: Sendable { case result, assistantText }
+        enum Kind: Sendable { case result, assistantText, sessionId }
         let kind: Kind
         let text: String?
         let isError: Bool
@@ -238,6 +260,19 @@ final class LocalTaskRunner {
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let type = json["type"] as? String else { return nil }
         switch type {
+        // Codex (`codex exec --json`)
+        case "thread.started":
+            return StreamEvent(kind: .sessionId, text: json["thread_id"] as? String, isError: false)
+        case "item.completed":
+            guard let item = json["item"] as? [String: Any], item["type"] as? String == "agent_message",
+                  let text = item["text"] as? String, !text.isEmpty else { return nil }
+            return StreamEvent(kind: .assistantText, text: text, isError: false)
+        case "turn.failed":
+            let err = (json["error"] as? [String: Any])?["message"] as? String
+            return StreamEvent(kind: .result, text: err ?? "Codex のターンが失敗しました", isError: true)
+        case "error":
+            return StreamEvent(kind: .result, text: json["message"] as? String ?? "Codex エラー", isError: true)
+        // Claude Code (`claude -p --output-format stream-json`)
         case "result":
             return StreamEvent(kind: .result, text: json["result"] as? String,
                                isError: json["is_error"] as? Bool ?? (json["subtype"] as? String != "success"))
@@ -254,12 +289,17 @@ final class LocalTaskRunner {
 
     private func handleStream(_ id: UUID, _ event: StreamEvent) {
         switch event.kind {
+        case .sessionId:
+            if var s = store.session(id: id), s.claudeSessionId == nil, let thread = event.text {
+                s.claudeSessionId = thread
+                store.upsert(s)
+            }
         case .result:
             results[id] = (event.text, event.isError)
         case .assistantText:
-            if results[id] == nil || results[id]?.isError == false {
-                results[id] = (event.text, false)
-            }
+            // Latest message wins: a later answer supersedes a transient error (Codex reconnects),
+            // and Claude Code's final `result` event still arrives after its last message.
+            results[id] = (event.text, false)
         }
     }
 
@@ -296,7 +336,7 @@ final class LocalTaskRunner {
                     finish(id, status: .completed, detail: TaskPrompt.summary(result?.text), verified: false)
                 }
             } else {
-                let why = TaskPrompt.summary(result?.text) ?? "Claude Code が終了コード \(code) で停止しました。"
+                let why = TaskPrompt.summary(result?.text) ?? "\(s.engineKind.label) が終了コード \(code) で停止しました。"
                 finish(id, status: .failed, detail: "\(why)\nログ: \(logURL(for: id).path)")
             }
         }
@@ -346,7 +386,10 @@ final class LocalTaskRunner {
 
         switch event {
         case "SessionStart":
-            update(&s, .planning, step: "Claude Code 起動")
+            if s.claudeSessionId == nil, let sid = payload["session_id"] as? String, !sid.isEmpty {
+                s.claudeSessionId = sid
+            }
+            update(&s, .planning, step: "\(s.engineKind.label) 起動")
 
         case "UserPromptSubmit":
             update(&s, .planning, step: nil)
@@ -354,8 +397,9 @@ final class LocalTaskRunner {
         case "PreToolUse":
             if let verdict = SafetyGuard.check(tool: tool, input: input) {
                 update(&s, .waitingApproval, step: "⚠ 承認待ち: \(verdict.reason)")
-                let req = RunnerApprovalRequest(tool: tool, command: Self.describe(tool: tool, input: input),
+                var req = RunnerApprovalRequest(tool: tool, command: Self.describe(tool: tool, input: input),
                                                 guardReason: verdict.reason)
+                req.allowsAlways = false
                 askApproval(id, req) { decision in
                     switch decision {
                     case .allow, .always:
@@ -375,11 +419,14 @@ final class LocalTaskRunner {
         case "PermissionRequest":
             let verdict = SafetyGuard.check(tool: tool, input: input)
             update(&s, .waitingApproval, step: "承認待ち: \(Self.stepLabel(tool: tool, input: input))")
-            let req = RunnerApprovalRequest(tool: tool, command: Self.describe(tool: tool, input: input),
+            let canAlways = verdict == nil && s.engineKind == .claude
+            var req = RunnerApprovalRequest(tool: tool, command: Self.describe(tool: tool, input: input),
                                             guardReason: verdict?.reason)
+            req.allowsAlways = canAlways
             askApproval(id, req) { decision in
-                // "always" lets Claude Code store the rule (permission_suggestions) — never for guarded ops.
-                let d: ApprovalDecision = (decision == .always && verdict != nil) ? .allow : decision
+                // "always" lets Claude Code store the rule (permission_suggestions) — never for guarded ops,
+                // and Codex PermissionRequest hooks fail closed on updatedPermissions.
+                let d: ApprovalDecision = (decision == .always && !canAlways) ? .allow : decision
                 reply(#"{"permissionDecision":"\#(d.rawValue)"}"#)
             }
             return
@@ -401,7 +448,7 @@ final class LocalTaskRunner {
 
         case "StopFailure":
             let error = (payload["error"] as? String) ?? (payload["message"] as? String) ?? "API エラー"
-            outcomes[id] = .failed("Claude Code が停止しました: \(error)")
+            outcomes[id] = .failed("\(s.engineKind.label) が停止しました: \(error)")
 
         case "SubagentStart":
             notify(s, step: "+ サブエージェント")

@@ -15,6 +15,14 @@ final class TaskRunnerBridge: ObservableObject, TaskRunnerDelegate {
     @Published var replyTarget: UUID? = nil
     /// Last error from start/resume, shown in the composer.
     @Published var composerError: String? = nil
+    /// Agent used for new tasks (composer switch), persisted.
+    @Published var engine: TaskEngine = .claude {
+        didSet { UserDefaults.standard.set(engine.rawValue, forKey: "runnerEngine") }
+    }
+    /// Codex needs Coucou's hook registered once: the composer asks before touching ~/.codex.
+    @Published var codexSetupPrompt: Bool = false
+    @Published var codexBusy: Bool = false
+    private var pendingCodexJob: (prompt: String, cwd: String)? = nil
     /// Bumped on every runner update so views listing sessions refresh.
     @Published private(set) var revision: Int = 0
 
@@ -28,8 +36,10 @@ final class TaskRunnerBridge: ObservableObject, TaskRunnerDelegate {
         if ud.object(forKey: "runnerUseChrome") != nil { config.useChrome = ud.bool(forKey: "runnerUseChrome") }
         if ud.object(forKey: "runnerMaxVerifyRounds") != nil { config.maxVerifyRounds = max(0, ud.integer(forKey: "runnerMaxVerifyRounds")) }
         config.claudePathOverride = ud.string(forKey: "claudeCLIPath")
+        config.codexPathOverride = ud.string(forKey: "codexCLIPath")
         runner = LocalTaskRunner(store: TaskStore(directory: HookServer.supportDir), config: config)
         runner.delegate = self
+        if let raw = ud.string(forKey: "runnerEngine"), let e = TaskEngine(rawValue: raw) { engine = e }
     }
 
     /// Called once at launch: brings back tasks that are still waiting for the user.
@@ -54,14 +64,93 @@ final class TaskRunnerBridge: ObservableObject, TaskRunnerDelegate {
 
     func start(prompt: String, cwd: String) {
         composerError = nil
+        if engine == .codex {
+            startCodex(prompt: prompt, cwd: cwd)
+        } else {
+            launch(prompt: prompt, cwd: cwd, engine: .claude)
+        }
+    }
+
+    private func launch(prompt: String, cwd: String, engine: TaskEngine) {
         do {
-            let s = try runner.start(prompt: prompt, cwd: cwd)
+            let s = try runner.start(prompt: prompt, cwd: cwd, engine: engine)
             AppState.shared.focusId = s.agentTaskId
             AppState.shared.view = .overview
         } catch {
             composerError = error.localizedDescription
             SoundEngine.shared.play("error")
         }
+    }
+
+    // MARK: - Codex hook setup
+
+    /// Codex runs only hooks the user trusted: check ours first (off the main thread, it spawns
+    /// `codex app-server`), and ask before registering them.
+    private func startCodex(prompt: String, cwd: String) {
+        let codex: String
+        do { codex = try runner.cliPath(for: .codex) } catch {
+            composerError = error.localizedDescription
+            SoundEngine.shared.play("error")
+            return
+        }
+        let hook = runner.config.hookCommand
+        codexBusy = true
+        Task.detached {
+            let status = CodexSetup.status(codex: codex, cwd: cwd, hookCommand: hook,
+                                           path: ClaudeProcess.loginShellPATH())
+            await MainActor.run {
+                self.codexBusy = false
+                switch status {
+                case .ready:
+                    self.launch(prompt: prompt, cwd: cwd, engine: .codex)
+                case .notInstalled, .untrusted:
+                    self.pendingCodexJob = (prompt, cwd)
+                    self.codexSetupPrompt = true
+                case .unavailable(let message):
+                    self.composerError = "Codex を確認できません: \(message)"
+                }
+            }
+        }
+    }
+
+    /// "登録して開始": adds the hook to ~/.codex/hooks.json (backup kept), trusts it, starts the job.
+    func confirmCodexSetup() {
+        guard let job = pendingCodexJob else { codexSetupPrompt = false; return }
+        let codex: String
+        do { codex = try runner.cliPath(for: .codex) } catch {
+            composerError = error.localizedDescription
+            return
+        }
+        let hook = runner.config.hookCommand
+        codexSetupPrompt = false
+        codexBusy = true
+        Task.detached {
+            let path = ClaudeProcess.loginShellPATH()
+            var failure: String? = nil
+            do {
+                try CodexSetup.installHooks(hookCommand: hook)
+                try CodexSetup.trustOurHooks(codex: codex, cwd: job.cwd, hookCommand: hook, path: path)
+            } catch {
+                failure = error.localizedDescription
+            }
+            let status = CodexSetup.status(codex: codex, cwd: job.cwd, hookCommand: hook, path: path)
+            await MainActor.run {
+                self.codexBusy = false
+                self.pendingCodexJob = nil
+                if let failure {
+                    self.composerError = "Codex の Hook 登録に失敗しました: \(failure)"
+                } else if status != .ready {
+                    self.composerError = "Codex の Hook を有効にできませんでした（codex を最新にしてください）"
+                } else {
+                    self.launch(prompt: job.prompt, cwd: job.cwd, engine: .codex)
+                }
+            }
+        }
+    }
+
+    func cancelCodexSetup() {
+        pendingCodexJob = nil
+        codexSetupPrompt = false
     }
 
     func reply(to id: UUID, message: String) {
@@ -126,7 +215,8 @@ final class TaskRunnerBridge: ObservableObject, TaskRunnerDelegate {
                                 tool: request.tool,
                                 command: request.command,
                                 taskId: session.agentTaskId,
-                                guardReason: request.guardReason)
+                                guardReason: request.guardReason,
+                                allowsAlways: request.allowsAlways)
         HookServer.shared.presentRunnerApproval(info) { decision in
             respond(ApprovalDecision(rawValue: decision) ?? .deny)
         }

@@ -39,6 +39,8 @@ struct ApprovalInfo: Sendable {
     var taskId: String? = nil
     /// Set when SafetyGuard forced this approval (git push, deploy, rm -rf…): no "Always".
     var guardReason: String? = nil
+    /// False for Codex tasks (no persistent permission rules through hooks).
+    var allowsAlways: Bool = true
 }
 
 // MARK: - Pill badge (shown on pill edge when non-focused task has an alert)

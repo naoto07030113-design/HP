@@ -60,7 +60,8 @@ struct OverviewView: View {
                                     .lineLimit(1)
                                     .truncationMode(.tail)
                                     .layoutPriority(1)
-                                Text(agent.source == .claudeCode ? "Claude Code" : "n8n")
+                                Text(TaskRunnerBridge.shared.session(forAgentTask: agent.id)?.engineKind.label
+                                     ?? (agent.source == .claudeCode ? "Claude Code" : "n8n"))
                                     .font(.system(size: 11))
                                     .foregroundColor(Color(hex: "#8E939C"))
                                     .lineLimit(1)
@@ -224,7 +225,7 @@ struct ApprovalView: View {
                         PrimaryButton("今回許可") {
                             HookServer.shared.sendApprovalDecision("allow")
                         }
-                        if approval?.guardReason == nil {
+                        if approval?.guardReason == nil && approval?.allowsAlways != false {
                             SecondaryButton("常に許可") {
                                 HookServer.shared.sendApprovalDecision("always")
                             }
@@ -771,6 +772,12 @@ struct PromptView: View {
     @ObservedObject var state: AppState
     @State private var text: String = ""
     @FocusState private var focused: Bool
+    @AppStorage(ChatProvider.defaultsKey) private var providerRaw: String = ""
+
+    private var provider: ChatProvider {
+        ChatProvider(rawValue: providerRaw)
+            ?? ChatProvider.current(hasAnthropicKey: !(KeychainStore.shared.get("anthropic-api-key") ?? "").isEmpty)
+    }
 
     var body: some View {
         ZStack(alignment: .leading) {
@@ -815,6 +822,22 @@ struct PromptView: View {
                 }
 
                 HStack(spacing: 8) {
+                    // Claude (Anthropic API key) ⇄ GPT (Codex CLI, ChatGPT login). Switching starts a new thread.
+                    Button(action: {
+                        providerRaw = (provider == .claude ? ChatProvider.gpt : ChatProvider.claude).rawValue
+                        ClaudeService.shared.clearConversation()
+                    }) {
+                        Text(provider.label)
+                            .font(.system(size: 10.5, weight: .semibold))
+                            .foregroundColor(Color(hex: provider == .gpt ? "#9FE3C4" : "#C7C9FF"))
+                            .padding(.horizontal, 7).padding(.vertical, 3)
+                            .background(Color.white.opacity(0.08))
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .help(provider == .gpt ? "GPT（Codex・ChatGPT ログイン）で回答中。クリックで Claude に切替"
+                                           : "Claude（API キー）で回答中。クリックで GPT（Codex）に切替")
+
                     TextField(state.chatHistory.isEmpty ? "Ask me anything…" : "Continue…", text: $text)
                         .textFieldStyle(.plain)
                         .font(.system(size: 13))

@@ -32,7 +32,8 @@ enum TaskVerifier {
             return text.split(whereSeparator: \.isNewline)
                 .map { $0.trimmingCharacters(in: .whitespaces) }
                 .filter { !$0.isEmpty && !$0.hasPrefix("#") }
-                .map { VerificationStep(name: $0, command: $0) }
+                .enumerated()
+                .map { VerificationStep(name: "check\($0.offset + 1)", command: $0.element) }
         }
 
         var steps: [VerificationStep] = []

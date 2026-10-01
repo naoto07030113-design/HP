@@ -16,6 +16,29 @@ Anthropic API は使わない。ユーザーの `claude` CLI のログイン（C
 
 🌐 ボタンで Claude in Chrome（`--chrome`）の利用を切り替え（既定オフ。Chrome 拡張を入れている場合にオン）。
 
+## Codex（OpenAI）で仕事を頼む
+🔨 タブ左の切替で **Claude / Codex** を選ぶ。Codex は `codex exec --json` で裏で動かし、
+進捗・承認カード・Safety Guard・Finish Loop（自動検証と差し戻し）・返信での再開は Claude と同じように動く。
+
+- 認証は Codex CLI の **ChatGPT ログイン**（`codex login`）。API キーは使わず、子プロセスから `OPENAI_API_KEY` / `CODEX_API_KEY` を外す。
+  利用分は ChatGPT プランの Codex 利用枠から消費（枠を超えるとクレジット購入または待機）。
+- **初回だけ**「Codex に Coucou の Hook を登録します」と出るので「登録して開始」を押す。
+  `~/.codex/hooks.json` に Coucou の Hook を追記し（既存の Hook は残す・`hooks.json.bak-日時` を作成）、
+  Codex 自身の設定 API（app-server `config/batchWrite`）で **Coucou の Hook だけ** を信頼済みにする。
+  Coucou 外で使う普通の `codex` ではこの Hook は何もせず即終了する。
+- サンドボックスは workspace-write。ネット接続などサンドボックス外の実行は Codex が承認を求め、それが Coucou の承認カードに出る
+  （新規は `--approve-for-me`、再開は `approval_policy="on-request"` + `approvals_reviewer="auto_review"`。Coucou が答えない場合は Codex の自動レビューに回る）。
+- Codex の承認カードには「常に許可」を出さない（Hook から恒久ルールを作れないため）。
+- セッション ID は Codex が出す thread id を保存し、返信・再試行は `codex exec resume <thread>` で同じスレッドを続ける。
+
+## 💬 チャットで GPT を使う
+💬 タブの入力欄左の **Claude / GPT** ボタンで切替。GPT は Codex CLI（ChatGPT ログイン）経由で、読み取り専用サンドボックスで答える。
+API キー不要・ChatGPT プランの Codex 利用枠を消費。会話の続きは同じ Codex スレッドを再開する。
+初期値: Anthropic API キーがあれば Claude、なければ Codex が入っていれば GPT。
+
+## ピル（Resend / n8n / Vercel / GitHub など）
+初期状態ですべてオフ（このブランチの初回起動時に一度だけオフにする）。必要なものは Settings で再度オンにできる。
+
 ## 構成
 
 ```
@@ -89,6 +112,9 @@ Claude が終了しようとすると（Stop Hook、タイムアウト 3600 秒�
 | `runnerPermissionMode` | `acceptEdits` | `--permission-mode`（`default` にするとファイル編集も毎回承認） |
 | `runnerMaxVerifyRounds` | 3 | Finish Loop の最大差し戻し回数 |
 | `runnerUseChrome` | false | `--chrome` を付ける（🌐 ボタンと同じ） |
+| `runnerEngine` | `claude` | 🔨 タブの既定エンジン（`claude` / `codex`） |
+| `codexCLIPath` | 自動検出 | `codex` のパス |
+| `chatProvider` | 自動 | 💬 チャットの相手（`claude` / `gpt`） |
 
 ログ: `~/Library/Application Support/NotchBuddy/tasks/<task-id>.log`（stream-json と stderr）。
 
@@ -105,7 +131,12 @@ Runner コア（Foundation のみのファイル）を Swift 6.0（strict concur
 2. finish-loop: 1 回目の検証失敗 → Stop を block → Claude が修正 → 2 回目 OK → completed
 3. guard: `git push` を SafetyGuard が PreToolUse で止める → 拒否 → push せずに完了
 4. needs-human: NEEDS_HUMAN → waitingHuman → 返信で `--resume` → completed
-加えて SafetyGuard・マーカー解析・検証計画などの単体テスト 53 件。
+加えて SafetyGuard・マーカー解析・検証計画・Codex 連携などの単体テスト 67 件。
+
+Codex（codex-cli 0.159.3）は ChatGPT ログインができない環境のため、モデルだけをローカルのモック（Responses API 互換）に差し替え、
+実物の Codex CLI・Hook・`CodexSetup`・Runner で検証: Hook 登録と信頼（未登録 → ready）、Finish Loop の差し戻し → 完了、
+同じスレッドでの再開、`git push` を Safety Guard が拒否、サンドボックス外実行（ネット）の承認カード → 許可、
+`hooks.json` の重複除去、GPT チャットのスレッド継続。実際の GPT の応答品質は Mac 上で確認すること。
 macOS UI 部分（SwiftUI/AppKit）は GitHub Actions の macOS ビルドでコンパイル確認。実機での島 UI の目視確認は Mac で行うこと。
 
 ## 今後（MVP 外）

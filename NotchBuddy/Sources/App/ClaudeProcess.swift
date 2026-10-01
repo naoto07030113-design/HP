@@ -143,8 +143,9 @@ final class ClaudeProcess: @unchecked Sendable {
 
     static func environment(base: [String: String], taskId: String, path: String?) -> [String: String] {
         var env = base
-        // Subscription login only; and never look like a nested Claude Code session.
-        for key in ["ANTHROPIC_API_KEY", "CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT", "CLAUDE_CODE_SESSION_ID"] {
+        // Subscription / ChatGPT login only (never API billing); never look like a nested agent session.
+        for key in ["ANTHROPIC_API_KEY", "OPENAI_API_KEY", "CODEX_API_KEY",
+                    "CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT", "CLAUDE_CODE_SESSION_ID"] {
             env.removeValue(forKey: key)
         }
         if let path, !path.isEmpty { env["PATH"] = path }
@@ -156,26 +157,48 @@ final class ClaudeProcess: @unchecked Sendable {
 
     /// `claude` path: explicit override, the usual install locations, then the login shell's PATH.
     static func locateClaude(override: String? = nil) -> String? {
+        locate("claude", override: override, extra: ["~/.claude/local/claude"])
+    }
+
+    /// `codex` path (npm, Homebrew or the Codex app's bundled CLI).
+    static func locateCodex(override: String? = nil) -> String? {
+        locate("codex", override: override, extra: ["/Applications/Codex.app/Contents/Resources/codex"])
+    }
+
+    static func locate(_ binary: String, override: String?, extra: [String] = []) -> String? {
         let fm = FileManager.default
         if let override, !override.isEmpty, fm.isExecutableFile(atPath: override) { return override }
         let home = fm.homeDirectoryForCurrentUser.path
-        let candidates = [
-            "\(home)/.claude/local/claude",
-            "\(home)/.local/bin/claude",
-            "/opt/homebrew/bin/claude",
-            "/usr/local/bin/claude",
-            "\(home)/.npm-global/bin/claude",
-            "\(home)/.bun/bin/claude",
-            "\(home)/.volta/bin/claude",
+        let candidates = extra.map { $0.replacingOccurrences(of: "~", with: home) } + [
+            "\(home)/.local/bin/\(binary)",
+            "/opt/homebrew/bin/\(binary)",
+            "/usr/local/bin/\(binary)",
+            "\(home)/.npm-global/bin/\(binary)",
+            "\(home)/.bun/bin/\(binary)",
+            "\(home)/.volta/bin/\(binary)",
         ]
         if let hit = candidates.first(where: { fm.isExecutableFile(atPath: $0) }) { return hit }
         if let path = loginShellPATH() {
             for dir in path.split(separator: ":") {
-                let p = "\(dir)/claude"
+                let p = "\(dir)/\(binary)"
                 if fm.isExecutableFile(atPath: p) { return p }
             }
         }
         return nil
+    }
+
+    /// `codex exec` command line. Approvals go to the PermissionRequest hook (Coucou) first;
+    /// the sandbox stays workspace-write. The prompt is read from stdin (`-`).
+    /// `resume` has no `--approve-for-me`; the same policy is set through config overrides.
+    static func codexArguments(resumeThread: String?, cwd: String) -> [String] {
+        if let thread = resumeThread {
+            return ["exec", "resume", thread, "--json", "--skip-git-repo-check",
+                    "-c", "approval_policy=\"on-request\"",
+                    "-c", "approvals_reviewer=\"auto_review\"",
+                    "-c", "sandbox_mode=\"workspace-write\"",
+                    "-"]
+        }
+        return ["exec", "--json", "--skip-git-repo-check", "--approve-for-me", "-C", cwd, "-"]
     }
 
     nonisolated(unsafe) private static var cachedPATH: String?

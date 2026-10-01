@@ -135,7 +135,8 @@ final class AppState: ObservableObject {
     }
 
     // Active integration pills (VS Code excluded — always on). Max 4.
-    @Published var activeIntegrations: Set<String> = ["integration_resend", "integration_n8n", "integration_vercel", "integration_github"] {
+    // Deskmate: none by default — the pill row is for Claude Code / Codex tasks; enable in Settings.
+    @Published var activeIntegrations: Set<String> = [] {
         didSet {
             if let data = try? JSONEncoder().encode(Array(activeIntegrations)) {
                 UserDefaults.standard.set(data, forKey: "activeIntegrations")
@@ -202,6 +203,11 @@ final class AppState: ObservableObject {
            let a = try? JSONDecoder().decode([String].self, from: d) { n8nWorkflowFilter = Set(a) }
         if let d = ud.data(forKey: "activeIntegrations"),
            let a = try? JSONDecoder().decode([String].self, from: d) { activeIntegrations = Set(a) }
+        // One-time: installs that ran the original defaults (Resend, n8n, Vercel, GitHub) start clean.
+        if !ud.bool(forKey: "deskmateIntegrationsOffV1") {
+            activeIntegrations = []
+            ud.set(true, forKey: "deskmateIntegrationsOffV1")
+        }
 
         // Sync SoundEngine volume on launch
         SoundEngine.shared.volume = Float(soundVolume)

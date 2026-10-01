@@ -144,6 +144,8 @@ func run() async -> Int32 {
     let hookCmd = "python3 \"\(root.appendingPathComponent("nb-hook.py").path)\" runner"
     var config = LocalTaskRunner.Config(supportDir: supportDir, hookCommand: hookCmd)
     config.claudePathOverride = ProcessInfo.processInfo.environment["CLAUDE_BIN"]
+    config.codexPathOverride = ProcessInfo.processInfo.environment["CODEX_BIN"]
+    let engine: TaskEngine = scenario.hasPrefix("codex") ? .codex : .claude
     config.hookWatchdog = 30
     let runner = LocalTaskRunner(store: TaskStore(directory: supportDir), config: config)
     let rec = Recorder()
@@ -196,6 +198,17 @@ func run() async -> Int32 {
         grep -q 'hello world' hello.txt
         """)
         prompt = "hello.txt のタイポを直してください。"
+    case "codex":
+        // Codex path: CodexSetup installs + trusts the hook, then the same finish loop / guard / approvals.
+        // The model behaviour comes from whatever serves CODEX_HOME's provider (a mock in CI-less tests).
+        project = makeProject("codex")
+        let counter = root.appendingPathComponent("codex.count").path
+        try? FileManager.default.removeItem(atPath: counter)
+        write(project.appendingPathComponent("hello.txt"), "helo world\n")
+        write(project.appendingPathComponent(".coucou/verify"), """
+        n=$(cat \(counter) 2>/dev/null || echo 0); echo $((n+1)) > \(counter); if [ "$n" -lt 1 ]; then echo "check failed (first run)"; exit 1; fi
+        """)
+        prompt = "hello.txt のタイポを直してください。"
     case "guard":
         project = makeProject("guard")
         write(project.appendingPathComponent("README.md"), "demo\n")
@@ -210,9 +223,19 @@ func run() async -> Int32 {
     }
 
     log("scenario=\(scenario) project=\(project.path)")
+    if engine == .codex {
+        let codex = try! runner.cliPath(for: .codex)
+        let path = ProcessInfo.processInfo.environment["PATH"]
+        log("codex setup before: \(CodexSetup.status(codex: codex, cwd: project.path, hookCommand: hookCmd, path: path))")
+        do {
+            let backup = try CodexSetup.installHooks(hookCommand: hookCmd)
+            try CodexSetup.trustOurHooks(codex: codex, cwd: project.path, hookCommand: hookCmd, path: path)
+            log("codex setup after: \(CodexSetup.status(codex: codex, cwd: project.path, hookCommand: hookCmd, path: path)) backup=\(backup?.lastPathComponent ?? "-")")
+        } catch { log("codex setup failed: \(error.localizedDescription)"); return 1 }
+    }
     let session: TaskSession
     do {
-        session = try runner.start(prompt: prompt, cwd: project.path)
+        session = try runner.start(prompt: prompt, cwd: project.path, engine: engine)
     } catch {
         log("start failed: \(error.localizedDescription)"); return 1
     }
@@ -227,6 +250,12 @@ func run() async -> Int32 {
             log("waitingHuman detail: \(s.detail ?? "-")  → resuming with a reply")
             resumed = true
             try? runner.resume(id: s.id, message: "この作業はキャンセルします。NOTE.md に「ログイン待ちで中止」と1行だけ書いて完了してください。")
+            continue
+        }
+        if scenario == "codex" && s.status == .completed && !resumed {
+            log("completed once (thread \(s.claudeSessionId ?? "-")) → resuming the same Codex thread")
+            resumed = true
+            do { try runner.resume(id: s.id, message: "もう一度確認して") } catch { log("resume failed: \(error)"); return 1 }
             continue
         }
         if s.status.isTerminal || s.status == .waitingHuman {

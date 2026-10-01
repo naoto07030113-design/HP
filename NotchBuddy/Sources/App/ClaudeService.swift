@@ -117,7 +117,11 @@ final class ClaudeService {
 
     func clearConversation() {
         conversationMessages = []
+        codexThread = nil
     }
+
+    // GPT chat through the user's Codex CLI (ChatGPT login, no API key)
+    private var codexThread: String? = nil
 
     private let systemPrompt = """
     You are Mochi, Louis's personal AI assistant embedded in the notch of his Mac. \
@@ -133,6 +137,10 @@ final class ClaudeService {
     // MARK: - Chat (multi-turn, natural text + web search)
 
     func chat(query: String, context: PromptContext?, state: AppState) async {
+        if ChatProvider.current(hasAnthropicKey: !(apiKey ?? "").isEmpty) == .gpt {
+            await chatViaCodex(query: query, context: context, state: state)
+            return
+        }
         guard let key = apiKey, !key.isEmpty else {
             await showError("API key missing. Open settings.", state: state)
             return
@@ -173,6 +181,38 @@ final class ClaudeService {
         } catch {
             conversationMessages.removeLast()
             await showError("Network error: \(error.localizedDescription)", state: state)
+        }
+    }
+
+    private func chatViaCodex(query: String, context: PromptContext?, state: AppState) async {
+        guard let codex = ClaudeProcess.locateCodex(override: UserDefaults.standard.string(forKey: "codexCLIPath")) else {
+            await showError("Codex CLI が見つかりません。GPT で話すには codex をインストールしてください。", state: state)
+            return
+        }
+        var contextText: String? = nil
+        switch context {
+        case .window(let app, let title, let url):
+            contextText = "App: \(app), Window: \(title)" + (url.map { ", URL: \($0)" } ?? "")
+        case .file(let name, let fileURL):
+            contextText = "File: \(name)" + (fileURL.map { "（パス: \($0.path)）" } ?? "")
+        case nil:
+            break
+        }
+        let thread = codexThread
+        let workdir = HookServer.supportDir.appendingPathComponent("chat")
+        let result: Result<CodexChat.Reply, Error> = await Task.detached {
+            Result { try CodexChat.send(message: query, context: contextText, thread: thread,
+                                        codex: codex, workdir: workdir) }
+        }.value
+        switch result {
+        case .success(let reply):
+            codexThread = reply.thread
+            state.chatHistory.append(ChatMessage(role: .assistant, content: reply.text))
+            state.stateOverride = nil
+            state.view = .prompt
+            NotificationCenter.default.post(name: .triggerEmote, object: BotEmote.happy)
+        case .failure(let error):
+            await showError(error.localizedDescription, state: state)
         }
     }
 
