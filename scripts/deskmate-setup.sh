@@ -73,6 +73,23 @@ ditto "$BUILT" "$APP_DIR/Coucou.app" || die "アプリのコピーに失敗し�
 open "$APP_DIR/Coucou.app" || die "起動に失敗しました。"
 ok "起動しました（$APP_DIR/Coucou.app）"
 
+# Mac を再起動しても Mochi が戻るよう、ログイン時に自動で起動する（LaunchAgent。署名なしのビルドでも確実）
+AGENT="$HOME/Library/LaunchAgents/com.ito.deskmate.coucou.plist"
+mkdir -p "$HOME/Library/LaunchAgents"
+cat > "$AGENT" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.ito.deskmate.coucou</string>
+  <key>ProgramArguments</key>
+  <array><string>/usr/bin/open</string><string>$APP_DIR/Coucou.app</string></array>
+  <key>RunAtLoad</key><true/>
+</dict>
+</plist>
+PLIST
+plutil -lint "$AGENT" >/dev/null 2>&1 && ok "ログイン時に自動で起動するよう設定しました" || warn "自動起動の設定に失敗しました"
+
 # ---------------------------------------------------------------- 5. Claude Code
 say "5/6 Claude Code（claude）"
 if ! command -v claude >/dev/null 2>&1; then
