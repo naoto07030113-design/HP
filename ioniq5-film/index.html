@@ -1,0 +1,715 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>IONIQ 5 — Motion Film</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300&family=Noto+Sans+JP:wght@300&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#050506;--acc:#d6ebff}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#000;color:#fff;overflow:hidden;
+  font-family:Inter,"Helvetica Neue","Hiragino Sans","Noto Sans JP",system-ui,sans-serif}
+#app{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:10px}
+#stage{position:relative;height:min(calc(100vh - 84px),calc((100vw - 20px)*16/9));aspect-ratio:9/16;
+  background:var(--bg);overflow:hidden;container-type:size}
+svg{width:100%;height:100%;display:block}
+#sub{position:absolute;left:0;right:0;bottom:6.5%;text-align:center;font-weight:300;font-size:3.4cqw;
+  letter-spacing:.12em;color:rgba(255,255,255,.72);opacity:0;transition:opacity .25s;pointer-events:none}
+.ln{fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tq .ln{vector-effect:non-scaling-stroke;stroke-width:1.8}
+#bar{display:flex;align-items:center;gap:12px;width:min(100%,520px);font-size:12px;color:#9aa0a6;letter-spacing:.08em}
+#bar button,#bar label{background:none;border:1px solid #333;color:#d8dde2;border-radius:3px;padding:6px 10px;
+  font:inherit;cursor:pointer;white-space:nowrap}
+#bar button.on{border-color:#d6ebff;color:#d6ebff}
+#bar input[type=range]{flex:1;accent-color:#d6ebff}
+#bar input[type=file]{display:none}
+#time{width:68px;text-align:right;font-variant-numeric:tabular-nums}
+body.capture #bar{display:none}
+body.capture #app{padding:0;gap:0}
+body.capture #stage{height:100vh}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="stage">
+    <svg id="svg" viewBox="0 0 1080 1920" preserveAspectRatio="xMidYMid meet">
+      <defs id="defs">
+        <pattern id="gp1" width="60" height="60" patternUnits="userSpaceOnUse"><path d="M60 0H0V60" fill="none" stroke="#fff" stroke-width="1"/></pattern>
+        <pattern id="gp2" width="240" height="240" patternUnits="userSpaceOnUse"><path d="M240 0H0V240" fill="none" stroke="#fff" stroke-width="1.4"/></pattern>
+        <radialGradient id="gfade" cx=".5" cy=".5" r=".72"><stop offset=".25" stop-color="#fff"/><stop offset="1" stop-color="#000"/></radialGradient>
+        <mask id="gmask"><rect width="1080" height="1920" fill="url(#gfade)"/></mask>
+        <filter id="glow" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="7"/></filter>
+        <filter id="glowS" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="3"/></filter>
+        <linearGradient id="bodyfill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#202226"/><stop offset="1" stop-color="#0c0c0e"/></linearGradient>
+        <linearGradient id="groundg" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".32"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+        <clipPath id="revealClip"><rect id="revealRect" x="1200" y="-600" width="1400" height="900"/></clipPath>
+      </defs>
+      <rect width="1080" height="1920" fill="#050506"/>
+      <g mask="url(#gmask)">
+        <rect id="grid1" width="1080" height="1920" fill="url(#gp1)" opacity="0"/>
+        <rect id="grid2" width="1080" height="1920" fill="url(#gp2)" opacity="0"/>
+      </g>
+      <g id="streaks"></g>
+      <line id="ground" x1="0" x2="1080" y1="1130" y2="1130" stroke="url(#groundg)" stroke-width="1.5" opacity="0"/>
+      <g id="front"></g>
+      <g id="side"></g>
+      <g id="tq" class="tq"></g>
+      <g id="hud"></g>
+      <g id="texts"></g>
+    </svg>
+    <div id="sub"></div>
+  </div>
+  <div id="bar">
+    <button id="bPlay">▶ PLAY</button>
+    <input id="seek" type="range" min="0" max="2000" value="0">
+    <span id="time">0.00 / 20.00</span>
+    <button id="bSnd" class="on" title="BGM + SE (WebAudio)">SOUND</button>
+    <button id="bSub" title="ナレーション字幕">字幕</button>
+    <button id="bTts" title="ブラウザ内蔵の日本語音声で仮ナレーション">仮音声</button>
+    <label title="Geminiで作成したナレーション音声を同期再生">NARRATION<input id="narrFile" type="file" accept="audio/*"></label>
+  </div>
+</div>
+
+<script>
+(async () => {
+'use strict';
+try { await Promise.race([document.fonts.load('200 100px Inter'), new Promise(r => setTimeout(r, 2500))]); } catch (e) {}
+const NS = 'http://www.w3.org/2000/svg';
+const DUR = 20;
+const ACC = '#d6ebff';
+const FONT = 'Inter,"Helvetica Neue","Hiragino Sans","Noto Sans JP",Arial,sans-serif';
+const $ = s => document.querySelector(s);
+const el = (p, tag, a = {}) => { const e = document.createElementNS(NS, tag); for (const k in a) e.setAttribute(k, a[k]); if (p) p.appendChild(e); return e; };
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const E = {
+  out3: x => 1 - Math.pow(1 - x, 3),
+  outExpo: x => x >= 1 ? 1 : 1 - Math.pow(2, -10 * x),
+  io3: x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2,
+  ioSine: x => -(Math.cos(Math.PI * x) - 1) / 2,
+  smooth: x => x * x * (3 - 2 * x)
+};
+// keyframe interpolation (smooth between keys)
+const kf = (t, p) => {
+  if (t <= p[0][0]) return p[0][1];
+  for (let i = 1; i < p.length; i++) if (t <= p[i][0]) {
+    const a = p[i - 1], b = p[i]; return a[1] + (b[1] - a[1]) * E.ioSine((t - a[0]) / (b[0] - a[0]));
+  }
+  return p[p.length - 1][1];
+};
+const rng = (s => () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296)(7);
+
+const svg = $('#svg'), defs = $('#defs');
+const layer = {
+  grid1: $('#grid1'), grid2: $('#grid2'), streaks: $('#streaks'), ground: $('#ground'),
+  front: $('#front'), side: $('#side'), tq: $('#tq'), hud: $('#hud'), texts: $('#texts')
+};
+const gp1 = $('#gp1'), gp2 = $('#gp2'), revealRect = $('#revealRect');
+
+/* ------------------------------------------------------------------ TEXT */
+let clipN = 0;
+function makeText(str, o) {
+  const size = o.size, weight = o.weight || 200, track = (o.track ?? .12) * size;
+  const g = el(o.parent || layer.texts, 'g');
+  const probe = el(svg, 'text', { visibility: 'hidden', 'font-size': size, 'font-weight': weight, 'font-family': FONT });
+  const L = []; let x = 0;
+  for (const ch of str) {
+    probe.textContent = ch === ' ' ? ' ' : ch;
+    const w = probe.getComputedTextLength();
+    L.push({ ch, x, w }); x += w + track;
+  }
+  svg.removeChild(probe);
+  const total = x - track;
+  const off = o.anchor === 'start' ? 0 : o.anchor === 'end' ? -total : -total / 2;
+  L.forEach(l => {
+    l.x += off;
+    if (l.ch === ' ') return;
+    const id = 'tc' + (clipN++);
+    const cp = el(defs, 'clipPath', { id });
+    l.r = el(cp, 'rect', { y: -size * 1.05, height: size * 1.45, x: l.x, width: 0 });
+    const lg = el(g, 'g', { 'clip-path': `url(#${id})` });
+    l.t = el(lg, 'text', { y: 0, x: l.x, 'font-size': size, 'font-weight': weight, 'font-family': FONT,
+      fill: o.fill || '#fff', 'text-rendering': 'geometricPrecision' });
+    l.t.textContent = l.ch;
+  });
+  const obj = {
+    g, width: total, fit: o.maxW ? Math.min(1, o.maxW / total) : 1,
+    place(cx, cy, s = 1) { g.setAttribute('transform', `translate(${cx.toFixed(2)} ${cy.toFixed(2)}) scale(${(s * obj.fit).toFixed(4)})`); },
+    update(inP, outP = 0) {
+      if (inP <= 0 || outP >= 1) { g.style.display = 'none'; return; }
+      g.style.display = '';
+      const n = L.length;
+      L.forEach((l, i) => {
+        if (!l.t) return;
+        const st = i / n * .55;
+        const r = E.out3(clamp((inP - st) / .45));
+        const e = E.out3(clamp((outP - st) / .45));
+        const w = l.w + 1;
+        l.r.setAttribute('x', (l.x + w * e).toFixed(2));
+        l.r.setAttribute('width', Math.max(0, w * (r - e)).toFixed(2));
+        l.t.setAttribute('x', (l.x + (-(1 - r) + e) * l.w * .3).toFixed(2));
+      });
+    }
+  };
+  obj.update(0);
+  return obj;
+}
+
+/* ---------------------------------------------------------- SHARED PIECES */
+function mirrorPath(s) {
+  let d = `M ${s[0][0]},${-s[0][1]}`;
+  for (let i = 1; i < s.length; i++) {
+    const q = s[i];
+    d += q.length === 4 ? ` Q ${q[0]},${-q[1]} ${q[2]},${-q[3]}` : ` L ${q[0]},${-q[1]}`;
+  }
+  for (let i = s.length - 1; i >= 1; i--) {
+    const q = s[i], pv = s[i - 1], px = pv[pv.length - 2], ph = pv[pv.length - 1];
+    d += q.length === 4 ? ` Q ${-q[0]},${-q[1]} ${-px},${-ph}` : ` L ${-px},${-ph}`;
+  }
+  return d + ' Z';
+}
+const drawP = (p, v) => {
+  const Ln = p.__L || (p.__L = p.getTotalLength());
+  p.style.strokeDasharray = `${Ln} ${Ln}`;
+  p.style.strokeDashoffset = (Ln * (1 - v)).toFixed(2);
+  p.style.display = v <= 0 ? 'none' : '';
+};
+function pixelSet(parent, list, size, color = ACC) {
+  const halo = el(parent, 'g', { filter: 'url(#glow)', opacity: 0 });
+  const core = el(parent, 'g');
+  const px = list.map(p => {
+    const a = { x: p.x - size / 2, y: p.y - size / 2, width: size, height: size, fill: color, opacity: 0 };
+    return { ...p, c: el(core, 'rect', { ...a, rx: 1 }), h: el(halo, 'rect', a) };
+  });
+  return {
+    px, halo, core,
+    set(i, v) { const q = px[i]; q.c.setAttribute('opacity', v.toFixed(3)); q.h.setAttribute('opacity', v.toFixed(3)); },
+    setAll(v) { px.forEach((_, i) => this.set(i, v)); },
+    setHalo(v) { halo.setAttribute('opacity', v.toFixed(3)); }
+  };
+}
+
+/* ------------------------------------------------------------ FRONT VIEW */
+const FRONT_R = [[0, 764], [230, 764], [300, 764, 325, 730], [392, 556], [398, 526, 430, 516], [440, 505],
+  [452, 495, 452, 460], [452, 250], [452, 150, 420, 140], [300, 125], [150, 110, 0, 110]];
+const F = (() => {
+  const root = el(layer.front, 'g');
+  const cp = el(defs, 'clipPath', { id: 'fclip' });
+  const cr = el(cp, 'rect', { x: -640, width: 1280, y: -430, height: 0 });
+  const sil = el(root, 'g', { 'clip-path': 'url(#fclip)' });
+  [-1, 1].forEach(sg => el(sil, 'rect', { x: sg > 0 ? 335 : -437, y: -175, width: 102, height: 175, rx: 12,
+    fill: '#0a0a0b', stroke: 'rgba(255,255,255,.22)', 'stroke-width': 1.5 }));
+  el(sil, 'path', { d: mirrorPath(FRONT_R), fill: 'url(#bodyfill)', stroke: 'rgba(255,255,255,.26)', 'stroke-width': 2 });
+  const det = el(sil, 'g', { opacity: 0 });
+  const dl = (d, extra = {}) => el(det, 'path', { d, class: 'ln', 'stroke-width': 1.6, ...extra });
+  dl('M -262,-742 L 262,-742 L 372,-560 L -372,-560 Z', { fill: '#08090b' });
+  dl('M -432,-516 L 432,-516');
+  dl('M -250,-318 L 250,-318 L 232,-296 L -232,-296 Z');
+  dl('M -310,-215 L 310,-215 L 270,-160 L -270,-160 Z');
+  dl('M 452,-590 L 492,-590 L 492,-548 L 452,-548'); dl('M -452,-590 L -492,-590 L -492,-548 L -452,-548');
+  dl('M -452,-300 L -410,-340'); dl('M 452,-300 L 410,-340');
+  // pixel headlights
+  const list = [];
+  for (let k = -11; k <= 11; k++) {
+    const rows = Math.abs(k) >= 6 ? [-1, 0, 1] : [0];
+    rows.forEach(r => list.push({ x: k * 34, y: -430 + r * 34, k: Math.abs(k), r: Math.abs(r) }));
+  }
+  const px = pixelSet(root, list, 24);
+  return { root, cr, det, px };
+})();
+
+/* --------------------------------------------------------------- SIDE CAR */
+const TOP = 'M 992,-58 L 1000,-100 Q 1006,-150 988,-182 Q 955,-214 870,-226 L 770,-244 L 600,-334 ' +
+  'Q 520,-347 400,-348 Q 280,-348 160,-340 L 150,-337 Q 70,-318 30,-255 Q 2,-215 2,-130 L 10,-60';
+const ARC = 'A 98 98 0 1 1';
+const BODY = TOP + ` L 76.7,-50 ${ARC} 263.3,-50 L 723.7,-50 ${ARC} 910.3,-50 L 975,-52 Z`;
+
+function mkWheel(parent, cx) {
+  const g = el(parent, 'g', { transform: `translate(${cx} -80)` });
+  el(g, 'circle', { r: 80, fill: '#09090a', stroke: '#fff', 'stroke-width': 2, 'stroke-opacity': .9 });
+  el(g, 'circle', { r: 56, fill: 'none', stroke: '#fff', 'stroke-width': 1.2, 'stroke-opacity': .5 });
+  const spin = el(g, 'g');
+  for (let i = 0; i < 14; i++) {
+    const a = i / 14 * Math.PI * 2;
+    el(spin, 'rect', { x: Math.cos(a) * 41 - 3.5, y: Math.sin(a) * 41 - 3.5, width: 7, height: 7, fill: '#fff', opacity: .75,
+      transform: `rotate(${a * 180 / Math.PI} ${Math.cos(a) * 41} ${Math.sin(a) * 41})` });
+  }
+  el(g, 'circle', { r: 11, fill: '#09090a', stroke: '#fff', 'stroke-width': 1.5, 'stroke-opacity': .8 });
+  return { g, spin };
+}
+
+function buildCar(parent, o = {}) {
+  const root = el(parent, 'g');
+  const clipG = el(root, 'g', o.reveal ? { 'clip-path': 'url(#revealClip)' } : {});
+  const wheelsG = el(clipG, 'g');
+  const wheels = [mkWheel(wheelsG, 170), mkWheel(wheelsG, 817)];
+  const fill = el(clipG, 'path', { d: BODY, fill: 'url(#bodyfill)' });
+  const glassFill = [];
+  const details = [];
+  const ln = (d, x, extra = {}) => { const p = el(clipG, 'path', { d, class: 'ln', ...extra }); details.push({ p, x }); return p; };
+  ['M 490,-326 L 594,-324 L 714,-238 L 490,-238 Z', 'M 290,-332 L 468,-328 L 468,-238 L 290,-238 Z',
+   'M 174,-328 L 282,-332 L 282,-238 L 112,-238 Z'].forEach((d, i) => {
+    const p = ln(d, [600, 380, 200][i], { 'stroke-width': 1.4, fill: '#0b0c0e' }); glassFill.push(p);
+  });
+  ln('M 284,-238 L 284,-70', 284); ln('M 480,-332 L 480,-72', 480); ln('M 712,-236 L 712,-62', 712);
+  ln('M 740,-176 L 270,-150', 500, { 'stroke-width': 1.6 });
+  ln('M 500,-216 L 534,-216', 517, { 'stroke-width': 2.4 }); ln('M 300,-216 L 334,-216', 317, { 'stroke-width': 2.4 });
+  ln('M 706,-250 L 722,-264 L 748,-264 L 742,-248 Z', 730, { 'stroke-width': 1.5 });
+  ln(`M 10,-60 L 76.7,-50 ${ARC} 263.3,-50`, 170);
+  ln('M 263.3,-50 L 723.7,-50', 500);
+  ln(`M 723.7,-50 ${ARC} 910.3,-50 L 975,-52 L 992,-58`, 817);
+  let pxF = null, pxR = null;
+  if (!o.noPx) {
+    pxF = pixelSet(clipG, [120, 135, 150, 165].map(h => ({ x: 990, y: -h })), 9);
+    pxR = pixelSet(clipG, [185, 200, 215, 230].map(h => ({ x: 9, y: -h })), 9);
+  }
+  const res = { root, clipG, wheels, wheelsG, fill, glassFill, details, pxF, pxR };
+  if (o.interior) {
+    const I = el(root, 'g');
+    const mk = (d, s, dur, extra = {}) => ({ p: el(I, 'path', { d, class: 'ln', 'stroke-width': 1.6, ...extra }), s, dur });
+    res.axis = el(I, 'path', { d: 'M 170,-80 L 817,-80', class: 'ln', 'stroke-width': 1.8 });
+    res.inner = [
+      mk('M 188,-318 Q 300,-330 400,-330 Q 530,-328 596,-306', 8.0, 1.0),
+      mk('M 478,-330 L 478,-80', 8.2, .8),
+      mk('M 724,-80 L 724,-170 Q 740,-206 790,-224', 8.3, .9),
+      mk('M 676,-228 L 700,-168 M 702,-186 L 728,-172', 8.6, .7),
+      mk('M 516,-114 C 500,-170 496,-210 508,-262', 8.5, .9),
+      mk('M 512,-112 L 612,-112 Q 640,-114 648,-132 M 560,-112 L 560,-80', 8.9, .7),
+      mk('M 500,-266 Q 500,-300 522,-300 Q 538,-298 536,-268 Z', 9.1, .5),
+      mk('M 266,-114 C 250,-170 246,-210 258,-250', 8.7, .9),
+      mk('M 262,-112 L 362,-112 Q 390,-114 398,-132 M 310,-112 L 310,-80', 9.1, .7),
+      mk('M 250,-254 Q 250,-286 270,-286 Q 286,-284 284,-256 Z', 9.3, .5)
+    ];
+    res.hubs = pixelSet(I, [{ x: 170, y: -80 }, { x: 817, y: -80 }], 12);
+    res.battery = mk('M 290,-76 L 705,-76 L 705,-53 L 290,-53 Z', 7.8, .9, { 'stroke-width': 1.8 });
+    let dv = ''; for (let k = 1; k < 10; k++) dv += `M ${290 + k * 41.5},-76 L ${290 + k * 41.5},-53 `;
+    res.cells = el(I, 'path', { d: dv, class: 'ln', 'stroke-width': 1.2, opacity: 0 });
+    res.cellFill = el(I, 'rect', { x: 290, y: -76, width: 415, height: 23, fill: ACC, opacity: 0 });
+    const E0 = 'M 497.5,-64.5 ';
+    const mkE = d => ({
+      base: el(I, 'path', { d, class: 'ln', stroke: ACC, 'stroke-width': 1.4 }),
+      glowG: el(I, 'g', { filter: 'url(#glowS)' }),
+    });
+    res.eR = mkE(E0 + 'L 270,-64.5 L 226,-80 L 170,-80');
+    res.eF = mkE(E0 + 'L 717,-64.5 L 761,-80 L 817,-80');
+    [res.eR, res.eF].forEach(e => { e.pulse = el(e.glowG, 'path', { d: e.base.getAttribute('d'), class: 'ln', stroke: '#fff', 'stroke-width': 4 }); });
+  }
+  if (o.reveal) {
+    res.outTop = el(root, 'path', { d: TOP, class: 'ln', 'stroke-width': 2.4 });
+    res.head = pixelSet(root, [{ x: 0, y: 0 }], 13);
+    res.dim = el(root, 'g', { opacity: 0 });
+    res.dimLine = el(res.dim, 'path', { d: 'M 0,86 L 1000,86 M 0,74 L 0,98 M 1000,74 L 1000,98', class: 'ln', 'stroke-width': 1.4, 'stroke-opacity': .7 });
+    res.dimTxt = el(res.dim, 'text', { x: 500, y: 136, 'text-anchor': 'middle', fill: '#fff', 'fill-opacity': .7, 'font-size': 24,
+      'font-weight': 300, 'font-family': FONT, 'letter-spacing': '6' });
+    res.dimTxt.textContent = '4,635 mm';
+  }
+  return res;
+}
+
+const S = buildCar(layer.side, { reveal: true, interior: true });
+
+/* ----------------------------------------------------------- 3/4 FRONT */
+const TQ = (() => {
+  const root = el(layer.tq, 'g');
+  const Y = (x, h) => `${x},${-h}`;
+  const dh = h => 24 * (1 - h / 280);
+  const far = (x, h) => [x + 230, h + dh(h)];
+  const poly = (pts, extra) => el(root, 'path', { d: 'M ' + pts.map(p => Y(p[0], p[1])).join(' L ') + ' Z', ...extra });
+  const hoodN = [[600.6, 244], [678.6, 226], [745, 214], [770.6, 182]];
+  const hoodF = hoodN.map(p => far(p[0], p[1]));
+  const faceN = [[770.6, 182], [774, 58]];
+  const faceF = faceN.map(p => far(p[0], p[1]));
+  // front face + hood + windshield (drawn first, side body overlaps)
+  poly([faceN[0], faceF[0], faceF[1], faceN[1]], { fill: '#17181b', stroke: 'rgba(255,255,255,.28)', 'stroke-width': 1.6, class: 'ln' });
+  poly([...hoodN, ...hoodF.slice().reverse()], { fill: '#212327', class: 'ln', 'stroke-width': 1.6 });
+  const wsN = [[600.6, 244], [468, 334]];
+  const wsF = wsN.map(p => far(p[0], p[1]));
+  poly([wsN[0], wsN[1], wsF[1], wsF[0]], { fill: '#08090b', class: 'ln', 'stroke-width': 1.6 });
+  const face = (u, h) => { const n = 774 + 230 * u; return [n, h + dh(h) * u]; };
+  const det = el(root, 'g');
+  const fl = (a, b) => el(det, 'path', { d: `M ${Y(...face(a[0], a[1]))} L ${Y(...face(b[0], b[1]))}`, class: 'ln', 'stroke-width': 1.4, opacity: .75 });
+  fl([.06, 118], [.94, 118]);
+  fl([.18, 92], [.82, 92]); fl([.18, 92], [.12, 118]); fl([.82, 92], [.88, 118]);
+  fl([.04, 170], [.96, 170]);
+  // side body (x squashed)
+  const sc = el(root, 'g', { transform: 'scale(0.78 1)' });
+  const car = buildCar(sc, { noPx: true });
+  // pixel lights on the face
+  const list = [];
+  for (let k = -11; k <= 11; k++) {
+    const rows = Math.abs(k) >= 6 ? [-1, 0, 1] : [0];
+    rows.forEach(r => { const u = (k + 11.9) / 23.8; const [x, h] = face(u, 148 + r * 10.5); list.push({ x, y: -h, s: 1 - .18 * u }); });
+  }
+  const px = pixelSet(root, list, 7.4);
+  return { root, car, px, det };
+})();
+
+/* ---------------------------------------------------------- TEXT OBJECTS */
+const T = {
+  title: makeText('IONIQ 5', { size: 118, track: .32, maxW: 900 }),
+  design: makeText('DESIGN', { size: 170, track: .08, maxW: 900 }),
+  param: makeText('PARAMETRIC PIXEL', { size: 28, track: .5, weight: 300, maxW: 900 }),
+  space: makeText('SPACE', { size: 170, track: .08, maxW: 900 }),
+  live: makeText('SPACE TO LIVE.', { size: 66, track: .2, maxW: 900 }),
+  ev: makeText('EV TECHNOLOGY', { size: 58, track: .3, maxW: 900 }),
+  move: makeText('MOVE', { size: 128, track: .1, maxW: 900 }),
+  diff: makeText('DIFFERENT.', { size: 128, track: .06, maxW: 900 }),
+  title2: makeText('IONIQ 5', { size: 108, track: .32, maxW: 900 }),
+  redef: makeText('EV, REDEFINED.', { size: 30, track: .55, weight: 300, maxW: 900 })
+};
+const HUD = [
+  { name: 'ENERGY', s: 11.6, a: [497.5, -64.5], dir: 'down', t: null },
+  { name: 'CHARGE', s: 12.4, a: [120, -185], dir: 'upL', t: null },
+  { name: 'DRIVE', s: 13.2, a: [880, -226], dir: 'upR', t: null }
+];
+HUD.forEach(h => {
+  h.t = makeText(h.name, { size: 40, track: .34, weight: 300, parent: layer.hud, anchor: h.dir === 'upL' ? 'start' : h.dir === 'upR' ? 'end' : 'middle' });
+  h.line = el(layer.hud, 'path', { d: 'M 0 0 L 1 1', class: 'ln', stroke: ACC, 'stroke-width': 1.4, 'stroke-opacity': .8 });
+  h.pix = pixelSet(layer.hud, [{ x: 0, y: 0 }], 13);
+});
+
+/* ------------------------------------------------------------- STREAKS */
+const streaks = Array.from({ length: 18 }, () => ({
+  y: 140 + rng() * 1640, len: 140 + rng() * 420, sp: 1.6 + rng() * 2.4, ph: rng(), a: .16 + rng() * .34,
+  e: el(layer.streaks, 'line', { stroke: '#fff', 'stroke-width': 1.4, opacity: 0 })
+}));
+
+/* ----------------------------------------------------------------- SUBS */
+const SUBS = [
+  [.35, 3.0, '未来は、もっと静かにやってくる。'], [3.2, 5.9, '一目でわかる、そのデザイン。'],
+  [7.2, 10.4, 'クルマの中に、もうひとつの空間を。'], [11.2, 14.6, '電気で走る。その先まで考えたEV。'],
+  [15.2, 17.4, '移動を、もっと自由に。'], [18.3, 19.4, 'IONIQ 5。']
+];
+
+/* --------------------------------------------------------------- RENDER */
+const side2s = (s, x, h) => [540 + s * (x - 500), 1005 + s * (175 - h)];
+const lerp = (a, b, k) => a + (b - a) * k;
+let showSubs = false;
+
+function render(t) {
+  /* ---------- grid ---------- */
+  const gridA = kf(t, [[3, 0], [4.2, .07], [11, .09], [15, .07], [17.4, .17], [17.9, 0]]);
+  const u5 = t - 15;
+  const gx = u5 < 0 ? 0 : (u5 < 1.2 ? 1500 * 1.2 * (Math.pow(u5 / 1.2, 3) - Math.pow(u5 / 1.2, 4) / 2) : 1500 * 1.2 * .5 + 1500 * (u5 - 1.2));
+  const gOff = (t < 15 ? t * 2 : 30) + gx;
+  gp1.setAttribute('patternTransform', `translate(${-gOff} 0)`);
+  gp2.setAttribute('patternTransform', `translate(${-gOff} 0)`);
+  layer.grid1.setAttribute('opacity', gridA.toFixed(3));
+  layer.grid2.setAttribute('opacity', (gridA * 1.7).toFixed(3));
+
+  /* ---------- FRONT VIEW : opening (0–3.3) and ending (17.9–20) ---------- */
+  const frontOpen = t < 3.4, frontEnd = t >= 17.9;
+  layer.front.style.display = (frontOpen || frontEnd) ? '' : 'none';
+  if (frontOpen) {
+    const sc = .92 * (1 - .04 * seg(t, 3, 3.4));
+    layer.front.setAttribute('transform', `translate(540 1355) scale(${sc})`);
+    layer.front.setAttribute('opacity', (1 - seg(t, 3.0, 3.3)).toFixed(3));
+    F.det.setAttribute('opacity', 0);
+    F.px.px.forEach((q, i) => {
+      const ts = q.k === 0 ? .4 : 1.0 + q.k * .065 + q.r * .02;
+      F.px.set(i, E.out3(seg(t, ts, ts + .14)) * .9);
+    });
+    F.px.setHalo(.7 * seg(t, .4, 1));
+    const p = E.ioSine(seg(t, 1.6, 2.95));
+    F.cr.setAttribute('y', (-430 - 400 * p).toFixed(1));
+    F.cr.setAttribute('height', (830 * p + 40 * p).toFixed(1));
+    T.title.place(540, 430, 1); T.title.update(seg(t, 1.9, 2.6), seg(t, 2.85, 3.1));
+  } else if (frontEnd) {
+    layer.front.setAttribute('transform', `translate(540 1180) scale(0.8)`);
+    layer.front.setAttribute('opacity', E.ioSine(seg(t, 17.95, 18.7)).toFixed(3));
+    F.det.setAttribute('opacity', (.6 * E.ioSine(seg(t, 18.3, 19.2))).toFixed(3));
+    F.cr.setAttribute('y', -800); F.cr.setAttribute('height', 840);
+    const v = E.ioSine(seg(t, 18.25, 19.1)) * .92;
+    F.px.setAll(v); F.px.setHalo(.55 * v);
+    T.title2.place(540, 1440, 1); T.title2.update(seg(t, 18.5, 19.15));
+    T.redef.place(540, 1510, 1); T.redef.update(seg(t, 19.05, 19.6));
+  } else { T.title.update(0); T.title2.update(0); T.redef.update(0); }
+  if (!frontOpen) T.title.update(0);
+  if (!frontEnd) { T.title2.update(0); T.redef.update(0); }
+
+  /* ---------- SIDE VIEW (3.0–15.05) ---------- */
+  const sideOn = t > 3.0 && t < 15.1;
+  layer.side.style.display = sideOn ? '' : 'none';
+  layer.hud.style.display = (t > 11 && t < 15.05) ? '' : 'none';
+  if (sideOn) {
+    const s = .95 * (1 + .022 * seg(t, 3, 11));
+    const tx = 540 - s * 500, ty = 1005 + s * 175;
+    layer.side.setAttribute('transform', `translate(${tx.toFixed(2)} ${ty.toFixed(2)}) scale(${s.toFixed(4)})`);
+    layer.side.setAttribute('opacity', (1 - seg(t, 14.75, 15.05)).toFixed(3));
+
+    // trace (S2)
+    const pTr = E.ioSine(seg(t, 3.2, 6.4));
+    const Lt = S.outTop.__L || (S.outTop.__L = S.outTop.getTotalLength());
+    drawP(S.outTop, pTr);
+    const hp = S.outTop.getPointAtLength(Lt * pTr);
+    const trX = pTr >= 1 ? -30 : hp.x;
+    revealRect.setAttribute('x', trX.toFixed(1));
+    S.head.px[0].c.setAttribute('x', hp.x - 6.5); S.head.px[0].c.setAttribute('y', hp.y - 6.5);
+    S.head.px[0].h.setAttribute('x', hp.x - 6.5); S.head.px[0].h.setAttribute('y', hp.y - 6.5);
+    const hv = pTr > 0 && pTr < 1 ? 1 : 0;
+    S.head.set(0, hv); S.head.setHalo(.9 * hv);
+    S.outTop.setAttribute('opacity', kf(t, [[3.2, 1], [7.3, 1], [8.2, .5], [11, .5], [11.8, .95]]).toFixed(3));
+
+    const fillA = kf(t, [[3.2, .95], [7.3, .95], [8.2, .05], [11, .05], [11.8, .95]]);
+    const detB = kf(t, [[3, .55], [7.3, .55], [8.2, .14], [11, .14], [11.8, .55]]);
+    S.fill.setAttribute('opacity', fillA.toFixed(3));
+    S.glassFill.forEach(p => p.setAttribute('fill-opacity', (fillA * .9).toFixed(3)));
+    S.wheelsG.setAttribute('opacity', (.45 + .55 * fillA).toFixed(3));
+    S.details.forEach(d => {
+      const f = t < 7 ? Math.exp(-Math.max(0, d.x - trX) / 80) * (pTr < 1 || t < 6.9 ? 1 : 0) : 0;
+      d.p.setAttribute('opacity', (detB + (1 - detB) * f).toFixed(3));
+    });
+    const ang = Math.max(0, t - 11) * 55;
+    S.wheels.forEach(w => w.spin.setAttribute('transform', `rotate(${ang.toFixed(1)})`));
+    // lights
+    const pl = E.ioSine(seg(t, 3.5, 4.4));
+    S.pxF.setAll(.9 * pl); S.pxR.setAll(.9 * pl); S.pxF.setHalo(.6 * pl); S.pxR.setHalo(.6 * pl);
+    // dimension (S2)
+    const dimP = E.ioSine(seg(t, 6.2, 6.9)), dimOut = 1 - seg(t, 7.0, 7.4);
+    S.dim.setAttribute('opacity', dimOut.toFixed(3)); drawP(S.dimLine, dimP);
+    S.dimTxt.setAttribute('fill-opacity', (.7 * seg(t, 6.6, 7.0)).toFixed(3));
+
+    // wheel axis + interior (S3)
+    drawP(S.axis, E.ioSine(seg(t, 7.0, 7.9)));
+    const intFade = 1 - seg(t, 10.8, 11.4);
+    S.axis.setAttribute('opacity', (kf(t, [[7, .9], [8.2, .6]]) * intFade).toFixed(3));
+    const hubV = E.out3(seg(t, 7.0, 7.3)) * (.35 + .65 * (1 - seg(t, 7.9, 8.4)) + .0) * (t < 11 ? 1 : 1 - seg(t, 11, 11.4));
+    S.hubs.set(0, hubV); S.hubs.set(1, hubV * seg(t, 7.7, 7.95)); S.hubs.setHalo(.7);
+    S.inner.forEach(i => { drawP(i.p, E.ioSine(seg(t, i.s, i.s + i.dur))); i.p.setAttribute('opacity', (.9 * intFade).toFixed(3)); });
+    drawP(S.battery.p, E.ioSine(seg(t, S.battery.s, S.battery.s + S.battery.dur)));
+    const batA = kf(t, [[7.8, .7], [11.4, .7], [12.2, 1]]);
+    S.battery.p.setAttribute('opacity', batA.toFixed(3));
+    S.cells.setAttribute('opacity', (E.ioSine(seg(t, 8.6, 9.2)) * batA).toFixed(3));
+    const pulse = .5 + .5 * Math.sin((t - 12) * 2.2);
+    S.cellFill.setAttribute('opacity', (seg(t, 12.0, 12.8) * (.12 + .1 * pulse) * (1 - seg(t, 14.5, 14.9))).toFixed(3));
+
+    // energy flow (S4)
+    const eP = E.ioSine(seg(t, 12.0, 12.8));
+    [S.eR, S.eF].forEach(e => {
+      drawP(e.base, eP); e.base.setAttribute('opacity', (.55 * (1 - seg(t, 14.4, 14.8))).toFixed(3));
+      const Ln = e.base.__L, segL = 70, ph = ((t - 12.6) / 1.15) % 1, h = ph * (Ln + segL);
+      e.pulse.style.strokeDasharray = `${segL} ${Ln + segL}`;
+      e.pulse.style.strokeDashoffset = (segL - h).toFixed(2);
+      e.glowG.setAttribute('opacity', (t > 12.6 && t < 14.8 ? Math.min(1, (t - 12.6) * 3) * (1 - seg(t, 14.4, 14.8)) : 0).toFixed(3));
+    });
+    if (t > 11) {
+      const hv2 = seg(t, 12.3, 12.8) * (1 - seg(t, 14.4, 14.8));
+      S.hubs.set(0, Math.max(hubV, hv2 * (.6 + .4 * pulse))); S.hubs.set(1, Math.max(hubV * seg(t, 7.7, 7.95), hv2 * (.6 + .4 * pulse)));
+    }
+
+    // text: DESIGN / PARAMETRIC PIXEL  (3.3–7.3)
+    const mv = E.io3(seg(t, 5.3, 6.4));
+    const dS = lerp(1, 48 / 170, mv), dW = T.design.width * T.design.fit * dS;
+    T.design.place(lerp(540, 70 + dW / 2, mv), lerp(560, 150, mv), dS);
+    T.design.update(seg(t, 3.35, 4.0), seg(t, 6.85, 7.2));
+    const pS = lerp(1, .78, mv), pW = T.param.width * T.param.fit * pS;
+    T.param.place(lerp(540, 70 + pW / 2, mv), lerp(640, 200, mv), pS);
+    T.param.update(seg(t, 3.9, 4.5), seg(t, 6.85, 7.2));
+    // SPACE / SPACE TO LIVE.
+    T.space.place(540, 590, 1); T.space.update(seg(t, 7.15, 7.8), seg(t, 8.75, 9.05));
+    T.live.place(540, 570, 1); T.live.update(seg(t, 9.0, 9.7), seg(t, 10.75, 11.05));
+    // EV TECHNOLOGY
+    T.ev.place(540, 410, 1); T.ev.update(seg(t, 11.1, 11.75), seg(t, 14.6, 14.95));
+
+    // HUD
+    const anchorScr = h => side2s(.95 * 1.022, h.a[0], -h.a[1]);
+    HUD.forEach(h => {
+      const [ax, ay] = anchorScr(h);
+      let d, tx, ty;
+      if (h.dir === 'down') { d = `M ${ax} ${ay + 18} L ${ax} 1318`; tx = ax; ty = 1385; }
+      else if (h.dir === 'upL') { d = `M ${ax} ${ay - 18} L ${ax} 806`; tx = 80; ty = 780; }
+      else { d = `M ${ax} ${ay - 18} L ${ax} 806`; tx = 1000; ty = 780; }
+      h.line.setAttribute('d', d);
+      const pIn = E.ioSine(seg(t, h.s + .15, h.s + .55)), out = seg(t, 14.4, 14.8);
+      drawP(h.line, pIn); h.line.setAttribute('stroke-opacity', (.8 * (1 - out)).toFixed(3));
+      const blink = t < h.s ? 0 : (t < h.s + .12 ? 1 : t < h.s + .2 ? .15 : 1);
+      h.pix.px[0].c.setAttribute('x', ax - 6.5); h.pix.px[0].c.setAttribute('y', ay - 6.5);
+      h.pix.px[0].h.setAttribute('x', ax - 6.5); h.pix.px[0].h.setAttribute('y', ay - 6.5);
+      h.pix.set(0, blink * (1 - out)); h.pix.setHalo(.8);
+      h.t.place(tx, ty, 1); h.t.update(seg(t, h.s + .4, h.s + .9), out);
+    });
+  } else {
+    T.design.update(0); T.param.update(0); T.space.update(0); T.live.update(0); T.ev.update(0);
+  }
+
+  /* ---------- 3/4 FRONT : MOVE DIFFERENT (15.0–17.9) ---------- */
+  const tqOn = t >= 15 && t < 17.95;
+  layer.tq.style.display = tqOn ? '' : 'none';
+  layer.ground.setAttribute('opacity', tqOn ? (seg(t, 15.2, 15.8) * (1 - seg(t, 17.55, 17.9))).toFixed(3) : 0);
+  layer.streaks.style.display = tqOn ? '' : 'none';
+  if (tqOn) {
+    const s = .95 + .015 * seg(t, 15, 18);
+    layer.tq.setAttribute('transform', `translate(${(540 - s * 505).toFixed(2)} ${1130}) scale(${s.toFixed(4)})`);
+    layer.tq.setAttribute('opacity', (E.ioSine(seg(t, 15.0, 15.4)) * (1 - seg(t, 17.55, 17.9))).toFixed(3));
+    TQ.car.details.forEach(d => d.p.setAttribute('opacity', .8));
+    TQ.car.fill.setAttribute('opacity', .95);
+    TQ.car.glassFill.forEach(p => p.setAttribute('fill-opacity', .9));
+    TQ.car.wheelsG.setAttribute('opacity', 1);
+    const wa = (t - 15) * 420; TQ.car.wheels.forEach(w => w.spin.setAttribute('transform', `rotate(${wa % 360})`));
+    const bump = t >= 15.3 ? Math.exp(-(t - 15.3) * 3.2) : 0;
+    const base = .5 + .35 * seg(t, 15.0, 15.3);
+    const v = clamp(base + .5 * bump);
+    TQ.px.setAll(v); TQ.px.setHalo(clamp(.25 + 1.0 * bump));
+    // streaks
+    const a = E.smooth(seg(u5, .1, 1.2)) * (1 - seg(t, 17.5, 17.9));
+    streaks.forEach(k => {
+      const prog = (u5 * k.sp + k.ph) % 1, head = 1080 + k.len - prog * (1080 + 2 * k.len);
+      k.e.setAttribute('x1', (head - k.len).toFixed(1)); k.e.setAttribute('x2', head.toFixed(1));
+      k.e.setAttribute('y1', k.y.toFixed(1)); k.e.setAttribute('y2', k.y.toFixed(1));
+      k.e.setAttribute('opacity', (k.a * a).toFixed(3));
+    });
+    const out = seg(t, 17.4, 17.7);
+    T.move.place(540, 470, 1); T.move.update(seg(t, 15.35, 16.0), out);
+    T.diff.place(540, 612, 1); T.diff.update(seg(t, 15.55, 16.2), out);
+  } else { T.move.update(0); T.diff.update(0); }
+
+  /* ---------- subtitles ---------- */
+  const sub = SUBS.find(x => t >= x[0] && t < x[1]);
+  const subEl = $('#sub');
+  subEl.textContent = sub ? sub[2] : subEl.textContent;
+  subEl.style.opacity = (showSubs && sub) ? 1 : 0;
+}
+
+/* ================================================================ AUDIO */
+function buildAudio(ctx, out, t0, now) {
+  const at = ev => now + (ev - t0);
+  const live = ev => ev >= t0;
+  const master = ctx.createGain(); master.gain.value = .85; master.connect(out);
+  const noiseBuf = (() => { const b = ctx.createBuffer(1, ctx.sampleRate * 3, ctx.sampleRate), d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; return b; })();
+  // ---- BGM (minimal drone + soft pad)
+  const bgm = ctx.createGain(); bgm.connect(master);
+  const kfv = [[0, 0], [1, .16], [3, .28], [7, .32], [11, .4], [15, .52], [17.9, .52], [18.12, .1], [19.5, .08], [20, .02]];
+  const lvl = t => { for (let i = 1; i < kfv.length; i++) if (t <= kfv[i][0]) { const a = kfv[i - 1], b = kfv[i]; return a[1] + (b[1] - a[1]) * (t - a[0]) / (b[0] - a[0]); } return kfv[kfv.length - 1][1]; };
+  bgm.gain.setValueAtTime(lvl(t0), now);
+  kfv.forEach(k => { if (k[0] > t0) bgm.gain.linearRampToValueAtTime(k[1], at(k[0])); });
+  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 420; lp.connect(bgm);
+  [[55, .55], [82.4, .28], [110.3, .2]].forEach(([f, g]) => {
+    const o = ctx.createOscillator(), gg = ctx.createGain(); o.frequency.value = f; gg.gain.value = g; o.connect(gg); gg.connect(lp);
+    o.start(now); o.stop(at(21));
+  });
+  const pad = ctx.createBiquadFilter(); pad.type = 'lowpass'; pad.frequency.value = 600; pad.Q.value = 2;
+  const padG = ctx.createGain(); padG.gain.value = .07; pad.connect(padG); padG.connect(bgm);
+  [220, 220.9, 329.6, 330.4].forEach(f => { const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f; o.connect(pad); o.start(now); o.stop(at(21)); });
+  const lfo = ctx.createOscillator(), lfoG = ctx.createGain(); lfo.frequency.value = .12; lfoG.gain.value = 260; lfo.connect(lfoG); lfoG.connect(pad.frequency); lfo.start(now); lfo.stop(at(21));
+  // ---- SE helpers
+  const env = (g, time, a, peak, d) => { g.gain.setValueAtTime(0, time); g.gain.linearRampToValueAtTime(peak, time + a); g.gain.exponentialRampToValueAtTime(.0001, time + a + d); };
+  const tick = (ev, f, v = .1, d = .09, type = 'sine') => { if (!live(ev)) return; const o = ctx.createOscillator(), g = ctx.createGain(); o.type = type; o.frequency.value = f; env(g, at(ev), .002, v, d); o.connect(g); g.connect(master); o.start(at(ev)); o.stop(at(ev) + d + .05); };
+  const noise = (ev, dur, fType, f0, f1, v, q = 1, shape = 'tri') => {
+    if (ev + dur < t0) return; const s = Math.max(ev, t0);
+    const src = ctx.createBufferSource(); src.buffer = noiseBuf; const f = ctx.createBiquadFilter(); f.type = fType; f.Q.value = q;
+    const g = ctx.createGain();
+    f.frequency.setValueAtTime(f0, at(ev)); f.frequency.exponentialRampToValueAtTime(f1, at(ev + dur));
+    g.gain.setValueAtTime(0, at(ev));
+    if (shape === 'tri') { g.gain.linearRampToValueAtTime(v, at(ev + dur * .5)); g.gain.linearRampToValueAtTime(0, at(ev + dur)); }
+    else { g.gain.linearRampToValueAtTime(v, at(ev + .01)); g.gain.exponentialRampToValueAtTime(.0001, at(ev + dur)); }
+    src.connect(f); f.connect(g); g.connect(master); src.start(at(s), (s - ev) % 2); src.stop(at(ev + dur) + .05);
+  };
+  // 0:01 pixel-on ticks
+  tick(.4, 1760, .07, .12);
+  for (let n = 1; n <= 11; n++) tick(1.0 + n * .065, 1100 + n * 110, .06, .08);
+  // 0:03 low impact
+  if (live(3.0)) {
+    const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.setValueAtTime(130, at(3)); o.frequency.exponentialRampToValueAtTime(36, at(3.6));
+    env(g, at(3), .004, .9, 1.4); o.connect(g); g.connect(master); o.start(at(3)); o.stop(at(4.6));
+    noise(3.0, .35, 'lowpass', 500, 120, .35, 1, 'hit');
+  }
+  // 0:07 line draw
+  noise(7.0, 1.6, 'bandpass', 700, 3200, .16, 5);
+  tick(7.0, 1320, .05, .3); tick(7.9, 1980, .05, .3);
+  // 0:11 digital UI
+  [[11.1, 1500], [11.6, 1200], [12.4, 1600], [13.2, 2000]].forEach(([ev, f]) => { tick(ev, f, .08, .14, 'triangle'); tick(ev + .06, f * 1.5, .04, .1, 'triangle'); });
+  // 0:15 low acceleration
+  if (t0 < 17.9) {
+    const s = Math.max(15, t0);
+    const o = ctx.createOscillator(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+    o.type = 'sawtooth'; f.type = 'lowpass'; f.Q.value = 3;
+    o.frequency.setValueAtTime(55, at(15)); o.frequency.exponentialRampToValueAtTime(190, at(17.7));
+    f.frequency.setValueAtTime(260, at(15)); f.frequency.exponentialRampToValueAtTime(1300, at(17.7));
+    g.gain.setValueAtTime(0, at(15)); g.gain.linearRampToValueAtTime(.2, at(17.2)); g.gain.linearRampToValueAtTime(0, at(18.0));
+    o.connect(f); f.connect(g); g.connect(master); o.start(at(15)); o.stop(at(18.1));
+    noise(15.0, 2.9, 'bandpass', 400, 2600, .12, 1.5);
+    tick(15.3, 2200, .12, .5);
+  }
+  // 0:18 near silence, then a quiet end tone
+  if (live(18.4)) [261.6, 392].forEach(f => { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = f;
+    g.gain.setValueAtTime(0, at(18.4)); g.gain.linearRampToValueAtTime(.05, at(18.9)); g.gain.linearRampToValueAtTime(0, at(20)); o.connect(g); g.connect(master); o.start(at(18.4)); o.stop(at(20.1)); });
+  return () => { try { master.gain.cancelScheduledValues(0); master.gain.value = 0; } catch (e) {} };
+}
+
+/* ================================================================ PLAYER */
+let T0 = 0, playing = false, lastNow = 0, actx = null, killAudio = null, soundOn = true, ttsOn = false;
+const narr = new Audio(); narr.preload = 'auto'; let hasNarr = false;
+const fmt = t => t.toFixed(2).padStart(5, '0') + ' / 20.00';
+
+function stopAudio() {
+  if (killAudio) { killAudio(); killAudio = null; }
+  if (actx) { actx.close().catch(() => {}); actx = null; }
+  narr.pause(); try { speechSynthesis.cancel(); } catch (e) {}
+}
+function startAudio(t) {
+  stopAudio();
+  if (soundOn) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    actx = new AC(); killAudio = buildAudio(actx, actx.destination, t, actx.currentTime + .05);
+  }
+  if (hasNarr) { narr.currentTime = Math.max(0, t); narr.play().catch(() => {}); }
+  else if (ttsOn && 'speechSynthesis' in window) {
+    SUBS.forEach(([a, b, txt]) => {
+      if (b <= t) return;
+      setTimeout(() => {
+        if (!playing) return;
+        const u = new SpeechSynthesisUtterance(txt.replace('IONIQ 5', 'アイオニック ファイブ').replace('EV', 'イーブイ'));
+        u.lang = 'ja-JP'; u.rate = .95; u.pitch = .9; speechSynthesis.speak(u);
+      }, Math.max(0, (a - t) * 1000));
+    });
+  }
+}
+function setT(t) { T0 = clamp(t, 0, DUR); render(T0); $('#seek').value = Math.round(T0 * 100); $('#time').textContent = fmt(T0); }
+function play() {
+  if (T0 >= DUR - .01) T0 = 0;
+  playing = true; lastNow = performance.now(); $('#bPlay').textContent = '❚❚ PAUSE'; startAudio(T0);
+}
+function pause() { playing = false; $('#bPlay').textContent = '▶ PLAY'; stopAudio(); }
+function loop(now) {
+  if (playing) {
+    T0 += (now - lastNow) / 1000; lastNow = now;
+    if (T0 >= DUR) { setT(DUR); pause(); } else setT(T0);
+  }
+  requestAnimationFrame(loop);
+}
+$('#bPlay').onclick = () => playing ? pause() : play();
+$('#seek').oninput = e => { const was = playing; if (was) stopAudio(); setT(e.target.value / 100); if (was) { lastNow = performance.now(); startAudio(T0); } };
+$('#bSnd').onclick = e => { soundOn = !soundOn; e.target.classList.toggle('on', soundOn); if (playing) startAudio(T0); };
+$('#bSub').onclick = e => { showSubs = !showSubs; e.target.classList.toggle('on', showSubs); render(T0); };
+$('#bTts').onclick = e => { ttsOn = !ttsOn; e.target.classList.toggle('on', ttsOn); if (playing) startAudio(T0); };
+$('#narrFile').onchange = e => { const f = e.target.files[0]; if (!f) return; narr.src = URL.createObjectURL(f); hasNarr = true; if (playing) startAudio(T0); };
+addEventListener('keydown', e => { if (e.code === 'Space') { e.preventDefault(); playing ? pause() : play(); } });
+
+/* ============================================ capture API (offline render) */
+window.renderAt = t => { render(t); };
+window.renderAudioWav = async () => {
+  const sr = 44100, ctx = new OfflineAudioContext(2, sr * DUR, sr);
+  buildAudio(ctx, ctx.destination, 0, 0);
+  const buf = await ctx.startRendering();
+  const L = buf.getChannelData(0), R = buf.getChannelData(1), n = L.length;
+  const bytes = new Uint8Array(44 + n * 4), dv = new DataView(bytes.buffer);
+  const w = (o, s) => { for (let i = 0; i < s.length; i++) dv.setUint8(o + i, s.charCodeAt(i)); };
+  w(0, 'RIFF'); dv.setUint32(4, 36 + n * 4, true); w(8, 'WAVEfmt '); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 2, true);
+  dv.setUint32(24, sr, true); dv.setUint32(28, sr * 4, true); dv.setUint16(32, 4, true); dv.setUint16(34, 16, true); w(36, 'data'); dv.setUint32(40, n * 4, true);
+  for (let i = 0; i < n; i++) { dv.setInt16(44 + i * 4, clamp(L[i], -1, 1) * 32767, true); dv.setInt16(46 + i * 4, clamp(R[i], -1, 1) * 32767, true); }
+  let bin = ''; const CH = 0x8000; for (let i = 0; i < bytes.length; i += CH) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CH));
+  return btoa(bin);
+};
+
+/* ------------------------------------------------------------------ BOOT */
+if (new URLSearchParams(location.search).has('capture')) document.body.classList.add('capture');
+render(0);
+requestAnimationFrame(loop);
+window.__ready = true;
+})();
+</script>
+</body>
+</html>
