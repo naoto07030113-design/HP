@@ -11,7 +11,7 @@ const Header = forwardRef(function Header({ count, bump, onOpenCart }, cartRef) 
   }, [bump, controls])
 
   return (
-    <header className="sticky top-0 z-30 border-b border-white/40 bg-white/40 backdrop-blur-xl">
+    <header className="sticky top-[env(safe-area-inset-top,0px)] z-30 border-b border-white/40 bg-white/40 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
         <a href="#top" aria-label="MATCHA MOOD トップへ">
           <Logo />
